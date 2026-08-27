@@ -25199,6 +25199,11 @@ impl TypedActionView for Workspace {
                     ctx.notify();
                 }
             }
+            ToggleArchivedTabsExpanded => {
+                self.vertical_tabs_panel.archived_tabs_expanded =
+                    !self.vertical_tabs_panel.archived_tabs_expanded;
+                ctx.notify();
+            }
             SetVerticalTabsDisplayGranularity(granularity) => {
                 let granularity = *granularity;
                 TabSettings::handle(ctx).update(ctx, |settings, ctx| {

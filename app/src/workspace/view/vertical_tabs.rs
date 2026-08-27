@@ -10,7 +10,6 @@ use pathfinder_color::ColorU;
 use pathfinder_geometry::rect::RectF;
 use pathfinder_geometry::vector::{Vector2F, vec2f};
 use settings::Setting as _;
-use warp_core::context_flag::ContextFlag;
 use warp_core::telemetry::TelemetryEvent as _;
 use warp_core::ui::Icon as WarpIcon;
 use warp_core::ui::color::blend::Blend;
@@ -40,6 +39,7 @@ use crate::ai::agent::conversation::{ConversationStatus, StatusColorStyle};
 use crate::ai::agent_management::AgentNotificationsModel;
 use crate::ai::cloud_environments::CloudAmbientAgentEnvironment;
 use crate::ai::conversation_status_ui::render_status_element;
+use crate::app_state::{ArchivedTabSnapshot, LeafContents, PaneNodeSnapshot, TabSnapshot};
 use crate::appearance::Appearance;
 use crate::cloud_object::CloudObjectLookup as _;
 use crate::cloud_object::model::generic_string_model::StringModel;
@@ -93,7 +93,8 @@ use crate::workspace::{
 use crate::{FeatureFlag, send_telemetry_from_app_ctx};
 
 const PANEL_WIDTH: f32 = 248.;
-const MIN_PANEL_WIDTH: f32 = 200.;
+const MIN_PANEL_WIDTH: f32 = 56.;
+const MINI_PANEL_MAX_WIDTH: f32 = 112.;
 const MAX_PANEL_WIDTH_RATIO: f32 = 0.5;
 const DETAIL_SIDECAR_SECTION_PADDING: f32 = 12.;
 const DETAIL_SIDECAR_SECTION_GAP: f32 = 4.;
@@ -307,6 +308,13 @@ struct TabGroupMouseStates {
     chevron: MouseStateHandle,
     kebab: MouseStateHandle,
     close: MouseStateHandle,
+}
+
+#[derive(Clone, Default)]
+struct ArchivedTabMouseStates {
+    row: MouseStateHandle,
+    restore: MouseStateHandle,
+    delete: MouseStateHandle,
 }
 
 /// Describes how a pane row sits in its tab's row layout. Carried as state
@@ -703,6 +711,8 @@ pub(super) struct VerticalTabsPanelState {
     group_mouse_states: RefCell<HashMap<EntityId, PaneGroupStateHandles>>,
     /// Hover states per tab group, keyed by `TabGroupId`.
     tab_group_mouse_states: RefCell<HashMap<TabGroupId, TabGroupMouseStates>>,
+    archived_tab_mouse_states: RefCell<HashMap<uuid::Uuid, ArchivedTabMouseStates>>,
+    archived_header_mouse_state: MouseStateHandle,
     pane_row_mouse_states: RefCell<HashMap<PaneId, MouseStateHandle>>,
     pane_title_mouse_states: RefCell<HashMap<PaneId, MouseStateHandle>>,
     pane_badge_mouse_states: RefCell<HashMap<PaneId, PaneRowBadgeMouseStates>>,
@@ -735,6 +745,7 @@ pub(super) struct VerticalTabsPanelState {
     show_details_on_hover_mouse_state: MouseStateHandle,
     panel_right_click_mouse_state: MouseStateHandle,
     pub(super) show_settings_popup: bool,
+    pub(super) archived_tabs_expanded: bool,
 }
 
 impl Default for VerticalTabsPanelState {
@@ -744,6 +755,8 @@ impl Default for VerticalTabsPanelState {
             resizable_state: resizable_state_handle(PANEL_WIDTH),
             group_mouse_states: RefCell::default(),
             tab_group_mouse_states: RefCell::default(),
+            archived_tab_mouse_states: RefCell::default(),
+            archived_header_mouse_state: Default::default(),
             pane_row_mouse_states: RefCell::default(),
             pane_title_mouse_states: RefCell::default(),
             pane_badge_mouse_states: RefCell::default(),
@@ -773,11 +786,19 @@ impl Default for VerticalTabsPanelState {
             show_details_on_hover_mouse_state: Default::default(),
             panel_right_click_mouse_state: Default::default(),
             show_settings_popup: false,
+            archived_tabs_expanded: false,
         }
     }
 }
 
 impl VerticalTabsPanelState {
+    fn is_mini(&self) -> bool {
+        self.resizable_state
+            .lock()
+            .map(|state| is_mini_panel_width(state.size()))
+            .unwrap_or(false)
+    }
+
     /// Returns a lightweight handle bundle for workspace-level visibility reconciliation while the
     /// detail sidecar is active.
     pub(super) fn detail_hover_state(&self, window_id: WindowId) -> VerticalTabsDetailHoverState {
@@ -822,6 +843,10 @@ impl VerticalTabsPanelState {
             self.clear_detail_sidecar();
         }
     }
+}
+
+fn is_mini_panel_width(width: f32) -> bool {
+    width <= MINI_PANEL_MAX_WIDTH
 }
 
 struct PaneProps<'a> {
@@ -1427,6 +1452,20 @@ fn render_control_bar(
     let settings_button = render_settings_button(state, appearance);
     let new_tab_button = render_new_tab_button(state, workspace, appearance, app);
 
+    if state.is_mini() {
+        return Container::new(
+            Flex::column()
+                .with_main_axis_size(MainAxisSize::Min)
+                .with_cross_axis_alignment(CrossAxisAlignment::Center)
+                .with_spacing(CONTROL_BAR_SPACING)
+                .with_child(new_tab_button)
+                .with_child(settings_button)
+                .finish(),
+        )
+        .with_padding(Padding::uniform(CONTROL_BAR_VERTICAL_PADDING))
+        .finish();
+    }
+
     Container::new(
         Flex::row()
             .with_main_axis_size(MainAxisSize::Max)
@@ -1777,7 +1816,7 @@ fn render_groups(
     let appearance = Appearance::as_ref(app);
     let theme = appearance.theme();
 
-    if workspace.tabs.is_empty() {
+    if workspace.tabs.is_empty() && workspace.archived_tabs.is_empty() {
         return Container::new(
             Text::new_inline("No tabs open", appearance.ui_font_family(), 12.)
                 .with_color(theme.sub_text_color(theme.background()).into())
@@ -1911,7 +1950,20 @@ fn render_groups(
             .collect()
     };
 
-    if visible_tabs.is_empty() {
+    let query_lower = query.to_lowercase();
+    let visible_archived_tabs: Vec<_> = workspace
+        .archived_tabs
+        .iter()
+        .rev()
+        .filter(|archived| {
+            query.is_empty()
+                || archived_tab_title(&archived.tab)
+                    .to_lowercase()
+                    .contains(&query_lower)
+        })
+        .collect();
+
+    if visible_tabs.is_empty() && visible_archived_tabs.is_empty() {
         if query.is_empty() {
             return Empty::new().finish();
         } else {
@@ -2015,6 +2067,15 @@ fn render_groups(
         groups.add_child(render_vertical_tab_insertion_target(None, theme));
     }
 
+    if !visible_archived_tabs.is_empty() {
+        groups.add_child(render_archived_tabs_section(
+            state,
+            &visible_archived_tabs,
+            !query.is_empty(),
+            appearance,
+        ));
+    }
+
     // Prune stale badge mouse states for panes that no longer exist.
     let all_pane_ids: std::collections::HashSet<PaneId> = workspace
         .tabs
@@ -2037,6 +2098,15 @@ fn render_groups(
         .detail_pane_badge_mouse_states
         .borrow_mut()
         .retain(|id, _| all_pane_ids.contains(id));
+    let archive_ids: std::collections::HashSet<_> = workspace
+        .archived_tabs
+        .iter()
+        .map(|archived| archived.id)
+        .collect();
+    state
+        .archived_tab_mouse_states
+        .borrow_mut()
+        .retain(|id, _| archive_ids.contains(id));
 
     let groups = groups.finish();
     if uses_outer_group_container {
@@ -2046,6 +2116,236 @@ fn render_groups(
             .with_padding(Padding::uniform(8.).with_top(0.))
             .finish()
     }
+}
+
+fn archived_tab_title(tab: &TabSnapshot) -> String {
+    if let Some(title) = tab
+        .custom_title
+        .as_deref()
+        .filter(|title| !title.is_empty())
+    {
+        return title.to_owned();
+    }
+    first_terminal_cwd(&tab.root)
+        .and_then(|cwd| Path::new(cwd).file_name())
+        .and_then(|name| name.to_str())
+        .filter(|name| !name.is_empty())
+        .unwrap_or("Archived tab")
+        .to_owned()
+}
+
+fn first_terminal_cwd(node: &PaneNodeSnapshot) -> Option<&str> {
+    match node {
+        PaneNodeSnapshot::Branch(branch) => branch
+            .children
+            .iter()
+            .find_map(|(_, child)| first_terminal_cwd(child)),
+        PaneNodeSnapshot::Leaf(leaf) => match &leaf.contents {
+            LeafContents::Terminal(terminal) => terminal.cwd.as_deref(),
+            LeafContents::Notebook(_)
+            | LeafContents::AIDocument(_)
+            | LeafContents::Code(_)
+            | LeafContents::EnvVarCollection(_)
+            | LeafContents::EnvironmentManagement(_)
+            | LeafContents::Workflow(_)
+            | LeafContents::Settings(_)
+            | LeafContents::AIFact(_)
+            | LeafContents::CustomRouterEditor
+            | LeafContents::ExecutionProfileEditor
+            | LeafContents::CodeReview(_)
+            | LeafContents::AmbientAgent(_)
+            | LeafContents::NetworkLog
+            | LeafContents::GetStarted => None,
+        },
+    }
+}
+
+fn render_archived_tabs_section(
+    state: &VerticalTabsPanelState,
+    archived_tabs: &[&ArchivedTabSnapshot],
+    force_expanded: bool,
+    appearance: &Appearance,
+) -> Box<dyn Element> {
+    let theme = appearance.theme();
+    let sub_text = theme.sub_text_color(theme.background());
+    let main_text = theme.main_text_color(theme.background());
+    let is_mini = state.is_mini();
+    let expanded = !is_mini && (state.archived_tabs_expanded || force_expanded);
+    let archived_count = archived_tabs.len();
+    let chevron = if expanded {
+        WarpIcon::ChevronDown
+    } else {
+        WarpIcon::ChevronRight
+    };
+    let header = Hoverable::new(state.archived_header_mouse_state.clone(), move |hover| {
+        let background = if hover.is_hovered() {
+            internal_colors::fg_overlay_2(theme)
+        } else {
+            ThemeFill::Solid(ColorU::transparent_black())
+        };
+        let content: Box<dyn Element> = if is_mini {
+            ConstrainedBox::new(WarpIcon::ClockRewind.to_warpui_icon(sub_text).finish())
+                .with_width(16.)
+                .with_height(16.)
+                .finish()
+        } else {
+            Flex::row()
+                .with_main_axis_size(MainAxisSize::Max)
+                .with_cross_axis_alignment(CrossAxisAlignment::Center)
+                .with_spacing(6.)
+                .with_child(
+                    ConstrainedBox::new(chevron.to_warpui_icon(sub_text).finish())
+                        .with_width(12.)
+                        .with_height(12.)
+                        .finish(),
+                )
+                .with_child(
+                    Text::new_inline(
+                        warp_i18n::localize_format!(
+                            "Archived ({archived_count})",
+                            archived_count = archived_count,
+                        ),
+                        appearance.ui_font_family(),
+                        12.,
+                    )
+                    .with_color(sub_text.into())
+                    .with_style(Properties::default().weight(Weight::Bold))
+                    .finish(),
+                )
+                .finish()
+        };
+        Container::new(content)
+            .with_background(background)
+            .with_corner_radius(CornerRadius::with_all(Radius::Pixels(ROW_CORNER_RADIUS)))
+            .with_padding(Padding::uniform(6.))
+            .finish()
+    })
+    .with_cursor(Cursor::PointingHand)
+    .on_click(|ctx, _, _| {
+        ctx.dispatch_typed_action(WorkspaceAction::ToggleArchivedTabsExpanded);
+    })
+    .finish();
+
+    let mut section = Flex::column()
+        .with_main_axis_size(MainAxisSize::Min)
+        .with_cross_axis_alignment(CrossAxisAlignment::Stretch)
+        .with_spacing(4.)
+        .with_child(header);
+    if expanded {
+        for archived in archived_tabs {
+            let mouse_states = state
+                .archived_tab_mouse_states
+                .borrow_mut()
+                .entry(archived.id)
+                .or_default()
+                .clone();
+            section.add_child(render_archived_tab_row(
+                archived,
+                mouse_states,
+                appearance,
+                main_text,
+                sub_text,
+            ));
+        }
+    }
+
+    Container::new(section.finish())
+        .with_padding(if is_mini {
+            Padding::uniform(4.)
+        } else {
+            Padding::uniform(8.).with_top(4.)
+        })
+        .finish()
+}
+
+fn render_archived_tab_row(
+    archived: &ArchivedTabSnapshot,
+    mouse_states: ArchivedTabMouseStates,
+    appearance: &Appearance,
+    main_text: WarpThemeFill,
+    sub_text: WarpThemeFill,
+) -> Box<dyn Element> {
+    let theme = appearance.theme();
+    let archive_id = archived.id;
+    let restore_button = Hoverable::new(mouse_states.restore, move |hover| {
+        let background = if hover.is_hovered() {
+            internal_colors::fg_overlay_3(theme)
+        } else {
+            ThemeFill::Solid(ColorU::transparent_black())
+        };
+        Container::new(
+            ConstrainedBox::new(WarpIcon::Refresh.to_warpui_icon(sub_text).finish())
+                .with_width(12.)
+                .with_height(12.)
+                .finish(),
+        )
+        .with_background(background)
+        .with_corner_radius(CornerRadius::with_all(Radius::Pixels(4.)))
+        .with_padding(Padding::uniform(4.))
+        .finish()
+    })
+    .with_cursor(Cursor::PointingHand)
+    .on_click(move |ctx, _, _| {
+        ctx.dispatch_typed_action(WorkspaceAction::RestoreArchivedTab(archive_id));
+    })
+    .finish();
+
+    let delete_id = archived.id;
+    let delete_button = Hoverable::new(mouse_states.delete, move |hover| {
+        let background = if hover.is_hovered() {
+            internal_colors::fg_overlay_3(theme)
+        } else {
+            ThemeFill::Solid(ColorU::transparent_black())
+        };
+        Container::new(
+            ConstrainedBox::new(WarpIcon::Trash.to_warpui_icon(sub_text).finish())
+                .with_width(12.)
+                .with_height(12.)
+                .finish(),
+        )
+        .with_background(background)
+        .with_corner_radius(CornerRadius::with_all(Radius::Pixels(4.)))
+        .with_padding(Padding::uniform(4.))
+        .finish()
+    })
+    .with_cursor(Cursor::PointingHand)
+    .on_click(move |ctx, _, _| {
+        ctx.dispatch_typed_action(WorkspaceAction::DeleteArchivedTab(delete_id));
+    })
+    .finish();
+
+    let title = archived_tab_title(&archived.tab);
+    Hoverable::new(mouse_states.row, move |hover| {
+        let background = if hover.is_hovered() {
+            internal_colors::fg_overlay_2(theme)
+        } else {
+            ThemeFill::Solid(ColorU::transparent_black())
+        };
+        Container::new(
+            Flex::row()
+                .with_main_axis_size(MainAxisSize::Max)
+                .with_cross_axis_alignment(CrossAxisAlignment::Center)
+                .with_spacing(6.)
+                .with_child(
+                    Shrinkable::new(
+                        1.,
+                        Text::new_inline(title.clone(), appearance.ui_font_family(), 12.)
+                            .with_color(main_text.into())
+                            .finish(),
+                    )
+                    .finish(),
+                )
+                .with_child(restore_button)
+                .with_child(delete_button)
+                .finish(),
+        )
+        .with_background(background)
+        .with_corner_radius(CornerRadius::with_all(Radius::Pixels(ROW_CORNER_RADIUS)))
+        .with_padding(Padding::uniform(6.))
+        .finish()
+    })
+    .with_defer_events_to_children()
+    .finish()
 }
 
 #[allow(clippy::too_many_arguments)]
@@ -2204,7 +2504,7 @@ fn render_tab_group_internal(
                 .with_main_axis_size(MainAxisSize::Min)
                 .with_cross_axis_alignment(CrossAxisAlignment::Stretch)
                 .with_spacing(row_spacing);
-            if matches!(resolved_mode, VerticalTabsResolvedMode::Summary) {
+            if !state.is_mini() && matches!(resolved_mode, VerticalTabsResolvedMode::Summary) {
                 let Some((pane_id, row_mouse_state)) = row_mouse_states.first() else {
                     return Empty::new().finish();
                 };
@@ -2328,21 +2628,25 @@ fn render_tab_group_internal(
                         is_last: row_idx + 1 == total_rows,
                     };
                 }
-                let view_mode = *TabSettings::as_ref(app).vertical_tabs_view_mode.value();
-                let row = match view_mode {
-                    VerticalTabsViewMode::Compact => render_compact_pane_row(pane_props, app),
-                    VerticalTabsViewMode::Expanded => render_pane_row(pane_props, app),
+                let row = if state.is_mini() {
+                    render_mini_pane_row(pane_props, app)
+                } else {
+                    match *TabSettings::as_ref(app).vertical_tabs_view_mode.value() {
+                        VerticalTabsViewMode::Compact => render_compact_pane_row(pane_props, app),
+                        VerticalTabsViewMode::Expanded => render_pane_row(pane_props, app),
+                    }
                 };
                 rows.add_child(row);
             }
             rows.finish()
         };
 
-        let show_header = should_show_tab_group_header(
-            has_custom_title,
-            is_being_renamed,
-            visible_pane_ids.len(),
-        );
+        let show_header = !state.is_mini()
+            && should_show_tab_group_header(
+                has_custom_title,
+                is_being_renamed,
+                visible_pane_ids.len(),
+            );
         let group_content = if uses_outer_group_container {
             let mut group = Flex::column()
                 .with_main_axis_size(MainAxisSize::Min)
@@ -2537,13 +2841,9 @@ fn render_tab_group_internal(
         }
     });
 
-    // Mirror the horizontal-tab behavior: middle-click closes the tab, except when it would
-    // close the last tab in a context that doesn't allow closing the window.
-    if ContextFlag::CloseWindow.is_enabled() || !is_last_tab {
-        group_element = group_element.on_middle_click(move |ctx, _, _| {
-            ctx.dispatch_typed_action(WorkspaceAction::CloseTab(tab_index));
-        });
-    }
+    group_element = group_element.on_middle_click(move |ctx, _, _| {
+        ctx.dispatch_typed_action(WorkspaceAction::CloseTab(tab_index));
+    });
 
     let group_element = group_element.with_defer_events_to_children().finish();
 
@@ -2774,6 +3074,7 @@ fn render_grouped_tabs_header(
     is_being_renamed: bool,
     rename_editor: Option<&ViewHandle<EditorView>>,
     collapsed_member_kinds: Option<&[SummaryPaneKind]>,
+    is_mini: bool,
     app: &AppContext,
 ) -> Box<dyn Element> {
     let appearance = Appearance::as_ref(app);
@@ -2786,7 +3087,7 @@ fn render_grouped_tabs_header(
     // Collapsed groups show the icon collage (same component as horizontal tab
     // groups) in place of the chevron, sized to VERTICAL_TABS_ICON_SIZE so
     // the 2-icon variant matches the tab Summary Pair layout exactly.
-    let tab_group_icon = if is_collapsed {
+    let tab_group_icon = if is_collapsed || is_mini {
         let kinds = collapsed_member_kinds.unwrap_or(&[]);
         render_group_member_icon_collage(kinds, VERTICAL_TABS_ICON_SIZE, appearance)
     } else {
@@ -2880,22 +3181,31 @@ fn render_grouped_tabs_header(
     let group_pinned = FeatureFlag::PinnedTabs.is_enabled() && group.pinned;
     let row = Flex::row()
         .with_main_axis_size(MainAxisSize::Max)
-        .with_main_axis_alignment(MainAxisAlignment::SpaceBetween)
+        .with_main_axis_alignment(if is_mini {
+            MainAxisAlignment::Center
+        } else {
+            MainAxisAlignment::SpaceBetween
+        })
         .with_cross_axis_alignment(CrossAxisAlignment::Center)
         .with_child(
             Shrinkable::new(
                 1.,
                 Flex::row()
                     .with_main_axis_size(MainAxisSize::Max)
+                    .with_main_axis_alignment(if is_mini {
+                        MainAxisAlignment::Center
+                    } else {
+                        MainAxisAlignment::Start
+                    })
                     .with_cross_axis_alignment(CrossAxisAlignment::Center)
                     .with_spacing(ICON_WITH_STATUS_GAP)
                     .with_child(tab_group_icon)
-                    .with_child(Shrinkable::new(1., text_column).finish())
+                    .with_children((!is_mini).then(|| Shrinkable::new(1., text_column).finish()))
                     .finish(),
             )
             .finish(),
         )
-        .with_child(action_buttons)
+        .with_children((!is_mini).then_some(action_buttons))
         .finish();
 
     // Resolve the group's color so the header tints to match its member tabs.
@@ -2911,7 +3221,11 @@ fn render_grouped_tabs_header(
             WarpThemeFill::Solid(ColorU::transparent_black())
         };
         let mut container = Container::new(row)
-            .with_padding(Padding::uniform(GROUP_HORIZONTAL_PADDING))
+            .with_padding(Padding::uniform(if is_mini {
+                7.
+            } else {
+                GROUP_HORIZONTAL_PADDING
+            }))
             .with_corner_radius(CornerRadius::with_all(Radius::Pixels(ROW_CORNER_RADIUS)))
             .with_border(Border::all(1.).with_border_fill(border_fill));
         if let Some(color) = group_color_fill {
@@ -2930,7 +3244,7 @@ fn render_grouped_tabs_header(
         // Pin indicator anchored at the visible top-right corner, matching
         // the per-tab pin placement. Hidden whenever the action buttons
         // are visible so the two never overlap.
-        if group_pinned && !show_action_buttons {
+        if group_pinned && !show_action_buttons && !is_mini {
             let pin_icon = ConstrainedBox::new(
                 WarpIcon::PinFilledDiagonal
                     .to_warpui_icon(sub_text_color)
@@ -3007,6 +3321,7 @@ fn render_grouped_tab_container(
         .any(|(tab_index, _)| *tab_index == workspace.active_tab_index);
     let is_collapsed = group.collapsed;
     let first_member_index = members.first().map(|(index, _)| *index).unwrap_or(0);
+    let is_mini = state.is_mini();
 
     let resolved_mode = resolve_vertical_tabs_mode(app);
     let needs_outer_horizontal_padding = uses_outer_group_container(match resolved_mode {
@@ -3038,7 +3353,7 @@ fn render_grouped_tab_container(
         // Compute member kinds only when collapsed — the collage is only
         // rendered then, so this skips the per-tab pane walk when expanded.
         let collapsed_member_kinds =
-            is_collapsed.then(|| workspace.compute_group_member_kinds(group.id, app));
+            (is_collapsed || is_mini).then(|| workspace.compute_group_member_kinds(group.id, app));
         let header = render_grouped_tabs_header(
             &group,
             member_count,
@@ -3049,6 +3364,7 @@ fn render_grouped_tab_container(
             is_being_renamed,
             rename_editor.as_ref(),
             collapsed_member_kinds.as_deref(),
+            is_mini,
             app,
         );
         // While a pane is being dragged, the group header is a drop zone for the
@@ -7366,6 +7682,28 @@ pub(super) fn render_detail_sidecar(
         child_anchor,
         sidecar: ConstrainedBox::new(sidecar).with_width(width).finish(),
     })
+}
+
+fn render_mini_pane_row(props: PaneProps<'_>, app: &AppContext) -> Box<dyn Element> {
+    let appearance = Appearance::as_ref(app);
+    let theme = appearance.theme();
+    let icon = render_pane_icon_with_status(
+        resolve_icon_with_status_variant(&props.typed, &props.title, appearance, app),
+        theme,
+    );
+    let content = Flex::row()
+        .with_main_axis_size(MainAxisSize::Max)
+        .with_main_axis_alignment(MainAxisAlignment::Center)
+        .with_cross_axis_alignment(CrossAxisAlignment::Center)
+        .with_child(
+            ConstrainedBox::new(icon)
+                .with_width(VERTICAL_TABS_ICON_SIZE)
+                .with_height(VERTICAL_TABS_ICON_SIZE)
+                .finish(),
+        )
+        .finish();
+
+    render_pane_row_element(props, Padding::uniform(7.), true, content, theme)
 }
 
 fn render_compact_pane_row(props: PaneProps<'_>, app: &AppContext) -> Box<dyn Element> {
