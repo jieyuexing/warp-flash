@@ -263,6 +263,8 @@ use crate::code_review::CodeReviewTelemetryEvent;
 use crate::code_review::GlobalCodeReviewModel;
 use crate::code_review::diff_state::DiffStateModel;
 use crate::code_review::telemetry_event::CodeReviewPaneEntrypoint;
+#[cfg(not(target_family = "wasm"))]
+use crate::codex_rate_limits::CodexRateLimitsModel;
 use crate::coding_panel_enablement_state::CodingPanelEnablementState;
 use crate::context_chips::ChipRuntimeCapabilities;
 use crate::default_terminal::DefaultTerminal;
@@ -282,6 +284,10 @@ use crate::editor::{
 use crate::env_vars::CloudEnvVarCollection;
 use crate::env_vars::manager::{EnvVarCollectionManager, EnvVarCollectionSource};
 use crate::experiments::{BlockOnboarding, Experiment};
+#[cfg(not(target_family = "wasm"))]
+use crate::external_session_index::ExternalSessionIndexModel;
+#[cfg(not(target_family = "wasm"))]
+use crate::grok_rate_limits::GrokRateLimitsModel;
 use crate::launch_configs::launch_config::WindowTemplate;
 use crate::launch_configs::save_modal::{LaunchConfigModalEvent, LaunchConfigSaveModal};
 use crate::menu::{
@@ -995,6 +1001,13 @@ struct ThirdPartyLocalContinuationLaunch {
     command: String,
 }
 
+#[cfg(not(target_family = "wasm"))]
+#[derive(Clone, Copy)]
+enum QuotaProvider {
+    Codex,
+    Grok,
+}
+
 /// Per-`TabGroupId` hover state for the horizontal tab bar header.
 #[derive(Clone, Default)]
 struct HorizontalTabGroupMouseStates {
@@ -1023,6 +1036,10 @@ pub struct Workspace {
     tab_mru_order: Vec<EntityId>,
     pub(crate) hovered_tab_index: Option<TabBarHoverIndex>,
     tab_bar_hover_state: MouseStateHandle,
+    #[cfg(not(target_family = "wasm"))]
+    codex_quota_mouse_state: MouseStateHandle,
+    #[cfg(not(target_family = "wasm"))]
+    grok_quota_mouse_state: MouseStateHandle,
     tab_fixed_width: Option<f32>,
     traffic_light_mouse_states: TrafficLightMouseStates,
     /// Tab groups in this workspace, keyed by id.
@@ -3166,6 +3183,20 @@ impl Workspace {
         ctx.subscribe_to_model(&CLIAgentSessionsModel::handle(ctx), |me, _, event, ctx| {
             me.handle_cli_agent_sessions_event(event, ctx);
         });
+        #[cfg(not(target_family = "wasm"))]
+        {
+            let codex_rate_limits_model = CodexRateLimitsModel::handle(ctx);
+            ctx.subscribe_to_model(&codex_rate_limits_model, |_, _, _, ctx| ctx.notify());
+            codex_rate_limits_model.update(ctx, |model, ctx| model.ensure_started(ctx));
+
+            let grok_rate_limits_model = GrokRateLimitsModel::handle(ctx);
+            ctx.subscribe_to_model(&grok_rate_limits_model, |_, _, _, ctx| ctx.notify());
+            grok_rate_limits_model.update(ctx, |model, ctx| model.ensure_started(ctx));
+
+            let external_session_index_model = ExternalSessionIndexModel::handle(ctx);
+            ctx.subscribe_to_model(&external_session_index_model, |_, _, _, ctx| ctx.notify());
+            external_session_index_model.update(ctx, |model, ctx| model.ensure_started(ctx));
+        }
 
         ctx.subscribe_to_model(
             &AgentNotificationsModel::handle(ctx),
@@ -3398,6 +3429,10 @@ impl Workspace {
             tab_mru_order: Vec::new(),
             hovered_tab_index: None,
             tab_bar_hover_state: Default::default(),
+            #[cfg(not(target_family = "wasm"))]
+            codex_quota_mouse_state: Default::default(),
+            #[cfg(not(target_family = "wasm"))]
+            grok_quota_mouse_state: Default::default(),
             traffic_light_mouse_states: Default::default(),
             tab_groups: HashMap::new(),
             horizontal_tab_group_mouse_states: RefCell::default(),
@@ -20803,6 +20838,69 @@ impl Workspace {
         .finish()
     }
 
+    #[cfg(not(target_family = "wasm"))]
+    fn render_quota_pill(
+        &self,
+        icon: Icon,
+        label_text: String,
+        detail_text: String,
+        provider: QuotaProvider,
+        mouse_state: MouseStateHandle,
+        appearance: &Appearance,
+    ) -> Box<dyn Element> {
+        let theme = appearance.theme();
+        let text_color = theme.main_text_color(theme.background());
+        let font = appearance.ui_font_family();
+        let default_background = internal_colors::fg_overlay_1(theme);
+        let hover_background = internal_colors::fg_overlay_2(theme);
+
+        Hoverable::new(mouse_state, move |state| {
+            let icon = ConstrainedBox::new(icon.to_warpui_icon(text_color.into()).finish())
+                .with_width(14.)
+                .with_height(14.)
+                .finish();
+            let displayed_text = if state.is_hovered() {
+                detail_text.clone()
+            } else {
+                label_text.clone()
+            };
+            let label = Text::new_inline(displayed_text, font.clone(), 12.)
+                .with_color(text_color.into())
+                .with_style(Properties::default().weight(Weight::Medium))
+                .finish();
+            let content = Flex::row()
+                .with_cross_axis_alignment(CrossAxisAlignment::Center)
+                .with_spacing(6.)
+                .with_child(icon)
+                .with_child(label)
+                .finish();
+            ConstrainedBox::new(
+                Container::new(content)
+                    .with_background(if state.is_hovered() {
+                        hover_background
+                    } else {
+                        default_background
+                    })
+                    .with_corner_radius(CornerRadius::with_all(Radius::Pixels(4.)))
+                    .with_padding_left(8.)
+                    .with_padding_right(8.)
+                    .with_padding_top(4.)
+                    .with_padding_bottom(4.)
+                    .finish(),
+            )
+            .with_height(24.)
+            .finish()
+        })
+        .with_cursor(Cursor::PointingHand)
+        .on_click(move |ctx, _, _| {
+            ctx.dispatch_typed_action(match provider {
+                QuotaProvider::Codex => WorkspaceAction::RefreshCodexRateLimits,
+                QuotaProvider::Grok => WorkspaceAction::RefreshGrokRateLimits,
+            });
+        })
+        .finish()
+    }
+
     fn render_tab_bar_contents(
         &self,
         hover_fixed_width: Option<f32>,
@@ -21262,6 +21360,34 @@ impl Workspace {
         if let Some(pill) = self.render_team_switcher_pill(appearance, ctx) {
             target.add_child(pill);
         }
+
+        #[cfg(not(target_family = "wasm"))]
+        target.add_child(
+            Container::new(
+                Flex::row()
+                    .with_spacing(4.)
+                    .with_child(self.render_quota_pill(
+                        Icon::OpenAILogo,
+                        CodexRateLimitsModel::as_ref(ctx).label(),
+                        CodexRateLimitsModel::as_ref(ctx).detail_label(),
+                        QuotaProvider::Codex,
+                        self.codex_quota_mouse_state.clone(),
+                        appearance,
+                    ))
+                    .with_child(self.render_quota_pill(
+                        Icon::XLogo,
+                        GrokRateLimitsModel::as_ref(ctx).label(),
+                        GrokRateLimitsModel::as_ref(ctx).detail_label(),
+                        QuotaProvider::Grok,
+                        self.grok_quota_mouse_state.clone(),
+                        appearance,
+                    ))
+                    .finish(),
+            )
+            .with_margin_left(8.)
+            .with_margin_right(4.)
+            .finish(),
+        );
 
         if let Some(update_pill) = self.render_tab_overflow_menu(ctx, appearance) {
             target.add_child(
@@ -23892,6 +24018,12 @@ impl TypedActionView for Workspace {
                 position,
             } => self.toggle_vertical_tabs_pane_context_menu(*tab_index, *target, *position, ctx),
             ToggleTabBarOverflowMenu => self.toggle_tab_bar_overflow_menu(ctx),
+            RefreshCodexRateLimits => {
+                CodexRateLimitsModel::handle(ctx).update(ctx, |model, ctx| model.refresh_now(ctx));
+            }
+            RefreshGrokRateLimits => {
+                GrokRateLimitsModel::handle(ctx).update(ctx, |model, ctx| model.refresh_now(ctx));
+            }
             ToggleBlockSnackbar => self.toggle_block_snackbar(ctx),
             ToggleWelcomeTips => self.toggle_welcome_tips_visiblity(ctx),
             CloseTab(index) => self.close_tab(*index, false, true, ctx),

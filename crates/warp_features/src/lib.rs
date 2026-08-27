@@ -889,6 +889,9 @@ pub enum FeatureFlag {
     /// are protected from reordering.
     PinnedTabs,
 
+    /// Shows the Warposs browser for local Codex and Grok sessions.
+    WarpossExternalSessionTabs,
+
     /// Gates the SuperGrok feature, which lets users
     /// connect a Grok subscription instead of pasting an API key.
     SuperGrok,
@@ -1075,7 +1078,10 @@ pub const RELEASE_FLAGS: &[FeatureFlag] = &[
 ];
 
 /// Flags that we want to allow to switch at runtime (assuming RuntimeFeatureFlags is set)
-pub const RUNTIME_FEATURE_FLAGS: &[FeatureFlag] = &[FeatureFlag::LocalClaudeCodexChildHarnesses];
+pub const RUNTIME_FEATURE_FLAGS: &[FeatureFlag] = &[
+    FeatureFlag::LocalClaudeCodexChildHarnesses,
+    FeatureFlag::WarpossExternalSessionTabs,
+];
 
 impl FeatureFlag {
     pub fn is_enabled(&self) -> bool {

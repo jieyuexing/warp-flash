@@ -27,6 +27,12 @@ fn settings_popup_toggle_does_not_save_workspace_state() {
 }
 
 #[test]
+fn quota_refresh_actions_do_not_save_workspace_state() {
+    assert!(!WorkspaceAction::RefreshCodexRateLimits.should_save_app_state_on_action());
+    assert!(!WorkspaceAction::RefreshGrokRateLimits.should_save_app_state_on_action());
+}
+
+#[test]
 fn display_granularity_change_does_not_save_workspace_state() {
     assert!(
         !WorkspaceAction::SetVerticalTabsDisplayGranularity(VerticalTabsDisplayGranularity::Panes)

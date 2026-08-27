@@ -16,6 +16,8 @@ mod chip_configurator;
 mod cloud_object;
 mod code;
 mod code_review;
+#[cfg(not(target_family = "wasm"))]
+mod codex_rate_limits;
 mod coding_entrypoints;
 mod coding_panel_enablement_state;
 mod command_palette;
@@ -36,10 +38,14 @@ mod env_vars;
 mod experiments;
 mod external_cli_resume;
 mod external_secrets;
+#[cfg(not(target_family = "wasm"))]
+mod external_session_index;
 #[cfg(target_family = "wasm")]
 mod font_fallback;
 mod global_resource_handles;
 mod gpu_state;
+#[cfg(not(target_family = "wasm"))]
+mod grok_rate_limits;
 mod input_classifier;
 mod interval_timer;
 mod linear;
@@ -2241,6 +2247,12 @@ pub(crate) fn initialize_app(
     // loads metadata.
     ctx.add_singleton_model(|_| RestoredAgentConversations::new());
     ctx.add_singleton_model(|_| CLIAgentSessionsModel::new());
+    #[cfg(not(target_family = "wasm"))]
+    ctx.add_singleton_model(|_| codex_rate_limits::CodexRateLimitsModel::new());
+    #[cfg(not(target_family = "wasm"))]
+    ctx.add_singleton_model(|_| grok_rate_limits::GrokRateLimitsModel::new());
+    #[cfg(not(target_family = "wasm"))]
+    ctx.add_singleton_model(|_| external_session_index::ExternalSessionIndexModel::new());
     // ActiveAgentViewsModel is used to track active agent conversations and notify listeners when they change.
     ctx.add_singleton_model(|_| ActiveAgentViewsModel::new());
     ctx.add_singleton_model(AgentNotificationsModel::new);

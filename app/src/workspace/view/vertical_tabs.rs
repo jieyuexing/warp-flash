@@ -50,6 +50,8 @@ use crate::context_chips::github_pr_display_text_from_url;
 use crate::drive::DriveObjectType;
 use crate::drive::cloud_object_styling::warp_drive_icon_color;
 use crate::editor::EditorView;
+#[cfg(not(target_family = "wasm"))]
+use crate::external_session_index::render_external_session_tabs;
 use crate::pane_group::pane::IPaneType;
 use crate::pane_group::{
     CodePane, NotebookPane, PaneGroup, PaneId, TabBarHoverIndex, TerminalPane, WorkflowPane,
@@ -1666,9 +1668,21 @@ fn render_vertical_tabs_panel(
     let appearance = Appearance::as_ref(app);
     let theme = appearance.theme();
 
+    let groups = render_groups(state, workspace, app);
+    #[cfg(not(target_family = "wasm"))]
+    let groups = if FeatureFlag::WarpossExternalSessionTabs.is_enabled() {
+        Flex::column()
+            .with_cross_axis_alignment(CrossAxisAlignment::Stretch)
+            .with_child(render_external_session_tabs(workspace, app))
+            .with_child(groups)
+            .finish()
+    } else {
+        groups
+    };
+
     let scrollable_groups = ClippedScrollable::vertical(
         state.scroll_state.clone(),
-        render_groups(state, workspace, app),
+        groups,
         ScrollbarWidth::Custom(4.),
         theme.nonactive_ui_detail().into(),
         theme.active_ui_detail().into(),

@@ -18,3 +18,13 @@ fn local_child_harnesses_are_local_only_by_default() {
     assert!(!DEBUG_FLAGS.contains(&FeatureFlag::LocalClaudeCodexChildHarnesses));
     assert!(!DOGFOOD_FLAGS.contains(&FeatureFlag::LocalClaudeCodexChildHarnesses));
 }
+
+#[test]
+fn warposs_external_session_tabs_are_runtime_toggleable_and_default_off() {
+    assert!(RUNTIME_FEATURE_FLAGS.contains(&FeatureFlag::WarpossExternalSessionTabs));
+    assert!(!DEBUG_FLAGS.contains(&FeatureFlag::WarpossExternalSessionTabs));
+    assert!(!LOCAL_FLAGS.contains(&FeatureFlag::WarpossExternalSessionTabs));
+    assert!(!DOGFOOD_FLAGS.contains(&FeatureFlag::WarpossExternalSessionTabs));
+    assert!(!PREVIEW_FLAGS.contains(&FeatureFlag::WarpossExternalSessionTabs));
+    assert!(!RELEASE_FLAGS.contains(&FeatureFlag::WarpossExternalSessionTabs));
+}
