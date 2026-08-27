@@ -68,6 +68,8 @@ use crate::view_components::ToastFlavor;
 use crate::workspace::sync_inputs::SyncedInputState;
 use crate::workspace::{PaneViewLocator, WorkspaceRegistry};
 #[cfg(not(target_family = "wasm"))]
+use crate::workspaces::user_workspaces::{ResolvedTeamScope, UserWorkspaces};
+#[cfg(not(target_family = "wasm"))]
 use crate::{
     pane_group::child_agent::{
         HiddenChildAgentConversation, HiddenChildAgentConversationRequest,
@@ -1726,7 +1728,15 @@ fn launch_local_no_harness_child(
                     conversation_id,
                     ..
                 }) => {
-                    apply_child_agent_model_override(terminal_view_id, model_id.as_deref(), ctx);
+                    let scope = ResolvedTeamScope::from_scope(
+                        &UserWorkspaces::as_ref(ctx).team_context_for_view(ctx),
+                    );
+                    apply_child_agent_model_override(
+                        &scope,
+                        terminal_view_id,
+                        model_id.as_deref(),
+                        ctx,
+                    );
 
                     // Stamp the task id on the child conversation directly
                     // so the share-reporter in
@@ -1877,7 +1887,11 @@ fn launch_local_harness_child(
                         conversation_id,
                         ..
                     }) => {
+                        let scope = ResolvedTeamScope::from_scope(
+                            &UserWorkspaces::as_ref(ctx).team_context_for_view(ctx),
+                        );
                         apply_child_agent_model_override(
+                            &scope,
                             terminal_view_id,
                             model_id.as_deref(),
                             ctx,

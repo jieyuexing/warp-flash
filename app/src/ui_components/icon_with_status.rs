@@ -445,6 +445,7 @@ fn render_with_cloud_status_badge(
 }
 
 /// Adds a status badge with a cutout ring to the bottom-right of the circle.
+#[allow(clippy::too_many_arguments)]
 fn render_with_optional_status_badge(
     circle: Box<dyn Element>,
     status: Option<&ConversationStatus>,

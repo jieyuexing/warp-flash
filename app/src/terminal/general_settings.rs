@@ -180,13 +180,5 @@ define_settings_group!(GeneralSettings, settings: [
 ]);
 
 #[cfg(test)]
-mod tests {
-    use settings::Setting;
-
-    use super::QuitOnLastWindowClosed;
-
-    #[test]
-    fn warposs_closes_the_last_window_by_terminating_by_default() {
-        assert!(QuitOnLastWindowClosed::default_value());
-    }
-}
+#[path = "general_settings_tests.rs"]
+mod tests;

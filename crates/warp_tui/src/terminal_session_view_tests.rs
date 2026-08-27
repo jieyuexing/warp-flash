@@ -25,13 +25,14 @@ use warp::tui_export::{
     AskUserQuestionType, BlockPadding, BlocklistAIHistoryEvent, BlocklistAIHistoryModel,
     ConversationStatus, ConversationUsageTotals, Harness, InputTypeAutoDetectionSource, LLMId,
     LLMPreferences, LinkedWorkflowData, LongRunningCommandControlState, MessageId,
-    OutputStatusUpdateCallback, ParsedSlashCommandInput, PtyIntent, PtyIntentEvent, ServerOutputId,
-    Session, Shared, SizeInfo, SizeUpdate, SlashCommandDataSource as _, SlashCommandKind, TaskId,
-    TranscriptScope, TuiMcpAction, TuiMcpServerId, TuiOnboardingMarker, TuiOnboardingMarkers,
-    TuiUpArrowHistoryItemKind, UserTakeOverReason, UserWorkspaces, WarpConfig,
-    WarpConfigUpdateEvent, export_conversation_markdown, forkable_tui_conversation_for_test,
-    queue_tui_permission_action, register_tui_session_view_test_singletons,
-    set_tui_default_team_admin_for_test, set_tui_workspace_teams_for_test, slash_commands,
+    OutputStatusUpdateCallback, ParsedSlashCommandInput, PtyIntent, PtyIntentEvent,
+    ResolvedTeamScope, ServerOutputId, Session, Shared, SizeInfo, SizeUpdate,
+    SlashCommandDataSource as _, SlashCommandKind, TaskId, TranscriptScope, TuiMcpAction,
+    TuiMcpServerId, TuiOnboardingMarker, TuiOnboardingMarkers, TuiUpArrowHistoryItemKind,
+    UserTakeOverReason, UserWorkspaces, WarpConfig, WarpConfigUpdateEvent,
+    export_conversation_markdown, forkable_tui_conversation_for_test, queue_tui_permission_action,
+    register_tui_session_view_test_singletons, set_tui_default_team_admin_for_test,
+    set_tui_workspace_teams_for_test, slash_commands,
 };
 use warp_core::channel::{Channel, ChannelState};
 use warp_core::features::FeatureFlag;
@@ -73,11 +74,12 @@ use super::{
     LOADING_CONVERSATION_HINT, LOG_BUNDLE_FAILED_HINT, RUNNING_COMMAND_DETACH_HINT,
     SESSION_CAN_ACCEPT_BLOCKED_TERMINAL_USE_ACTION_FLAG,
     SESSION_CAN_ATTACH_AGENT_TO_RUNNING_COMMAND_FLAG,
-    SESSION_CAN_DETACH_AGENT_FROM_RUNNING_COMMAND_FLAG, SHELL_MODE_HINT, STATUSLINE_RESET_HINT,
-    TuiConversationRestoreOrigin, TuiTerminalSessionAction, TuiTerminalSessionEvent,
-    TuiTerminalSessionView, attachment_focus_available, cost_command_unavailable_hint,
-    export_file_success_message, log_bundle_success_message, mcp_primary_action_hint,
-    raw_prompt_if_not_blank, render_mcp_install_footer, render_mcp_menu_footer,
+    SESSION_CAN_DETACH_AGENT_FROM_RUNNING_COMMAND_FLAG, SHELL_MODE_HINT, STARTING_SHELL_HINT,
+    STATUSLINE_RESET_HINT, TuiConversationRestoreOrigin, TuiTerminalSessionAction,
+    TuiTerminalSessionEvent, TuiTerminalSessionView, attachment_focus_available,
+    cost_command_unavailable_hint, export_file_success_message, log_bundle_success_message,
+    mcp_primary_action_hint, raw_prompt_if_not_blank, render_mcp_install_footer,
+    render_mcp_menu_footer,
 };
 #[cfg(feature = "voice_input")]
 use super::{
@@ -1659,21 +1661,25 @@ fn accepted_model_only_changes_the_current_session() {
     App::test((), |mut app| async move {
         let fixture = focus_test_fixture(&mut app);
         LLMPreferences::handle(&app).update(&mut app, |preferences, ctx| {
-            let mut alternate = preferences.get_default_base_model(ctx).clone();
+            let scope = ResolvedTeamScope::from_scope(
+                &UserWorkspaces::teamless_context_resolver_for_test()(ctx),
+            );
+            let mut alternate = preferences.get_default_base_model(&scope, ctx).clone();
             alternate.id = "tui-session-override".into();
             alternate.display_name = "TUI session override".to_owned();
-            preferences.add_agent_mode_model_for_test(alternate);
+            preferences.add_agent_mode_model_for_test(&scope, alternate, ctx);
         });
         let (first_view, _) = add_focus_test_session(&mut app, &fixture, true);
         let (second_view, _) = add_focus_test_session(&mut app, &fixture, false);
         let (profile_default_id, alternate_id) = app.read(|ctx| {
+            let scope = UserWorkspaces::teamless_context_resolver_for_test()(ctx);
             let preferences = LLMPreferences::as_ref(ctx);
             let profile_default_id = preferences
-                .get_active_profile_base_model(ctx, None)
+                .get_active_profile_base_model(&scope, ctx, None)
                 .id
                 .clone();
             let alternate_id = preferences
-                .get_base_llm_choices_for_agent_mode(ctx)
+                .get_base_llm_choices_for_agent_mode(&scope, ctx)
                 .find(|model| model.id != profile_default_id && model.disable_reason.is_none())
                 .expect("test model catalog should include an alternate model")
                 .id
@@ -1686,24 +1692,25 @@ fn accepted_model_only_changes_the_current_session() {
         });
 
         app.read(|ctx| {
+            let scope = UserWorkspaces::teamless_context_resolver_for_test()(ctx);
             let preferences = LLMPreferences::as_ref(ctx);
             let first_surface_id = first_view.as_ref(ctx).terminal_surface_id;
             let second_surface_id = second_view.as_ref(ctx).terminal_surface_id;
             assert_eq!(
                 preferences
-                    .get_active_base_model(ctx, Some(first_surface_id))
+                    .get_active_base_model(&scope, ctx, Some(first_surface_id))
                     .id,
                 alternate_id
             );
             assert_eq!(
                 preferences
-                    .get_active_base_model(ctx, Some(second_surface_id))
+                    .get_active_base_model(&scope, ctx, Some(second_surface_id))
                     .id,
                 profile_default_id
             );
             assert_eq!(
                 preferences
-                    .get_active_profile_base_model(ctx, Some(first_surface_id))
+                    .get_active_profile_base_model(&scope, ctx, Some(first_surface_id))
                     .id,
                 profile_default_id
             );
@@ -1721,8 +1728,9 @@ fn model_menu_labels_the_profile_default_model() {
         });
 
         view.read(&app, |view, ctx| {
+            let scope = UserWorkspaces::teamless_context_resolver_for_test()(ctx);
             let default_name = LLMPreferences::as_ref(ctx)
-                .get_active_profile_base_model(ctx, Some(view.terminal_surface_id))
+                .get_active_profile_base_model(&scope, ctx, Some(view.terminal_surface_id))
                 .display_name
                 .clone();
             let snapshot = view
@@ -2646,8 +2654,9 @@ fn footer_model_label_is_a_bounded_click_target() {
         });
 
         let model_name = view.read(&app, |view, ctx| {
+            let scope = UserWorkspaces::teamless_context_resolver_for_test()(ctx);
             LLMPreferences::as_ref(ctx)
-                .get_active_base_model(ctx, Some(view.terminal_surface_id))
+                .get_active_base_model(&scope, ctx, Some(view.terminal_surface_id))
                 .display_name
                 .clone()
         });
@@ -3280,7 +3289,7 @@ fn bootstrap_renders_starting_shell_above_input() {
         let lines = render_session(&mut app, &view, 80, 40);
         let status_index = lines
             .iter()
-            .position(|line| line.trim() == "Starting shell...")
+            .position(|line| line.trim() == warp_i18n::localize_ref(STARTING_SHELL_HINT))
             .unwrap_or_else(|| panic!("bootstrap status should render:\n{}", lines.join("\n")));
         let input_index = lines
             .iter()
@@ -3303,7 +3312,7 @@ fn zero_state_position_stays_stable_across_shell_bootstrap() {
         assert!(
             ready_lines
                 .iter()
-                .all(|line| line.trim() != "Starting shell..."),
+                .all(|line| line.trim() != warp_i18n::localize_ref(STARTING_SHELL_HINT)),
             "ready state must not render the bootstrap hint:\n{}",
             ready_lines.join("\n")
         );
@@ -3315,7 +3324,7 @@ fn zero_state_position_stays_stable_across_shell_bootstrap() {
         assert!(
             bootstrap_lines
                 .iter()
-                .any(|line| line.trim() == "Starting shell..."),
+                .any(|line| line.trim() == warp_i18n::localize_ref(STARTING_SHELL_HINT)),
             "bootstrap state must render the starting-shell hint:\n{}",
             bootstrap_lines.join("\n")
         );
@@ -3560,7 +3569,7 @@ fn long_running_command_keeps_input_hidden() {
         assert!(
             !lines
                 .iter()
-                .any(|line| line.trim_end() == "Starting shell..."),
+                .any(|line| line.trim_end() == warp_i18n::localize_ref(STARTING_SHELL_HINT)),
             "LRC must not render bootstrap status:\n{}",
             lines.join("\n")
         );
@@ -4354,7 +4363,11 @@ fn background_session_does_not_receive_first_run_onboarding() {
             );
         });
         let lines = render_session(&mut app, &onboarding_view, 100, 24);
-        assert!(lines.iter().any(|line| line.contains("Welcome to Warp")));
+        assert!(
+            lines
+                .iter()
+                .any(|line| line.contains(warp_i18n::localize_ref("Welcome to Warp")))
+        );
         assert!(
             lines
                 .iter()
@@ -6452,9 +6465,10 @@ fn handoff_is_available_at_zero_state() {
                 .map(|(_, cmd)| cmd.name)
                 .collect();
 
-            assert!(
+            assert_eq!(
                 active_names.contains(&slash_commands::MOVE_TO_CLOUD.name),
-                "/handoff must be active at zero state",
+                ChannelState::channel().allows_ai(),
+                "/handoff availability must follow the product channel's AI policy",
             );
         });
     });

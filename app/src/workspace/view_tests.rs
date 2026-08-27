@@ -148,6 +148,12 @@ pub(crate) fn initialize_app(app: &mut App) {
     app.add_singleton_model(crate::ai::blocklist::QueuedQueryModel::new);
     app.add_singleton_model(|ctx| OrchestrationPillBarModel::new(Default::default(), ctx));
     app.add_singleton_model(|_| CLIAgentSessionsModel::new());
+    #[cfg(not(target_family = "wasm"))]
+    app.add_singleton_model(|_| crate::codex_rate_limits::CodexRateLimitsModel::new());
+    #[cfg(not(target_family = "wasm"))]
+    app.add_singleton_model(|_| crate::grok_rate_limits::GrokRateLimitsModel::new());
+    #[cfg(not(target_family = "wasm"))]
+    app.add_singleton_model(|_| crate::external_session_index::ExternalSessionIndexModel::new());
     // The blocklist controller created during terminal bootstrap subscribes to
     // OrchestrationEventService and OrchestrationEventStreamer unconditionally,
     // so both singletons must be registered before bootstrap.
@@ -682,6 +688,7 @@ fn copy_model_and_profile_preserves_explicit_model_over_source_profile_default()
     use warpui::EntityId;
 
     use crate::ai::llms::{AvailableLLMs, LLMId, LLMInfo, ModelsByFeature};
+    use crate::workspaces::user_workspaces::TeamlessScopeForTest;
 
     App::test((), |mut app| async move {
         initialize_app(&mut app);
@@ -722,21 +729,23 @@ fn copy_model_and_profile_preserves_explicit_model_over_source_profile_default()
             });
 
             // Source's explicit selection = M (differs from its profile default D).
+            let scope = TeamlessScopeForTest;
             LLMPreferences::handle(ctx).update(ctx, |prefs, ctx| {
-                prefs.update_preferred_agent_mode_llm(&m, source_id, ctx);
+                prefs.update_preferred_agent_mode_llm(&scope, &m, source_id, ctx);
             });
         });
 
         // Preconditions: source resolves to M; destination's current default is M.
         app.update(|ctx| {
+            let scope = TeamlessScopeForTest;
             let prefs = LLMPreferences::as_ref(ctx);
             assert_eq!(
-                prefs.get_active_base_model(ctx, Some(source_id)).id,
+                prefs.get_active_base_model(&scope, ctx, Some(source_id)).id,
                 m,
                 "source pane should resolve to its explicit selection"
             );
             assert_eq!(
-                prefs.get_active_base_model(ctx, Some(new_id)).id,
+                prefs.get_active_base_model(&scope, ctx, Some(new_id)).id,
                 m,
                 "destination pane's current profile default should be M"
             );
@@ -748,9 +757,10 @@ fn copy_model_and_profile_preserves_explicit_model_over_source_profile_default()
         });
 
         app.update(|ctx| {
+            let scope = TeamlessScopeForTest;
             assert_eq!(
                 LLMPreferences::as_ref(ctx)
-                    .get_active_base_model(ctx, Some(new_id))
+                    .get_active_base_model(&scope, ctx, Some(new_id))
                     .id,
                 m,
                 "destination pane must retain the source's explicit selection, not the source profile default"
@@ -1241,7 +1251,7 @@ fn mock_workspace_with_shared_session(app: &mut App) -> ViewHandle<Workspace> {
 }
 
 // Creates a workspace as a viewer of a shared session.
-fn mock_workspace_viewing_shared_session(app: &mut App) -> ViewHandle<Workspace> {
+pub(crate) fn mock_workspace_viewing_shared_session(app: &mut App) -> ViewHandle<Workspace> {
     // Create the workspace as a session-sharing sharer.
     let global_resource_handles = GlobalResourceHandles::mock(app);
 

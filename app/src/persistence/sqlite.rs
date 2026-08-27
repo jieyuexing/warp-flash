@@ -1921,6 +1921,7 @@ fn save_workspace(conn: &mut SqliteConnection, workspace: WorkspaceMetadata) -> 
         name: workspace.name,
         server_uid: workspace.uid.into(),
         is_selected: true,
+        feature_model_choice_json: serde_json::to_string(&workspace.feature_model_choice).ok(),
     };
 
     diesel::insert_into(workspaces)
@@ -1939,6 +1940,7 @@ fn save_workspace(conn: &mut SqliteConnection, workspace: WorkspaceMetadata) -> 
             name: team.name,
             server_uid: team.uid.into(),
             billing_metadata_json: serde_json::to_string(&team.billing_metadata).ok(),
+            feature_model_choice_json: serde_json::to_string(&team.feature_model_choice).ok(),
         };
         diesel::insert_into(teams)
             .values(&new_team)
@@ -2022,6 +2024,7 @@ fn save_workspaces(
             is_selected: current_workspace_uid
                 .map(|current_uid| workspace.uid == current_uid)
                 .unwrap_or(false),
+            feature_model_choice_json: serde_json::to_string(&workspace.feature_model_choice).ok(),
         })
         .collect();
     diesel::insert_or_ignore_into(workspaces)
@@ -2040,6 +2043,8 @@ fn save_workspaces(
                     server_uid: team.uid.into(),
                     name: team.name.clone(),
                     billing_metadata_json: serde_json::to_string(&team.billing_metadata).ok(),
+                    feature_model_choice_json: serde_json::to_string(&team.feature_model_choice)
+                        .ok(),
                 })
                 .collect::<Vec<NewTeam>>()
         })
@@ -2792,12 +2797,18 @@ fn read_sqlite_data(
 
             let members = members_by_team_id.get(&team.id).cloned();
 
+            let feature_model_choice = team
+                .feature_model_choice_json
+                .as_ref()
+                .and_then(|json| serde_json::from_str(json).ok());
+
             TeamMetadata::from_local_cache(
                 ServerId::from_string_lossy(team.server_uid),
                 team.name,
                 team_settings,
                 billing_metadata,
                 members,
+                feature_model_choice,
             )
         })
         .collect();
@@ -2825,10 +2836,15 @@ fn read_sqlite_data(
                     })
                     .cloned()
                     .collect();
+                let feature_model_choice = workspace
+                    .feature_model_choice_json
+                    .as_ref()
+                    .and_then(|json| serde_json::from_str(json).ok());
                 WorkspaceMetadata::from_local_cache(
                     workspace.server_uid.into(),
                     workspace.name,
                     Some(teams_for_workspace),
+                    feature_model_choice,
                 )
             })
         })

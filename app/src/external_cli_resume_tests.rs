@@ -1,7 +1,7 @@
-use super::external_cli_resume::*;
-
 #[cfg(not(target_family = "wasm"))]
 use std::fs;
+
+use super::external_cli_resume::*;
 
 #[test]
 fn resume_commands_use_explicit_session_ids() {

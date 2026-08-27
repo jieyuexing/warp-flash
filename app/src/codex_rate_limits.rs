@@ -277,10 +277,10 @@ fn codex_program_from(path: Option<&OsStr>, home: Option<&Path>) -> PathBuf {
     }
 
     #[cfg(target_os = "macos")]
-    if let Some(candidate) = home.map(|home| home.join(".local/bin").join(executable)) {
-        if candidate.is_file() {
-            return candidate;
-        }
+    if let Some(candidate) = home.map(|home| home.join(".local/bin").join(executable))
+        && candidate.is_file()
+    {
+        return candidate;
     }
 
     #[cfg(target_os = "macos")]

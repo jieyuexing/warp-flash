@@ -550,7 +550,7 @@ fn render_session_tab(
         .with_child(
             Shrinkable::new(
                 1.,
-                Text::new_inline(session.title.clone(), font.clone(), font_size)
+                Text::new_inline(session.title.clone(), font, font_size)
                     .with_color(main_color.into())
                     .with_style(Properties::default().weight(Weight::Medium))
                     .finish(),
@@ -560,7 +560,7 @@ fn render_session_tab(
         .with_child(
             Text::new_inline(
                 warp_i18n::localize_format!("ID: {id}", id = session.session_id),
-                font.clone(),
+                font,
                 font_size - 2.,
             )
             .with_color(sub_color.into())
@@ -569,7 +569,7 @@ fn render_session_tab(
         .with_child(
             Text::new_inline(
                 warp_i18n::localize_format!("Working directory: {cwd}", cwd = cwd),
-                font.clone(),
+                font,
                 font_size - 2.,
             )
             .with_color(sub_color.into())
