@@ -57,13 +57,18 @@ impl IntentionSlide {
         *self.onboarding_state.as_ref(app).intention()
     }
 
-    fn render_content(&self, appearance: &Appearance, selected_index: usize) -> Box<dyn Element> {
+    fn render_content(
+        &self,
+        appearance: &Appearance,
+        selected_index: usize,
+        ai_available: bool,
+    ) -> Box<dyn Element> {
         let bottom_nav = Align::new(self.render_bottom_nav(appearance, selected_index)).finish();
 
         slide_content::onboarding_slide_content(
             vec![
                 Align::new(self.render_header(appearance)).left().finish(),
-                Align::new(self.render_options(appearance, selected_index)).finish(),
+                Align::new(self.render_options(appearance, selected_index, ai_available)).finish(),
             ],
             bottom_nav,
             self.scroll_state.clone(),
@@ -115,7 +120,22 @@ impl IntentionSlide {
             .finish()
     }
 
-    fn render_options(&self, appearance: &Appearance, selected_index: usize) -> Box<dyn Element> {
+    fn render_options(
+        &self,
+        appearance: &Appearance,
+        selected_index: usize,
+        ai_available: bool,
+    ) -> Box<dyn Element> {
+        if !ai_available {
+            return Container::new(self.render_terminal_card(
+                appearance,
+                true,
+                self.classic_terminal_mouse_state.clone(),
+            ))
+            .with_margin_top(38.)
+            .finish();
+        }
+
         let agent_card = self.render_agent_card(
             appearance,
             selected_index == 0,
@@ -454,15 +474,20 @@ impl View for IntentionSlide {
         let appearance = Appearance::as_ref(app);
 
         let intention = self.model_intention(app);
+        let ai_available = self.onboarding_state.as_ref(app).ai_available();
 
-        let selected_index = match intention {
-            OnboardingIntention::AgentDrivenDevelopment => 0,
-            OnboardingIntention::Terminal => 1,
+        let selected_index = if ai_available {
+            match intention {
+                OnboardingIntention::AgentDrivenDevelopment => 0,
+                OnboardingIntention::Terminal => 1,
+            }
+        } else {
+            1
         };
 
         // Background is rendered by the parent onboarding view (including background images).
         layout::static_left(
-            || self.render_content(appearance, selected_index),
+            || self.render_content(appearance, selected_index, ai_available),
             || self.render_visual(selected_index),
         )
     }
@@ -470,16 +495,27 @@ impl View for IntentionSlide {
 
 impl IntentionSlide {
     fn select_option(&mut self, index: usize, ctx: &mut ViewContext<Self>) {
-        self.onboarding_state.update(ctx, |model, ctx| match index {
-            0 => model.set_intention_agent_driven_development(ctx),
-            1 => model.set_intention_terminal(ctx),
-            _ => {}
+        self.onboarding_state.update(ctx, |model, ctx| {
+            if !model.ai_available() {
+                model.set_intention_terminal(ctx);
+                return;
+            }
+            match index {
+                0 => model.set_intention_agent_driven_development(ctx),
+                1 => model.set_intention_terminal(ctx),
+                _ => {}
+            }
         });
         ctx.notify();
     }
 
     fn next(&mut self, ctx: &mut ViewContext<Self>) {
         self.onboarding_state.update(ctx, |model, ctx| {
+            if !model.ai_available() {
+                model.set_intention_terminal(ctx);
+                model.next(ctx);
+                return;
+            }
             match model.intention() {
                 // "Just use the terminal" confirms leaving AI behind before advancing.
                 OnboardingIntention::Terminal => {
@@ -494,6 +530,9 @@ impl IntentionSlide {
 
 impl OnboardingSlide for IntentionSlide {
     fn on_up(&mut self, ctx: &mut ViewContext<Self>) {
+        if !self.onboarding_state.as_ref(ctx).ai_available() {
+            return;
+        }
         let selected_index: usize = match self.model_intention(ctx) {
             OnboardingIntention::AgentDrivenDevelopment => 0,
             OnboardingIntention::Terminal => 1,
@@ -503,6 +542,9 @@ impl OnboardingSlide for IntentionSlide {
     }
 
     fn on_down(&mut self, ctx: &mut ViewContext<Self>) {
+        if !self.onboarding_state.as_ref(ctx).ai_available() {
+            return;
+        }
         let selected_index: usize = match self.model_intention(ctx) {
             OnboardingIntention::AgentDrivenDevelopment => 0,
             OnboardingIntention::Terminal => 1,

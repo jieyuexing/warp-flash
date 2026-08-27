@@ -8,6 +8,7 @@ use enclose::enclose;
 use itertools::Itertools;
 use settings::Setting as _;
 use settings::manager::SettingsManager;
+use warp_core::channel::ChannelState;
 use warp_core::context_flag::ContextFlag;
 use warp_errors::{report_error, report_if_error};
 use warp_util::path::user_friendly_path;
@@ -63,18 +64,22 @@ const MAX_RECENT_REPOS_IN_MENU: usize = 10;
 
 /// Creates the root app menu bar
 pub fn menu_bar(ctx: &mut AppContext) -> MenuBar {
-    MenuBar::new(vec![
+    let mut menus = vec![
         make_new_app_menu(ctx),
         make_new_file_menu(ctx),
         make_new_edit_menu(ctx),
         make_new_view_menu(ctx),
         make_new_tab_menu(ctx),
         make_new_blocks_menu(ctx),
-        make_new_ai_menu(ctx),
-        make_new_drive_menu(ctx),
-        make_new_window_menu(),
-        make_new_help_menu(),
-    ])
+    ];
+    if ChannelState::channel().allows_ai() {
+        menus.push(make_new_ai_menu(ctx));
+    }
+    if ChannelState::channel().allows_account_login() {
+        menus.push(make_new_drive_menu(ctx));
+    }
+    menus.extend([make_new_window_menu(), make_new_help_menu()]);
+    MenuBar::new(menus)
 }
 
 // Creates the app dock menu

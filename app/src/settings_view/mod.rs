@@ -1401,44 +1401,55 @@ impl SettingsView {
 
         // Build sidebar nav items. Umbrellas group their subpages here and
         // nowhere else, so this list is the only place membership is declared.
-        let mut nav_items = vec![
-            SettingsNavItem::Page(SettingsSection::Account),
-            SettingsNavItem::Umbrella(SettingsUmbrella::new(
-                "Agents",
-                vec![
-                    SettingsSection::WarpAgent,
-                    SettingsSection::AgentProfiles,
-                    SettingsSection::AgentMCPServers,
-                    SettingsSection::Knowledge,
-                    SettingsSection::ThirdPartyCLIAgents,
-                ],
-            )),
-            SettingsNavItem::Page(SettingsSection::BillingAndUsage),
-            SettingsNavItem::Umbrella(SettingsUmbrella::new(
-                "Code",
-                vec![
-                    SettingsSection::CodeIndexing,
-                    SettingsSection::EditorAndCodeReview,
-                ],
-            )),
-            SettingsNavItem::Umbrella(SettingsUmbrella::new(
-                "Cloud platform",
-                vec![
-                    SettingsSection::CloudEnvironments,
-                    SettingsSection::WarpCloudAgentAPIKeys,
-                ],
-            )),
-            SettingsNavItem::Page(SettingsSection::Teams),
-            SettingsNavItem::Page(SettingsSection::Appearance),
-            SettingsNavItem::Page(SettingsSection::Features),
-            SettingsNavItem::Page(SettingsSection::Keybindings),
-            SettingsNavItem::Page(SettingsSection::Warpify),
-            SettingsNavItem::Page(SettingsSection::Referrals),
-            SettingsNavItem::Page(SettingsSection::SharedBlocks),
-            SettingsNavItem::Page(SettingsSection::WarpDrive),
-            SettingsNavItem::Page(SettingsSection::Privacy),
-            SettingsNavItem::Page(SettingsSection::About),
-        ];
+        let mut nav_items = if ChannelState::channel().allows_account_login() {
+            vec![
+                SettingsNavItem::Page(SettingsSection::Account),
+                SettingsNavItem::Umbrella(SettingsUmbrella::new(
+                    "Agents",
+                    vec![
+                        SettingsSection::WarpAgent,
+                        SettingsSection::AgentProfiles,
+                        SettingsSection::AgentMCPServers,
+                        SettingsSection::Knowledge,
+                        SettingsSection::ThirdPartyCLIAgents,
+                    ],
+                )),
+                SettingsNavItem::Page(SettingsSection::BillingAndUsage),
+                SettingsNavItem::Umbrella(SettingsUmbrella::new(
+                    "Code",
+                    vec![
+                        SettingsSection::CodeIndexing,
+                        SettingsSection::EditorAndCodeReview,
+                    ],
+                )),
+                SettingsNavItem::Umbrella(SettingsUmbrella::new(
+                    "Cloud platform",
+                    vec![
+                        SettingsSection::CloudEnvironments,
+                        SettingsSection::WarpCloudAgentAPIKeys,
+                    ],
+                )),
+                SettingsNavItem::Page(SettingsSection::Teams),
+                SettingsNavItem::Page(SettingsSection::Appearance),
+                SettingsNavItem::Page(SettingsSection::Features),
+                SettingsNavItem::Page(SettingsSection::Keybindings),
+                SettingsNavItem::Page(SettingsSection::Warpify),
+                SettingsNavItem::Page(SettingsSection::Referrals),
+                SettingsNavItem::Page(SettingsSection::SharedBlocks),
+                SettingsNavItem::Page(SettingsSection::WarpDrive),
+                SettingsNavItem::Page(SettingsSection::Privacy),
+                SettingsNavItem::Page(SettingsSection::About),
+            ]
+        } else {
+            vec![
+                SettingsNavItem::Page(SettingsSection::Appearance),
+                SettingsNavItem::Page(SettingsSection::Features),
+                SettingsNavItem::Page(SettingsSection::Keybindings),
+                SettingsNavItem::Page(SettingsSection::Warpify),
+                SettingsNavItem::Page(SettingsSection::Privacy),
+                SettingsNavItem::Page(SettingsSection::About),
+            ]
+        };
 
         if FeatureFlag::WarpControlCli.is_enabled() {
             let shared_blocks_index = nav_items
@@ -1457,7 +1468,28 @@ impl SettingsView {
             Some(SettingsSection::Scripting) if !FeatureFlag::WarpControlCli.is_enabled() => {
                 SettingsSection::Account
             }
-            other => other.unwrap_or_default(),
+            other => other.unwrap_or_else(|| {
+                if ChannelState::channel().allows_account_login() {
+                    SettingsSection::default()
+                } else {
+                    SettingsSection::Appearance
+                }
+            }),
+        };
+        let initial_page = if !ChannelState::channel().allows_account_login()
+            && !matches!(
+                initial_page,
+                SettingsSection::Appearance
+                    | SettingsSection::Features
+                    | SettingsSection::Keybindings
+                    | SettingsSection::Warpify
+                    | SettingsSection::Privacy
+                    | SettingsSection::About
+                    | SettingsSection::Scripting
+            ) {
+            SettingsSection::Appearance
+        } else {
+            initial_page
         };
 
         // Auto-expand the umbrella if the initial page is one of its subpages.
@@ -2039,6 +2071,22 @@ impl SettingsView {
         allow_steal_focus: bool,
         ctx: &mut ViewContext<Self>,
     ) {
+        let section = if !ChannelState::channel().allows_account_login()
+            && !matches!(
+                section,
+                SettingsSection::Appearance
+                    | SettingsSection::Features
+                    | SettingsSection::Keybindings
+                    | SettingsSection::Warpify
+                    | SettingsSection::Privacy
+                    | SettingsSection::About
+                    | SettingsSection::Scripting
+            ) {
+            SettingsSection::Appearance
+        } else {
+            section
+        };
+
         // Every nav target owns its backing page. Check it exists.
         if self.settings_page(section).is_none() {
             return;

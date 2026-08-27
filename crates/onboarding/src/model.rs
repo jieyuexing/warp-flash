@@ -182,6 +182,8 @@ pub(crate) struct OnboardingStateModel {
     models: Vec<OnboardingModelInfo>,
     /// Whether the workspace enforces autonomy settings, hiding the user selection UI.
     workspace_enforces_autonomy: bool,
+    /// Whether this product channel permits Warp-provided AI features.
+    ai_available: bool,
     /// The AI setup selected on the "Choose your AI setup" slide.
     ai_setup_choice: AiSetupChoice,
     /// The access method selected on the "Choose how to access AI" slide.
@@ -202,15 +204,32 @@ impl OnboardingStateModel {
         models: Vec<OnboardingModelInfo>,
         default_model_id: LLMId,
         workspace_enforces_autonomy: bool,
+        ai_available: bool,
         auth_state: OnboardingAuthState,
     ) -> Self {
+        let mut agent_settings = AgentDevelopmentSettings::new(default_model_id);
+        if !ai_available {
+            agent_settings.cli_agent_toolbar_enabled = false;
+            agent_settings.session_default = crate::SessionDefault::Terminal;
+            agent_settings.disable_oz = true;
+            agent_settings.show_agent_notifications = false;
+        }
         Self {
             step: OnboardingStep::Intro,
-            intention: OnboardingIntention::AgentDrivenDevelopment,
-            agent_settings: AgentDevelopmentSettings::new(default_model_id),
-            ui_customization: UICustomizationSettings::agent_defaults(),
+            intention: if ai_available {
+                OnboardingIntention::AgentDrivenDevelopment
+            } else {
+                OnboardingIntention::Terminal
+            },
+            agent_settings,
+            ui_customization: if ai_available {
+                UICustomizationSettings::agent_defaults()
+            } else {
+                UICustomizationSettings::terminal_defaults()
+            },
             models,
             workspace_enforces_autonomy,
+            ai_available,
             ai_setup_choice: AiSetupChoice::default(),
             ai_access_choice: AiAccessChoice::default(),
             auth_state,
@@ -298,6 +317,9 @@ impl OnboardingStateModel {
         self.workspace_enforces_autonomy
     }
 
+    pub(crate) fn ai_available(&self) -> bool {
+        self.ai_available
+    }
     pub(crate) fn ai_setup_choice(&self) -> AiSetupChoice {
         self.ai_setup_choice
     }
@@ -484,7 +506,7 @@ impl OnboardingStateModel {
         self.ui_customization.show_conversation_history = enabled;
         self.ui_customization.show_project_explorer = enabled;
         self.ui_customization.show_global_search = enabled;
-        self.ui_customization.show_warp_drive = enabled;
+        self.ui_customization.show_warp_drive = enabled && self.ai_available;
         ctx.notify();
     }
 
@@ -538,6 +560,7 @@ impl OnboardingStateModel {
     }
 
     pub(crate) fn set_show_warp_drive(&mut self, value: bool, ctx: &mut ModelContext<Self>) {
+        let value = value && self.ai_available;
         if self.ui_customization.show_warp_drive == value {
             return;
         }
@@ -640,7 +663,10 @@ impl OnboardingStateModel {
         &self.models
     }
 
-    fn set_intention(&mut self, intention: OnboardingIntention, ctx: &mut ModelContext<Self>) {
+    fn set_intention(&mut self, mut intention: OnboardingIntention, ctx: &mut ModelContext<Self>) {
+        if !self.ai_available {
+            intention = OnboardingIntention::Terminal;
+        }
         if self.intention == intention {
             return;
         }

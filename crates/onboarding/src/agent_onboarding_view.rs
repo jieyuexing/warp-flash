@@ -151,11 +151,13 @@ impl AgentOnboardingView {
         ctx: &mut ViewContext<Self>,
     ) -> Self {
         let account_first = FeatureFlag::AccountFirstOnboarding.is_enabled();
+        let ai_available = warp_core::channel::ChannelState::channel().allows_ai();
         let onboarding_state = ctx.add_model(|_| {
             OnboardingStateModel::new(
                 models,
                 default_model_id,
                 workspace_enforces_autonomy,
+                ai_available,
                 auth_state,
             )
         });

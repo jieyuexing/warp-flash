@@ -317,6 +317,11 @@ impl AIRequestUsageModel {
 
     /// Spawns a task to refresh the latest AI request usage and bonus grants.
     pub fn refresh_request_usage_async(&mut self, ctx: &mut ModelContext<Self>) {
+        if !AISettings::as_ref(ctx).is_any_ai_enabled(ctx)
+            || !AuthStateProvider::as_ref(ctx).get().is_logged_in()
+        {
+            return;
+        }
         drop(self.refresh_request_usage(ctx));
     }
 

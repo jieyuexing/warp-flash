@@ -35,6 +35,7 @@ use crate::ai::agent_conversations_model::AgentConversationsModel;
 use crate::ai::ambient_agents::AmbientAgentTaskId;
 use crate::ai::blocklist::BlocklistAIHistoryModel;
 use crate::auth::UserUid;
+use crate::channel::ChannelState;
 use crate::context_chips::ContextChipKind;
 use crate::drive::sharing::ShareableObject;
 use crate::editor::{InteractionState, ReplicaId};
@@ -1953,6 +1954,10 @@ impl TerminalView {
         is_share_session_disabled: bool,
         has_session_link: bool,
     ) -> Vec<MenuItem<TerminalAction>> {
+        if !ChannelState::channel().allows_account_login() {
+            return Vec::new();
+        }
+
         let mut items = Vec::new();
 
         if !model.shared_session_status().is_sharer_or_viewer() {

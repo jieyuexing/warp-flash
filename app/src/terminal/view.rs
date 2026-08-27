@@ -132,7 +132,7 @@ use use_agent_footer::UseAgentToolbar;
 use uuid::Uuid;
 use vec1::vec1;
 use warp_core::r#async::debounce;
-use warp_core::channel::ChannelState;
+use warp_core::channel::{Channel, ChannelState};
 use warp_core::command::ExitCode;
 use warp_core::context_flag::ContextFlag;
 use warp_core::semantic_selection::SemanticSelection;
@@ -13315,7 +13315,12 @@ impl TerminalView {
             return;
         }
 
-        if notification.agent == CLIAgent::Codex && !FeatureFlag::CodexPlugin.is_enabled() {
+        // OSS keeps Warp-provided AI disabled, but may still consume the local Codex
+        // hook protocol for terminal metadata such as the first-prompt task title.
+        if notification.agent == CLIAgent::Codex
+            && !FeatureFlag::CodexPlugin.is_enabled()
+            && ChannelState::channel() != Channel::Oss
+        {
             return;
         }
 

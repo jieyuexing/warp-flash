@@ -2189,6 +2189,13 @@ impl AISettings {
     }
 
     pub fn is_any_ai_enabled(&self, app: &AppContext) -> bool {
+        // Product-channel policy is authoritative over persisted or synced user
+        // settings. The OSS fork is terminal-only, so a stale `true` value can
+        // never re-enable AI surfaces or requests there.
+        if !warp_core::channel::ChannelState::channel().allows_ai() {
+            return false;
+        }
+
         // Disable AI for anonymous and logged-out users.
         let is_anonymous_or_logged_out = AuthStateProvider::as_ref(app)
             .get()

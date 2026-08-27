@@ -1,6 +1,7 @@
 use pathfinder_color::ColorU;
 use pathfinder_geometry::vector::vec2f;
 use ui_components::{Component as _, Options as _, button};
+use warp_core::channel::ChannelState;
 use warp_core::features::FeatureFlag;
 use warp_core::send_telemetry_from_ctx;
 use warp_core::ui::Icon;
@@ -81,45 +82,46 @@ impl View for IntroSlide {
             ..Default::default()
         };
 
-        let login_row = Flex::row()
-            .with_child(
-                ui_builder
-                    .span("Already have an account? ")
-                    .with_style(disclaimer_styles)
-                    .build()
-                    .finish(),
-            )
-            .with_child(
-                ui_builder
-                    .link(
-                        "Log in".into(),
-                        None,
-                        Some(Box::new(|ctx| {
-                            ctx.dispatch_typed_action(IntroSlideAction::LoginClicked);
-                        })),
-                        self.login_mouse_state.clone(),
-                    )
-                    .soft_wrap(false)
-                    .with_style(UiComponentStyles {
-                        font_size: Some(12.),
-                        ..Default::default()
-                    })
-                    .build()
-                    .finish(),
-            )
-            .finish();
-
         let mut stack = Stack::new();
         stack.add_child(centered);
-        stack.add_positioned_child(
-            login_row,
-            OffsetPositioning::offset_from_parent(
-                vec2f(0., -28.),
-                ParentOffsetBounds::ParentBySize,
-                ParentAnchor::BottomMiddle,
-                ChildAnchor::BottomMiddle,
-            ),
-        );
+        if ChannelState::channel().allows_account_login() {
+            let login_row = Flex::row()
+                .with_child(
+                    ui_builder
+                        .span("Already have an account? ")
+                        .with_style(disclaimer_styles)
+                        .build()
+                        .finish(),
+                )
+                .with_child(
+                    ui_builder
+                        .link(
+                            "Log in".into(),
+                            None,
+                            Some(Box::new(|ctx| {
+                                ctx.dispatch_typed_action(IntroSlideAction::LoginClicked);
+                            })),
+                            self.login_mouse_state.clone(),
+                        )
+                        .soft_wrap(false)
+                        .with_style(UiComponentStyles {
+                            font_size: Some(12.),
+                            ..Default::default()
+                        })
+                        .build()
+                        .finish(),
+                )
+                .finish();
+            stack.add_positioned_child(
+                login_row,
+                OffsetPositioning::offset_from_parent(
+                    vec2f(0., -28.),
+                    ParentOffsetBounds::ParentBySize,
+                    ParentAnchor::BottomMiddle,
+                    ChildAnchor::BottomMiddle,
+                ),
+            );
+        }
         stack.finish()
     }
 }
@@ -174,8 +176,13 @@ impl IntroSlide {
         .finish();
 
         let subtitle_color = internal_colors::text_sub(theme, theme.background().into_solid());
+        let subtitle_source = if ChannelState::channel().allows_ai() {
+            "A modern terminal with state of the art agents built in."
+        } else {
+            "A modern terminal optimized for speed, context, and control without AI."
+        };
         let subtitle = FormattedTextElement::from_str(
-            localize_ui("A modern terminal with state of the art agents built in."),
+            localize_ui(subtitle_source),
             appearance.ui_font_family(),
             16.,
         )

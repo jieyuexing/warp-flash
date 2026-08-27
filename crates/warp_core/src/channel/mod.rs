@@ -26,6 +26,20 @@ pub enum Channel {
 }
 
 impl Channel {
+    /// Whether this product channel permits Warp-provided AI features.
+    ///
+    /// The open-source fork is terminal-only. Keeping this as a channel policy,
+    /// rather than a mutable user preference, makes the restriction effective at
+    /// every UI and request boundary that consults the shared AI enablement gate.
+    pub fn allows_ai(&self) -> bool {
+        !matches!(self, Channel::Oss)
+    }
+
+    /// Whether this product channel offers account login and account-backed services.
+    pub fn allows_account_login(&self) -> bool {
+        !matches!(self, Channel::Oss)
+    }
+
     /// Whether or not this channel is for internal use only
     pub fn is_dogfood(&self) -> bool {
         match self {
@@ -69,6 +83,23 @@ impl Channel {
             Channel::Integration => "warpctrl-integration",
             Channel::Oss => "warpctrl-oss",
         }
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::Channel;
+
+    #[test]
+    fn oss_is_terminal_only() {
+        assert!(!Channel::Oss.allows_ai());
+        assert!(!Channel::Oss.allows_account_login());
+        assert!(Channel::Stable.allows_ai());
+        assert!(Channel::Stable.allows_account_login());
+        assert!(Channel::Preview.allows_ai());
+        assert!(Channel::Dev.allows_ai());
+        assert!(Channel::Local.allows_ai());
+        assert!(Channel::Integration.allows_ai());
     }
 }
 

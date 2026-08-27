@@ -48,9 +48,45 @@ fn add_model(app: &mut App) -> ModelHandle<OnboardingStateModel> {
             Vec::new(),
             LLMId::from("auto"),
             false,
+            true,
             OnboardingAuthState::FreeUser,
         )
     })
+}
+
+#[test]
+fn terminal_only_product_cannot_select_ai_intent() {
+    App::test((), |mut app| async move {
+        app.update(MockTelemetryContextProvider::register);
+        let model = app.add_model(|_| {
+            OnboardingStateModel::new(
+                Vec::new(),
+                LLMId::from("auto"),
+                false,
+                false,
+                OnboardingAuthState::FreeUser,
+            )
+        });
+
+        model.read(&app, |model, _| {
+            assert!(!model.ai_available());
+            assert_eq!(*model.intention(), OnboardingIntention::Terminal);
+            assert!(!model.settings().is_ai_enabled());
+            assert!(!model.settings().is_warp_drive_enabled());
+            assert!(
+                !model
+                    .ui_customization()
+                    .tools_panel_enabled(model.intention())
+            );
+        });
+
+        model.update(&mut app, |model, ctx| {
+            model.set_intention_agent_driven_development(ctx)
+        });
+        model.read(&app, |model, _| {
+            assert_eq!(*model.intention(), OnboardingIntention::Terminal);
+        });
+    });
 }
 
 fn step(app: &App, model: &ModelHandle<OnboardingStateModel>) -> OnboardingStep {

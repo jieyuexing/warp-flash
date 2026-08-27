@@ -135,7 +135,12 @@ impl CustomizeUISlide {
         slide_content::onboarding_slide_content(
             vec![
                 Align::new(self.render_header(appearance)).left().finish(),
-                self.render_setting_cards(appearance, intention, ui),
+                self.render_setting_cards(
+                    appearance,
+                    intention,
+                    ui,
+                    self.onboarding_state.as_ref(app).ai_available(),
+                ),
             ],
             bottom_nav,
             self.scroll_state.clone(),
@@ -189,9 +194,11 @@ impl CustomizeUISlide {
         appearance: &Appearance,
         intention: OnboardingIntention,
         ui: &UICustomizationSettings,
+        account_features_available: bool,
     ) -> Box<dyn Element> {
         let tab_card = self.render_tab_styling_card(appearance, ui);
-        let tools_card = self.render_tools_panel_card(appearance, intention, ui);
+        let tools_card =
+            self.render_tools_panel_card(appearance, intention, ui, account_features_available);
         let code_card = self.render_code_review_card(appearance, ui);
 
         Container::new(
@@ -250,6 +257,7 @@ impl CustomizeUISlide {
         appearance: &Appearance,
         intention: OnboardingIntention,
         ui: &UICustomizationSettings,
+        account_features_available: bool,
     ) -> Box<dyn Element> {
         let is_selected = self.selected_setting == Some(SettingCard::ToolsPanel);
         let is_agent = matches!(intention, OnboardingIntention::AgentDrivenDevelopment);
@@ -314,23 +322,25 @@ impl CustomizeUISlide {
                 })),
             });
 
-            chips.push(ChipSpec {
-                label: "Warp Drive",
-                is_enabled: ui.show_warp_drive,
-                mouse_state: self.chip_warp_drive_mouse.clone(),
-                on_click: Box::new(|ctx, _, _| {
-                    ctx.dispatch_typed_action(CustomizeSlideAction::ToggleToolsSubSetting {
-                        setting: ToolsPanelSubSetting::WarpDrive,
-                    });
-                }),
-                on_hover: Some(Box::new(|is_hovered, ctx, _, _| {
-                    if is_hovered {
-                        ctx.dispatch_typed_action(CustomizeSlideAction::HoverToolsChip {
+            if account_features_available {
+                chips.push(ChipSpec {
+                    label: "Warp Drive",
+                    is_enabled: ui.show_warp_drive,
+                    mouse_state: self.chip_warp_drive_mouse.clone(),
+                    on_click: Box::new(|ctx, _, _| {
+                        ctx.dispatch_typed_action(CustomizeSlideAction::ToggleToolsSubSetting {
                             setting: ToolsPanelSubSetting::WarpDrive,
                         });
-                    }
-                })),
-            });
+                    }),
+                    on_hover: Some(Box::new(|is_hovered, ctx, _, _| {
+                        if is_hovered {
+                            ctx.dispatch_typed_action(CustomizeSlideAction::HoverToolsChip {
+                                setting: ToolsPanelSubSetting::WarpDrive,
+                            });
+                        }
+                    })),
+                });
+            }
         }
 
         render_toggle_card(

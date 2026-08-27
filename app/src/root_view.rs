@@ -623,6 +623,7 @@ fn requires_post_onboarding_login(
     warp_drive_enabled: bool,
 ) -> bool {
     !is_logged_in
+        && ChannelState::channel().allows_account_login()
         && (FeatureFlag::AccountFirstOnboarding.is_enabled() || ai_enabled || warp_drive_enabled)
 }
 /// Replaces the settings and tutorial snapshots consumed when post-auth
@@ -2849,6 +2850,9 @@ impl RootView {
                 ctx.notify();
             }
             AgentOnboardingEvent::LoginFromWelcomeRequested => {
+                if !ChannelState::channel().allows_account_login() {
+                    return;
+                }
                 let AuthOnboardingState::Onboarding {
                     target,
                     onboarding_view,
