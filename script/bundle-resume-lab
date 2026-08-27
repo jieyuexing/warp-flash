@@ -1,0 +1,35 @@
+#!/bin/bash
+
+set -euo pipefail
+
+repo_root="$(cd "$(dirname "$0")/.." && pwd)"
+output_path="${1:-$HOME/Applications/Warposs Resume Lab.app}"
+target_config="${WARP_RESUME_LAB_CONFIG_DIR:-$HOME/.warp-oss-resume-lab}"
+default_config="$repo_root/script/resume-lab-default-settings.toml"
+
+if [[ -e "$output_path" ]]; then
+    echo "Refusing to replace existing bundle: $output_path" >&2
+    exit 1
+fi
+
+cd "$repo_root"
+cargo build --bin warp-oss
+
+mkdir -p "$output_path/Contents/MacOS"
+mkdir -p "$output_path/Contents/Resources"
+install -m 755 target/debug/warp-oss "$output_path/Contents/MacOS/warp-oss-bin"
+install -m 755 script/resume-lab-launcher "$output_path/Contents/MacOS/warposs-resume-lab"
+install -m 644 script/ResumeLab-Info.plist "$output_path/Contents/Info.plist"
+install -m 644 "$default_config" "$output_path/Contents/Resources/default-settings.toml"
+codesign --force --deep --sign - "$output_path"
+
+if [[ -e "$target_config" ]]; then
+    config_backup="${target_config}.backup.$(date +%Y%m%d%H%M%S)"
+    mv "$target_config" "$config_backup"
+    echo "Previous Resume Lab config: $config_backup"
+fi
+mkdir -p "$target_config"
+install -m 600 "$default_config" "$target_config/settings.toml"
+
+echo "$output_path"
+echo "Resume Lab config seeded from the bundled layout template"

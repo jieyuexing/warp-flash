@@ -1,0 +1,15 @@
+#!/bin/bash
+
+set -euo pipefail
+
+contents_dir="$(cd "$(dirname "$0")/.." && pwd)"
+export WARP_DATA_PROFILE="${WARP_DATA_PROFILE:-resume-lab}"
+
+config_dir="${WARP_RESUME_LAB_CONFIG_DIR:-$HOME/.warp-oss-$WARP_DATA_PROFILE}"
+
+if [[ ! -e "$config_dir/settings.toml" ]]; then
+    mkdir -p "$config_dir"
+    install -m 600 "$contents_dir/Resources/default-settings.toml" "$config_dir/settings.toml"
+fi
+
+exec "$contents_dir/MacOS/warp-oss-bin" "$@"
