@@ -3381,6 +3381,71 @@ fn test_oss_layout_defaults_tools_panel_open() {
 }
 
 #[test]
+fn restored_external_cli_session_is_claimed_by_active_tab_only() {
+    fn terminal_tab(session_id: &str) -> TabSnapshot {
+        TabSnapshot {
+            custom_title: None,
+            root: PaneNodeSnapshot::Leaf(LeafSnapshot {
+                is_focused: true,
+                custom_vertical_tabs_title: None,
+                contents: LeafContents::Terminal(TerminalPaneSnapshot {
+                    uuid: session_id.as_bytes().to_vec(),
+                    cwd: Some("/work/project".to_owned()),
+                    shell_launch_data: None,
+                    is_active: true,
+                    is_read_only: false,
+                    input_config: None,
+                    llm_model_override: None,
+                    active_profile_id: None,
+                    conversation_ids_to_restore: Vec::new(),
+                    external_cli_resume_target:
+                        crate::external_cli_resume::ExternalCliResumeTarget::new(
+                            crate::external_cli_resume::ExternalCliAgent::Codex,
+                            session_id,
+                            Some("/work/project".to_owned()),
+                        ),
+                    active_conversation_id: None,
+                }),
+            }),
+            default_directory_color: None,
+            selected_color: SelectedTabColor::default(),
+            left_panel: None,
+            right_panel: None,
+            group_id: None,
+            pinned: false,
+        }
+    }
+
+    fn resume_session_id(tab: &TabSnapshot) -> Option<&str> {
+        let PaneNodeSnapshot::Leaf(LeafSnapshot {
+            contents: LeafContents::Terminal(terminal),
+            ..
+        }) = &tab.root
+        else {
+            return None;
+        };
+        terminal
+            .external_cli_resume_target
+            .as_ref()
+            .map(|target| target.session_id.as_str())
+    }
+
+    let mut tabs = vec![
+        terminal_tab("shared-session"),
+        terminal_tab("unique-session"),
+        terminal_tab("shared-session"),
+    ];
+
+    assert_eq!(
+        Workspace::deduplicate_external_cli_resume_targets(&mut tabs, 2),
+        1
+    );
+    assert_eq!(resume_session_id(&tabs[0]), None);
+    assert_eq!(resume_session_id(&tabs[1]), Some("unique-session"));
+    assert_eq!(resume_session_id(&tabs[2]), Some("shared-session"));
+}
+
+#[test]
 fn test_open_vertical_tabs_panel_is_idempotent() {
     App::test((), |mut app| async move {
         initialize_app(&mut app);

@@ -110,7 +110,7 @@ fn codex_resume_command_preserves_its_explicit_session_id() {
 
 #[cfg(not(target_family = "wasm"))]
 #[test]
-fn codex_session_lookup_uses_latest_cli_rollout_for_exact_cwd() {
+fn plain_codex_launch_does_not_guess_a_session_from_shared_cwd() {
     let codex_home = tempfile::tempdir().expect("codex home");
     let sessions = codex_home.path().join("sessions/2026/08/27");
     fs::create_dir_all(&sessions).expect("session bucket");
@@ -135,42 +135,8 @@ fn codex_session_lookup_uses_latest_cli_rollout_for_exact_cwd() {
         .expect("write rollout");
     }
 
-    let target =
+    assert!(
         active_codex_resume_target_from_root("codex --yolo", "/work/project", codex_home.path())
-            .expect("latest matching Codex session");
-
-    assert_eq!(target.session_id, "session-new");
-}
-
-#[cfg(unix)]
-#[test]
-fn codex_session_lookup_accepts_equivalent_cwd_symlinks() {
-    use std::os::unix::fs::symlink;
-
-    let codex_home = tempfile::tempdir().expect("codex home");
-    let workspace = tempfile::tempdir().expect("workspace");
-    let actual_cwd = workspace.path().join("actual");
-    let alias_cwd = workspace.path().join("alias");
-    fs::create_dir(&actual_cwd).expect("actual cwd");
-    symlink(&actual_cwd, &alias_cwd).expect("cwd symlink");
-
-    let sessions = codex_home.path().join("sessions/2026/08/27");
-    fs::create_dir_all(&sessions).expect("session bucket");
-    fs::write(
-        sessions.join("rollout-symlink.jsonl"),
-        format!(
-            "{{\"type\":\"session_meta\",\"payload\":{{\"id\":\"session-symlink\",\"cwd\":\"{}\",\"source\":\"cli\"}}}}\n",
-            actual_cwd.display()
-        ),
-    )
-    .expect("write rollout");
-
-    let target = active_codex_resume_target_from_root(
-        "codex",
-        alias_cwd.to_str().expect("alias cwd"),
-        codex_home.path(),
-    )
-    .expect("equivalent cwd target");
-
-    assert_eq!(target.session_id, "session-symlink");
+            .is_none()
+    );
 }

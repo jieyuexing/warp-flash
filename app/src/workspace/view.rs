@@ -3978,6 +3978,17 @@ impl Workspace {
             } => {
                 let active_tab_index = window_snapshot.active_tab_index;
                 let restored_left_panel_open = window_snapshot.left_panel_open;
+                let mut restored_tabs = window_snapshot.tabs.clone();
+                let suppressed_duplicate_resume_targets =
+                    Self::deduplicate_external_cli_resume_targets(
+                        &mut restored_tabs,
+                        active_tab_index,
+                    );
+                if suppressed_duplicate_resume_targets > 0 {
+                    log::warn!(
+                        "Suppressed {suppressed_duplicate_resume_targets} duplicate external CLI resume targets while restoring the window"
+                    );
+                }
 
                 // Restore groups first so per-tab `group_id` assignments
                 // below can validate membership against a populated map.
@@ -4004,8 +4015,7 @@ impl Workspace {
                         .collect();
                 }
 
-                window_snapshot
-                    .tabs
+                restored_tabs
                     .iter()
                     .enumerate()
                     .for_each(|(tab_index, saved_tab)| {
@@ -4244,6 +4254,56 @@ impl Workspace {
                 // the tabs panel closed even though native windows still expose workspace chrome.
                 false
             }
+        }
+    }
+
+    fn deduplicate_external_cli_resume_targets(
+        tabs: &mut [TabSnapshot],
+        active_tab_index: usize,
+    ) -> usize {
+        let mut claimed = HashSet::new();
+        let mut suppressed = 0;
+
+        if let Some(active_tab) = tabs.get_mut(active_tab_index) {
+            suppressed +=
+                Self::claim_external_cli_resume_targets(&mut active_tab.root, &mut claimed);
+        }
+
+        for (index, tab) in tabs.iter_mut().enumerate() {
+            if index != active_tab_index {
+                suppressed += Self::claim_external_cli_resume_targets(&mut tab.root, &mut claimed);
+            }
+        }
+
+        suppressed
+    }
+
+    fn claim_external_cli_resume_targets(
+        node: &mut PaneNodeSnapshot,
+        claimed: &mut HashSet<(crate::external_cli_resume::ExternalCliAgent, String)>,
+    ) -> usize {
+        match node {
+            PaneNodeSnapshot::Branch(branch) => branch
+                .children
+                .iter_mut()
+                .map(|(_, child)| Self::claim_external_cli_resume_targets(child, claimed))
+                .sum(),
+            PaneNodeSnapshot::Leaf(LeafSnapshot {
+                contents: LeafContents::Terminal(terminal),
+                ..
+            }) => {
+                let Some(target) = terminal.external_cli_resume_target.as_ref() else {
+                    return 0;
+                };
+                let key = (target.agent, target.session_id.clone());
+                if claimed.insert(key) {
+                    0
+                } else {
+                    terminal.external_cli_resume_target = None;
+                    1
+                }
+            }
+            PaneNodeSnapshot::Leaf(_) => 0,
         }
     }
 
