@@ -38,6 +38,20 @@ pub enum CLIAgentSessionStatus {
     Cancelled,
 }
 
+/// Operational activity of a tracked CLI agent process.
+///
+/// This is intentionally separate from [`CLIAgentSessionStatus`]: an interactive agent process
+/// can stay alive after a turn succeeds, fails, or pauses for input. Consumers such as tab chrome
+/// and live-duration rendering need to know whether the agent is actively working, not merely
+/// whether its shell command is still executing.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum CLIAgentSessionActivity {
+    Loading,
+    Running,
+    WaitingForInput,
+    Idle,
+}
+
 impl CLIAgentSessionStatus {
     pub fn to_conversation_status(&self) -> crate::ai::agent::conversation::ConversationStatus {
         use crate::ai::agent::conversation::ConversationStatus;
@@ -353,6 +367,7 @@ struct CtrlCCancelState {
 /// Singleton model that tracks pane-scoped CLI agent state and plugin-enriched session context.
 pub struct CLIAgentSessionsModel {
     sessions: HashMap<EntityId, CLIAgentSession>,
+    activities: HashMap<EntityId, CLIAgentSessionActivity>,
     /// Tracks (agent, remote_host) pairs where an auto plugin operation (install or update) has failed.
     /// Shared across all views so failure in one tab is reflected everywhere.
     plugin_auto_failures: HashSet<(CLIAgent, Option<String>)>,
@@ -373,6 +388,7 @@ impl CLIAgentSessionsModel {
     pub fn new() -> Self {
         Self {
             sessions: HashMap::new(),
+            activities: HashMap::new(),
             plugin_auto_failures: HashSet::new(),
             ctrl_c_cancel_state: HashMap::new(),
             next_ctrl_c_token: 0,
@@ -381,6 +397,10 @@ impl CLIAgentSessionsModel {
 
     pub fn session(&self, terminal_view_id: EntityId) -> Option<&CLIAgentSession> {
         self.sessions.get(&terminal_view_id)
+    }
+
+    pub fn activity(&self, terminal_view_id: EntityId) -> Option<CLIAgentSessionActivity> {
+        self.activities.get(&terminal_view_id).copied()
     }
 
     /// Returns `true` if the rich input editor is currently open for this terminal.
@@ -429,6 +449,8 @@ impl CLIAgentSessionsModel {
             session.session_context.project = project.or(session.session_context.project.take());
             session.session_context.session_id =
                 session_id.or(session.session_context.session_id.take());
+            self.activities
+                .insert(terminal_view_id, CLIAgentSessionActivity::Loading);
             return;
         }
 
@@ -459,6 +481,7 @@ impl CLIAgentSessionsModel {
     pub fn remove_session(&mut self, terminal_view_id: EntityId, ctx: &mut ModelContext<Self>) {
         self.abort_pending_cancel(terminal_view_id);
         self.ctrl_c_cancel_state.remove(&terminal_view_id);
+        self.activities.remove(&terminal_view_id);
         if let Some(session) = self.sessions.remove(&terminal_view_id) {
             ctx.emit(CLIAgentSessionsModelEvent::Ended {
                 terminal_view_id,
@@ -501,6 +524,23 @@ impl CLIAgentSessionsModel {
                 .has_seen_prompt_submit = true;
         }
 
+        let new_activity = match &event.event {
+            CLIAgentEventType::SessionStart => Some(CLIAgentSessionActivity::Loading),
+            CLIAgentEventType::PromptSubmit
+            | CLIAgentEventType::ToolComplete
+            | CLIAgentEventType::PermissionReplied => Some(CLIAgentSessionActivity::Running),
+            CLIAgentEventType::PermissionRequest | CLIAgentEventType::QuestionAsked => {
+                Some(CLIAgentSessionActivity::WaitingForInput)
+            }
+            CLIAgentEventType::Stop
+            | CLIAgentEventType::StopFailure
+            | CLIAgentEventType::IdlePrompt => Some(CLIAgentSessionActivity::Idle),
+            CLIAgentEventType::Unknown(_) => None,
+        };
+        let activity_changed = new_activity.is_some_and(|activity| {
+            self.activities.insert(terminal_view_id, activity) != Some(activity)
+        });
+
         let session = self
             .sessions
             .get_mut(&terminal_view_id)
@@ -521,12 +561,14 @@ impl CLIAgentSessionsModel {
             });
         }
 
-        if matches!(
-            event_type,
-            CLIAgentEventType::SessionStart
-                | CLIAgentEventType::PromptSubmit
-                | CLIAgentEventType::ToolComplete
-        ) {
+        if activity_changed
+            || matches!(
+                event_type,
+                CLIAgentEventType::SessionStart
+                    | CLIAgentEventType::PromptSubmit
+                    | CLIAgentEventType::ToolComplete
+            )
+        {
             ctx.emit(CLIAgentSessionsModelEvent::SessionUpdated {
                 terminal_view_id,
                 agent: session.agent,
@@ -654,6 +696,8 @@ impl CLIAgentSessionsModel {
         }
 
         session.status = CLIAgentSessionStatus::Cancelled;
+        self.activities
+            .insert(terminal_view_id, CLIAgentSessionActivity::Idle);
         let agent = session.agent;
         let session_context = Box::new(session.session_context.clone());
         ctx.emit(CLIAgentSessionsModelEvent::StatusChanged {
@@ -747,6 +791,16 @@ impl CLIAgentSessionsModel {
         // arm, and any pending window belonged to the session being replaced.
         self.abort_pending_cancel(terminal_view_id);
         self.ctrl_c_cancel_state.remove(&terminal_view_id);
+        self.activities.insert(
+            terminal_view_id,
+            match &session.status {
+                CLIAgentSessionStatus::InProgress => CLIAgentSessionActivity::Loading,
+                CLIAgentSessionStatus::Blocked { .. } => CLIAgentSessionActivity::WaitingForInput,
+                CLIAgentSessionStatus::Success
+                | CLIAgentSessionStatus::Failed { .. }
+                | CLIAgentSessionStatus::Cancelled => CLIAgentSessionActivity::Idle,
+            },
+        );
         if let Some(old) = self.sessions.insert(terminal_view_id, session) {
             ctx.emit(CLIAgentSessionsModelEvent::Ended {
                 terminal_view_id,

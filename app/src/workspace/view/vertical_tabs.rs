@@ -63,6 +63,7 @@ use crate::tab::{
 };
 use crate::terminal::cli_agent_sessions::CLIAgentSessionsModel;
 use crate::terminal::session_settings::SessionSettings;
+use crate::terminal::session_status::{TerminalSessionStatus, terminal_session_status};
 use crate::terminal::title_generator::is_contextual_directory_title;
 use crate::terminal::view::TerminalViewState;
 use crate::terminal::{CLIAgent, TerminalView};
@@ -3419,6 +3420,39 @@ fn render_title_indicator(theme: &WarpTheme) -> Box<dyn Element> {
     .finish()
 }
 
+fn render_terminal_session_status_pill(
+    status: TerminalSessionStatus,
+    appearance: &Appearance,
+) -> Box<dyn Element> {
+    let conversation_status = status.to_conversation_status();
+    let (icon, color) =
+        conversation_status.status_icon_and_color(appearance.theme(), StatusColorStyle::Standard);
+    let label = warp_i18n::localize_ui(status.label()).into_owned();
+
+    Container::new(
+        Flex::row()
+            .with_main_axis_size(MainAxisSize::Min)
+            .with_cross_axis_alignment(CrossAxisAlignment::Center)
+            .with_spacing(3.)
+            .with_child(
+                ConstrainedBox::new(icon.to_warpui_icon(WarpThemeFill::Solid(color)).finish())
+                    .with_width(10.)
+                    .with_height(10.)
+                    .finish(),
+            )
+            .with_child(
+                Text::new_inline(label, appearance.ui_font_family(), 10.)
+                    .with_color(WarpThemeFill::Solid(color).into())
+                    .finish(),
+            )
+            .finish(),
+    )
+    .with_padding(Padding::uniform(1.).with_left(4.).with_right(4.))
+    .with_background(ThemeFill::Solid(coloru_with_opacity(color, 10)))
+    .with_corner_radius(CornerRadius::with_all(Radius::Pixels(3.)))
+    .finish()
+}
+
 /// Whether a row should surface the synchronized-inputs indicator. Mirrors the
 /// horizontal tab bar's `Indicator::Synced` gating in `tab.rs`: the row's tab is
 /// receiving broadcast keystrokes and tab indicators are enabled. Restricted to
@@ -3476,12 +3510,17 @@ fn render_shortcut_hint(label: &str, appearance: &Appearance) -> Box<dyn Element
 /// `title` untouched when the row has no indicator to show.
 fn render_row_title_line(
     title: Box<dyn Element>,
+    session_status: Option<Box<dyn Element>>,
     shows_synced_inputs: bool,
     shows_activity_indicator: bool,
     shortcut_hint: Option<Box<dyn Element>>,
     theme: &WarpTheme,
 ) -> Box<dyn Element> {
-    if !shows_synced_inputs && !shows_activity_indicator && shortcut_hint.is_none() {
+    if session_status.is_none()
+        && !shows_synced_inputs
+        && !shows_activity_indicator
+        && shortcut_hint.is_none()
+    {
         return title;
     }
 
@@ -3489,6 +3528,9 @@ fn render_row_title_line(
         .with_main_axis_size(MainAxisSize::Min)
         .with_cross_axis_alignment(CrossAxisAlignment::Center)
         .with_spacing(4.);
+    if let Some(session_status) = session_status {
+        indicators.add_child(session_status);
+    }
     if shows_synced_inputs {
         indicators.add_child(render_synced_inputs_indicator());
     }
@@ -4570,6 +4612,8 @@ fn render_terminal_row_content(
 
     let first_line_element = render_row_title_line(
         first_line,
+        terminal_session_status(terminal_view, app)
+            .map(|status| render_terminal_session_status_pill(status, appearance)),
         row_shows_synced_inputs_indicator(props, app),
         has_unread_activity(&props.typed, app),
         shortcut_hint_label(props, app).map(|label| render_shortcut_hint(&label, appearance)),
@@ -4861,6 +4905,7 @@ fn render_summary_tab_item(
     }
     text_col.add_child(render_row_title_line(
         title_region.finish(),
+        None,
         row_shows_synced_inputs_indicator(&props, app),
         summary.has_unread_activity,
         shortcut_hint_label(&props, app).map(|label| render_shortcut_hint(&label, appearance)),
@@ -7476,8 +7521,27 @@ fn render_compact_pane_row(props: PaneProps<'_>, app: &AppContext) -> Box<dyn El
         };
 
     // Title row with optional indicators
+    let session_status = match &props.typed {
+        TypedPane::Terminal(terminal_pane) => {
+            terminal_session_status(terminal_pane.terminal_view(app).as_ref(app), app)
+                .map(|status| render_terminal_session_status_pill(status, appearance))
+        }
+        TypedPane::Code(_)
+        | TypedPane::CodeDiff
+        | TypedPane::File
+        | TypedPane::Notebook { .. }
+        | TypedPane::Workflow { .. }
+        | TypedPane::Settings
+        | TypedPane::EnvVarCollection
+        | TypedPane::EnvironmentManagement
+        | TypedPane::AIFact
+        | TypedPane::AIDocument
+        | TypedPane::ExecutionProfileEditor
+        | TypedPane::Other => None,
+    };
     let title_row = render_row_title_line(
         title_element,
+        session_status,
         row_shows_synced_inputs_indicator(&props, app),
         has_indicator,
         shortcut_hint_label(&props, app).map(|label| render_shortcut_hint(&label, appearance)),

@@ -87,6 +87,7 @@ pub mod wsl;
 pub mod cli_agent;
 pub use cli_agent::CLIAgent;
 pub(crate) mod cli_agent_sessions;
+pub(crate) mod session_status;
 pub(crate) mod title_generator;
 
 pub use block_list_settings::*;

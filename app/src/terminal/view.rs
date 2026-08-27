@@ -460,6 +460,7 @@ use crate::terminal::session_settings::{
     DEFAULT_THRESHOLD_FOR_LONG_RUNNING_NOTIFICATION, NotificationsMode, NotificationsSettings,
     SessionSettings, SessionSettingsChangedEvent, ToolbarChipSelection,
 };
+use crate::terminal::session_status::should_update_terminal_live_command_duration;
 use crate::terminal::settings::{TerminalSettings, TerminalSettingsChangedEvent};
 use crate::terminal::shared_session::manager::Manager;
 use crate::terminal::shared_session::role_change_modal::{
@@ -747,6 +748,13 @@ lazy_static! {
 
 /// Interval at which the live command duration counter repaints.
 const LIVE_COMMAND_DURATION_REPAINT_INTERVAL: Duration = Duration::from_secs(1);
+
+struct BlockLabelRenderOptions<'a> {
+    mouse_state: Option<&'a MouseStateHandle>,
+    live_duration_updates_enabled: bool,
+    padding_x: Pixels,
+    tool_tip_below_button: bool,
+}
 
 #[derive(Default)]
 pub struct ControlMasterErrorBannerState {
@@ -24138,12 +24146,16 @@ impl TerminalView {
     fn render_label_element(
         index: BlockIndex,
         model: &TerminalModel,
-        mouse_state: Option<&MouseStateHandle>,
         sessions: &Sessions,
-        padding_x: Pixels,
-        tool_tip_below_button: bool,
+        options: BlockLabelRenderOptions<'_>,
         appearance: &Appearance,
     ) -> Box<dyn Element> {
+        let BlockLabelRenderOptions {
+            mouse_state,
+            live_duration_updates_enabled,
+            padding_x,
+            tool_tip_below_button,
+        } = options;
         let terminal_theme_prompt: ColorU = appearance
             .theme()
             .sub_text_color(appearance.theme().background())
@@ -24161,7 +24173,10 @@ impl TerminalView {
         let mut label_row = Flex::row().with_child(prompt);
 
         let is_live = Self::is_block_duration_live(model, index);
-        if let Some(duration_string) = Self::block_duration_text(model, index) {
+        let should_render_duration = !is_live || live_duration_updates_enabled;
+        if should_render_duration
+            && let Some(duration_string) = Self::block_duration_text(model, index)
+        {
             let duration = Text::new_inline(
                 duration_string,
                 appearance.monospace_font_family(),
@@ -24217,7 +24232,7 @@ impl TerminalView {
             } else {
                 duration
             });
-        } else if Self::is_block_executing(model, index) {
+        } else if live_duration_updates_enabled && Self::is_block_executing(model, index) {
             // Block is executing but less than 1 second has elapsed — no duration
             // text to show yet. Add an invisible LiveElement to kick off the
             // repaint timer so the counter appears as soon as 1s elapses.
@@ -24596,6 +24611,7 @@ impl TerminalView {
         let theme = appearance.theme();
         let padding_x = self.size_info.padding_x_px;
         let sessions = self.sessions.clone();
+        let terminal_view_id = self.view_id;
 
         let inline_banners = self.render_inline_banners(appearance, app, model);
 
@@ -24656,10 +24672,17 @@ impl TerminalView {
                         let mut label = Self::render_label_element(
                             *index,
                             model,
-                            label_mouse_states.get(index),
                             sessions.as_ref(app),
-                            padding_x,
-                            i == 0,
+                            BlockLabelRenderOptions {
+                                mouse_state: label_mouse_states.get(index),
+                                live_duration_updates_enabled:
+                                    should_update_terminal_live_command_duration(
+                                        terminal_view_id,
+                                        app,
+                                    ),
+                                padding_x,
+                                tool_tip_below_button: i == 0,
+                            },
                             Appearance::as_ref(app),
                         );
                         // Special-case the last block so there is a reliable way to target it

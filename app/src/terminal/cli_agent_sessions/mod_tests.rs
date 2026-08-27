@@ -7,8 +7,8 @@ use super::event::{
     CLIAgentEvent, CLIAgentEventPayload, CLIAgentEventSource, CLIAgentEventType, parse_event,
 };
 use super::{
-    CLIAgentInputEntrypoint, CLIAgentInputState, CLIAgentSession, CLIAgentSessionContext,
-    CLIAgentSessionStatus, CLIAgentSessionsModel,
+    CLIAgentInputEntrypoint, CLIAgentInputState, CLIAgentSession, CLIAgentSessionActivity,
+    CLIAgentSessionContext, CLIAgentSessionStatus, CLIAgentSessionsModel,
 };
 use crate::ai::blocklist::{InputConfig, InputType};
 use crate::terminal::CLIAgent;
@@ -1272,5 +1272,52 @@ fn second_ctrl_c_while_armed_reuses_the_existing_window() {
                 "a second Ctrl-C while armed must reuse the existing window, not reset it"
             );
         });
+    });
+}
+
+#[test]
+fn operational_activity_tracks_agent_work_independently_of_process_lifetime() {
+    App::test((), |mut app| async move {
+        let model = app.add_singleton_model(|_| CLIAgentSessionsModel::new());
+        let view_id = EntityId::new();
+        model.update(&mut app, |model, ctx| {
+            model.set_session(
+                view_id,
+                cli_agent_session(CLIAgentSessionStatus::InProgress, true),
+                ctx,
+            );
+        });
+        assert_eq!(
+            model.read(&app, |model, _| model.activity(view_id)),
+            Some(CLIAgentSessionActivity::Loading)
+        );
+
+        model.update(&mut app, |model, ctx| {
+            model.update_from_event(view_id, &rich_event(CLIAgentEventType::PromptSubmit), ctx);
+        });
+        assert_eq!(
+            model.read(&app, |model, _| model.activity(view_id)),
+            Some(CLIAgentSessionActivity::Running)
+        );
+
+        model.update(&mut app, |model, ctx| {
+            model.update_from_event(view_id, &rich_event(CLIAgentEventType::QuestionAsked), ctx);
+        });
+        assert_eq!(
+            model.read(&app, |model, _| model.activity(view_id)),
+            Some(CLIAgentSessionActivity::WaitingForInput)
+        );
+
+        model.update(&mut app, |model, ctx| {
+            model.update_from_event(view_id, &rich_event(CLIAgentEventType::Stop), ctx);
+        });
+        assert_eq!(
+            model.read(&app, |model, _| model.activity(view_id)),
+            Some(CLIAgentSessionActivity::Idle)
+        );
+        assert!(model.read(&app, |model, _| matches!(
+            model.session(view_id).map(|session| &session.status),
+            Some(CLIAgentSessionStatus::Success)
+        )));
     });
 }
