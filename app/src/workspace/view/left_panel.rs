@@ -63,16 +63,19 @@ use crate::workspace::view::conversation_list::view::{
 use crate::workspace::view::global_search::view::{
     Event as GlobalSearchViewEvent, GlobalSearchEntryFocus, GlobalSearchView,
 };
+use crate::workspace::view::version_control::{VersionControlTelemetryEvent, VersionControlView};
 use crate::workspace::view::{
     LEFT_PANEL_AGENT_CONVERSATIONS_BINDING_NAME, LEFT_PANEL_GLOBAL_SEARCH_BINDING_NAME,
-    LEFT_PANEL_PROJECT_EXPLORER_BINDING_NAME, LEFT_PANEL_WARP_DRIVE_BINDING_NAME,
-    OPEN_GLOBAL_SEARCH_BINDING_NAME, TOGGLE_CONVERSATION_LIST_VIEW_BINDING_NAME,
-    TOGGLE_PROJECT_EXPLORER_BINDING_NAME, TOGGLE_WARP_DRIVE_BINDING_NAME,
+    LEFT_PANEL_PROJECT_EXPLORER_BINDING_NAME, LEFT_PANEL_VERSION_CONTROL_BINDING_NAME,
+    LEFT_PANEL_WARP_DRIVE_BINDING_NAME, OPEN_GLOBAL_SEARCH_BINDING_NAME,
+    TOGGLE_CONVERSATION_LIST_VIEW_BINDING_NAME, TOGGLE_PROJECT_EXPLORER_BINDING_NAME,
+    TOGGLE_WARP_DRIVE_BINDING_NAME,
 };
 
 #[derive(Default)]
 struct MouseStateHandles {
     project_explorer_button: MouseStateHandle,
+    version_control_button: MouseStateHandle,
     conversation_list_view_button: MouseStateHandle,
     global_search_button: MouseStateHandle,
     warp_drive_button: MouseStateHandle,
@@ -82,6 +85,7 @@ struct MouseStateHandles {
 #[derive(Clone, Debug)]
 pub enum LeftPanelAction {
     ProjectExplorer,
+    VersionControl,
     GlobalSearch { entry_focus: GlobalSearchEntryFocus },
     WarpDrive,
     ConversationListView,
@@ -98,9 +102,9 @@ pub(crate) enum ToolPanelAvailability {
 impl ToolPanelView {
     fn availability(self, app: &AppContext) -> ToolPanelAvailability {
         match self {
-            ToolPanelView::ProjectExplorer | ToolPanelView::GlobalSearch { .. } => {
-                ToolPanelAvailability::Available
-            }
+            ToolPanelView::ProjectExplorer
+            | ToolPanelView::VersionControl
+            | ToolPanelView::GlobalSearch { .. } => ToolPanelAvailability::Available,
             ToolPanelView::WarpDrive => {
                 if WarpDriveSettings::is_warp_drive_available(app) {
                     ToolPanelAvailability::Available
@@ -147,6 +151,7 @@ pub enum LeftPanelEvent {
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub enum ToolPanelView {
     ProjectExplorer,
+    VersionControl,
     GlobalSearch { entry_focus: GlobalSearchEntryFocus },
     WarpDrive,
     ConversationListView,
@@ -216,6 +221,7 @@ pub struct LeftPanelView {
     mouse_state_handles: MouseStateHandles,
     close_button_mouse_state: MouseStateHandle,
     warp_drive_view: ViewHandle<DrivePanel>,
+    version_control_view: ViewHandle<VersionControlView>,
     conversation_list_view: ViewHandle<ConversationListView>,
     active_view: active_view_state::ActiveViewState,
     toolbelt_buttons: Vec<ToolbeltButtonConfig>,
@@ -268,12 +274,15 @@ impl LeftPanelView {
             ),
             (
                 ToolPanelView::ProjectExplorer
+                | ToolPanelView::VersionControl
                 | ToolPanelView::GlobalSearch { .. }
                 | ToolPanelView::WarpDrive,
                 ToolPanelAvailability::RequiresAi,
             )
             | (
-                ToolPanelView::ProjectExplorer | ToolPanelView::GlobalSearch { .. },
+                ToolPanelView::ProjectExplorer
+                | ToolPanelView::VersionControl
+                | ToolPanelView::GlobalSearch { .. },
                 ToolPanelAvailability::RequiresAccount,
             )
             | (_, ToolPanelAvailability::Available) => {
@@ -351,6 +360,7 @@ impl LeftPanelView {
             }
         };
         let warp_drive_view = ctx.add_typed_action_view(DrivePanel::new);
+        let version_control_view = ctx.add_typed_action_view(VersionControlView::new);
         let conversation_list_view = ctx.add_typed_action_view(ConversationListView::new);
 
         ctx.subscribe_to_view(&warp_drive_view, |_me, _, event, ctx| {
@@ -439,6 +449,10 @@ impl LeftPanelView {
                     view.set_root_directories(all_directories, view_ctx);
                 });
 
+                me.version_control_view.update(ctx, |view, view_ctx| {
+                    view.set_working_directories(local_paths.clone(), view_ctx);
+                });
+
                 // Directories are already in display order (most recent first) from the model
                 let local_directories = deduplicate_by_directory_name(local_paths);
                 let file_tree_view =
@@ -466,6 +480,7 @@ impl LeftPanelView {
             mouse_state_handles: Default::default(),
             close_button_mouse_state: Default::default(),
             warp_drive_view,
+            version_control_view,
             conversation_list_view,
             active_view: active_view_state::new(active_view),
             toolbelt_buttons,
@@ -554,6 +569,18 @@ impl LeftPanelView {
                     active_icon: None,
                     tooltip_text: "Project explorer".to_string(),
                     action: LeftPanelAction::ProjectExplorer,
+                    render_with_active_state: false,
+                    tooltip_keybinding: toolbelt_tooltip_keybinding(&tooltip_keybinding_names, ctx),
+                    tooltip_keybinding_names,
+                }
+            }
+            ToolPanelView::VersionControl => {
+                let tooltip_keybinding_names = vec![LEFT_PANEL_VERSION_CONTROL_BINDING_NAME];
+                ToolbeltButtonConfig {
+                    icon: Icon::GitBranch,
+                    active_icon: None,
+                    tooltip_text: "Version control".to_string(),
+                    action: LeftPanelAction::VersionControl,
                     render_with_active_state: false,
                     tooltip_keybinding: toolbelt_tooltip_keybinding(&tooltip_keybinding_names, ctx),
                     tooltip_keybinding_names,
@@ -702,6 +729,14 @@ impl LeftPanelView {
         self.active_view.get() == ToolPanelView::ProjectExplorer
     }
 
+    #[cfg(feature = "integration_tests")]
+    pub fn version_control_debug_state(&self, app: &AppContext) -> (bool, usize) {
+        (
+            self.active_view.get() == ToolPanelView::VersionControl,
+            self.version_control_view.as_ref(app).repository_count(),
+        )
+    }
+
     pub fn warp_drive_view(&self) -> &ViewHandle<DrivePanel> {
         &self.warp_drive_view
     }
@@ -788,6 +823,10 @@ impl LeftPanelView {
             view.set_root_directories(all_directories, view_ctx);
         });
 
+        self.version_control_view.update(ctx, |view, view_ctx| {
+            view.set_working_directories(local_paths.clone(), view_ctx);
+        });
+
         let local_directories = deduplicate_by_directory_name(local_paths);
         let active_file_model = pane_group.as_ref(ctx).active_file_model().clone();
 
@@ -846,6 +885,9 @@ impl LeftPanelView {
                     });
                     ctx.focus(&file_tree_view);
                 }
+            }
+            ToolPanelView::VersionControl => {
+                ctx.focus(&self.version_control_view);
             }
             ToolPanelView::GlobalSearch { entry_focus } => {
                 if let Some(global_search_view) = self.active_global_search_view(ctx) {
@@ -1032,6 +1074,9 @@ impl LeftPanelView {
                 LeftPanelAction::ProjectExplorer => {
                     self.active_view.get() == ToolPanelView::ProjectExplorer
                 }
+                LeftPanelAction::VersionControl => {
+                    self.active_view.get() == ToolPanelView::VersionControl
+                }
                 LeftPanelAction::GlobalSearch { .. } => {
                     matches!(self.active_view.get(), ToolPanelView::GlobalSearch { .. })
                 }
@@ -1139,6 +1184,15 @@ impl LeftPanelView {
                         },
                         ctx
                     );
+                }
+            }
+            LeftPanelAction::VersionControl => {
+                let was_active = self.active_view.get() == ToolPanelView::VersionControl;
+                active_view_state::set(self, ToolPanelView::VersionControl, ctx);
+                if !was_active {
+                    send_telemetry_from_ctx!(VersionControlTelemetryEvent::Opened, ctx);
+                    self.version_control_view
+                        .update(ctx, |view, ctx| view.refresh(ctx));
                 }
             }
             LeftPanelAction::GlobalSearch { entry_focus } => {
@@ -1284,6 +1338,7 @@ impl View for LeftPanelView {
                         ctx.focus(&view);
                     }
                 }
+                ToolPanelView::VersionControl => ctx.focus(&self.version_control_view),
                 ToolPanelView::GlobalSearch { .. } => {
                     if let Some(view) = self.active_global_search_view(ctx) {
                         ctx.focus(&view);
@@ -1300,6 +1355,7 @@ impl View for LeftPanelView {
 
         let mouse_state_handles = vec![
             self.mouse_state_handles.project_explorer_button.clone(),
+            self.mouse_state_handles.version_control_button.clone(),
             self.mouse_state_handles
                 .conversation_list_view_button
                 .clone(),
@@ -1348,6 +1404,11 @@ impl View for LeftPanelView {
                     _ => Shrinkable::new(1.0, Container::new(Empty::new().finish()).finish())
                         .finish(),
                 },
+                ToolPanelView::VersionControl => Shrinkable::new(
+                    1.0,
+                    Container::new(ChildView::new(&self.version_control_view).finish()).finish(),
+                )
+                .finish(),
                 ToolPanelView::GlobalSearch { .. } => match self.active_global_search_view(app) {
                     Some(global_search_view) => Shrinkable::new(
                         1.0,

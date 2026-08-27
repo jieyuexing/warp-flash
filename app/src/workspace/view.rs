@@ -20,6 +20,7 @@ mod tab_grouping;
 #[cfg(test)]
 #[path = "view_tests.rs"]
 pub(crate) mod tests;
+pub(crate) mod version_control;
 mod vertical_tabs;
 #[cfg(target_family = "wasm")]
 mod wasm_view;
@@ -680,6 +681,8 @@ pub(crate) const TOGGLE_TAB_CONFIGS_MENU_BINDING_NAME: &str = "workspace:toggle_
 // Editable left panel toolbelt keybindings.
 pub(crate) const LEFT_PANEL_PROJECT_EXPLORER_BINDING_NAME: &str =
     "workspace:left_panel_project_explorer";
+pub(crate) const LEFT_PANEL_VERSION_CONTROL_BINDING_NAME: &str =
+    "workspace:left_panel_version_control";
 pub(crate) const LEFT_PANEL_GLOBAL_SEARCH_BINDING_NAME: &str = "workspace:left_panel_global_search";
 pub(crate) const LEFT_PANEL_WARP_DRIVE_BINDING_NAME: &str = "workspace:left_panel_warp_drive";
 pub(crate) const LEFT_PANEL_AGENT_CONVERSATIONS_BINDING_NAME: &str =
@@ -4352,6 +4355,7 @@ impl Workspace {
             // Restore which panel tab was active
             let active_view = match left_panel_snapshot.left_panel_displayed_tab {
                 LeftPanelDisplayedTab::FileTree => ToolPanelView::ProjectExplorer,
+                LeftPanelDisplayedTab::VersionControl => ToolPanelView::VersionControl,
                 LeftPanelDisplayedTab::GlobalSearch => ToolPanelView::GlobalSearch {
                     entry_focus: GlobalSearchEntryFocus::Results,
                 },
@@ -15244,6 +15248,13 @@ impl Workspace {
         self.active_tab_pane_group().as_ref(ctx).left_panel_open
     }
 
+    #[cfg(feature = "integration_tests")]
+    pub fn version_control_panel_debug_state(&self, ctx: &AppContext) -> (bool, usize) {
+        self.left_panel_view
+            .as_ref(ctx)
+            .version_control_debug_state(ctx)
+    }
+
     fn is_readonly_shared_session_active(&self, ctx: &mut ViewContext<Self>) -> bool {
         let active_terminal_view = self
             .active_tab_pane_group()
@@ -20591,6 +20602,7 @@ impl Workspace {
                         .unwrap_or(ToolPanelView::WarpDrive)
                     {
                         ToolPanelView::ProjectExplorer => "Project explorer",
+                        ToolPanelView::VersionControl => "Version control",
                         ToolPanelView::GlobalSearch { .. } => "Global search",
                         ToolPanelView::WarpDrive => "Warp Drive",
                         ToolPanelView::ConversationListView => "Agent conversations",
@@ -20645,6 +20657,7 @@ impl Workspace {
                 .unwrap_or(ToolPanelView::WarpDrive)
             {
                 ToolPanelView::ProjectExplorer => "Project explorer",
+                ToolPanelView::VersionControl => "Version control",
                 ToolPanelView::GlobalSearch { .. } => "Global search",
                 ToolPanelView::WarpDrive => "Warp Drive",
                 ToolPanelView::ConversationListView => "Agent conversations",
@@ -23934,6 +23947,9 @@ impl Workspace {
         if cfg!(feature = "local_fs") && *CodeSettings::as_ref(ctx).show_project_explorer.value() {
             views.push(ToolPanelView::ProjectExplorer);
         }
+        if cfg!(feature = "local_fs") {
+            views.push(ToolPanelView::VersionControl);
+        }
         if FeatureFlag::AgentViewConversationListView.is_enabled()
             && *AISettings::as_ref(ctx).show_conversation_history
         {
@@ -26279,6 +26295,18 @@ impl TypedActionView for Workspace {
             OpenProjectExplorer => {
                 if *CodeSettings::as_ref(ctx).show_project_explorer {
                     self.open_left_panel_view(&LeftPanelAction::ProjectExplorer, ctx);
+                }
+            }
+            ToggleVersionControl => {
+                if cfg!(feature = "local_fs") {
+                    let is_showing = self.left_panel_view.as_ref(ctx).active_view()
+                        == ToolPanelView::VersionControl;
+                    self.toggle_left_panel_view(&LeftPanelAction::VersionControl, is_showing, ctx);
+                }
+            }
+            OpenVersionControl => {
+                if cfg!(feature = "local_fs") {
+                    self.open_left_panel_view(&LeftPanelAction::VersionControl, ctx);
                 }
             }
             ToggleWarpDrive => {

@@ -5,7 +5,7 @@ use anyhow::{Result, anyhow};
 use warp_core::safe_warn;
 use warp_util::git::run_git_command;
 #[cfg(feature = "local_fs")]
-use warp_util::git::run_git_command_with_env;
+use warp_util::git::{run_git_command_strict_with_env, run_git_command_with_env};
 
 #[cfg(test)]
 #[path = "git_tests.rs"]
@@ -669,7 +669,7 @@ pub async fn run_commit(
     path_env: Option<&str>,
 ) -> Result<String> {
     if include_unstaged {
-        run_git_command_with_env(repo_path, &["add", "-A"], path_env).await?;
+        run_git_command_strict_with_env(repo_path, &["add", "-A"], path_env).await?;
     }
     // `git commit` exits 1 with an informational message on stdout when nothing
     // is staged, which `run_git_command_with_env` reports as `Ok` (exit 1 +
@@ -689,7 +689,7 @@ pub async fn run_commit(
         }
         anyhow::bail!("no changes added to commit");
     }
-    run_git_command_with_env(repo_path, &["commit", "-m", message], path_env).await
+    run_git_command_strict_with_env(repo_path, &["commit", "-m", message], path_env).await
 }
 
 #[cfg(not(feature = "local_fs"))]
@@ -706,7 +706,7 @@ pub async fn run_commit(
 /// `path_env` is forwarded so the LFS `pre-push` hook can find `git-lfs`.
 #[cfg(feature = "local_fs")]
 pub async fn run_push(repo_path: &Path, branch: &str, path_env: Option<&str>) -> Result<String> {
-    run_git_command_with_env(
+    run_git_command_strict_with_env(
         repo_path,
         &["push", "--set-upstream", "origin", branch],
         path_env,

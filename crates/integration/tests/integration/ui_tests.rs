@@ -347,6 +347,7 @@ integration_tests! {
     test_file_tree_keyboard_navigation,
     test_file_tree_non_openable_files,
     test_file_tree_nested_file_opening,
+    test_version_control_panel_discovers_git_repository,
 
     // Copy current path command-palette action
     test_copy_current_path_copies_terminal_pwd,

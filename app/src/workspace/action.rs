@@ -719,6 +719,8 @@ pub enum WorkspaceAction {
     NavigateNextPaneOrPanel,
     ToggleProjectExplorer,
     OpenProjectExplorer,
+    ToggleVersionControl,
+    OpenVersionControl,
     ToggleGlobalSearch,
     ToggleHiddenFiles,
     OpenGlobalSearch,
@@ -1184,6 +1186,8 @@ impl WorkspaceAction {
             | NavigateNextPaneOrPanel
             | ToggleProjectExplorer
             | OpenProjectExplorer
+            | ToggleVersionControl
+            | OpenVersionControl
             | ToggleGlobalSearch
             | ToggleHiddenFiles
             | OpenGlobalSearch

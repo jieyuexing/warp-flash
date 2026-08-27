@@ -18,6 +18,26 @@ pub async fn run_git_command_with_env(
     args: &[&str],
     path_env: Option<&str>,
 ) -> Result<String> {
+    run_git_command_with_env_and_exit_policy(repo_path, args, path_env, true).await
+}
+
+/// Runs a state-changing git command and requires a successful exit status.
+#[cfg(not(target_family = "wasm"))]
+pub async fn run_git_command_strict_with_env(
+    repo_path: &Path,
+    args: &[&str],
+    path_env: Option<&str>,
+) -> Result<String> {
+    run_git_command_with_env_and_exit_policy(repo_path, args, path_env, false).await
+}
+
+#[cfg(not(target_family = "wasm"))]
+async fn run_git_command_with_env_and_exit_policy(
+    repo_path: &Path,
+    args: &[&str],
+    path_env: Option<&str>,
+    allow_diff_exit_one: bool,
+) -> Result<String> {
     use command::Stdio;
 
     log::debug!(
@@ -47,7 +67,9 @@ pub async fn run_git_command_with_env(
     // - Exit code 0: no differences
     // - Exit code 1: differences found (this is normal for diff commands)
     // - Exit code > 1: actual error
-    if output.status.success() || (output.status.code() == Some(1) && !stdout.is_empty()) {
+    if output.status.success()
+        || (allow_diff_exit_one && output.status.code() == Some(1) && !stdout.is_empty())
+    {
         Ok(stdout)
     } else {
         Err(anyhow!("Git command failed: {}, {}", stderr, stdout))
@@ -191,6 +213,15 @@ pub async fn run_git_command(_repo_path: &Path, _args: &[&str]) -> Result<String
 
 #[cfg(target_family = "wasm")]
 pub async fn run_git_command_with_env(
+    _repo_path: &Path,
+    _args: &[&str],
+    _path_env: Option<&str>,
+) -> Result<String> {
+    Err(anyhow!("Not supported on wasm"))
+}
+
+#[cfg(target_family = "wasm")]
+pub async fn run_git_command_strict_with_env(
     _repo_path: &Path,
     _args: &[&str],
     _path_env: Option<&str>,
