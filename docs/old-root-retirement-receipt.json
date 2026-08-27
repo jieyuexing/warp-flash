@@ -1,0 +1,42 @@
+{
+  "schema": 1,
+  "receipt_id": "warp-flash-old-root-retirement-v1",
+  "status": "retired-recoverable",
+  "authorized_at": "2026-08-01T12:05:48+08:00",
+  "authority_ref": "user-input://warp-flash/delete-old-checkout/20260801",
+  "task_ref": "task-store://warp-flash-old-root-retirement-v1@revision-2",
+  "source_path": "/Users/jieyuexing/warp",
+  "source_device": 16777231,
+  "source_inode": 171502059,
+  "source_size_kib": 118263108,
+  "destination_path": "/Users/jieyuexing/harness-universe/planet-resources/planet-projects/warp-flash",
+  "destination_device": 16777231,
+  "destination_inode": 190319564,
+  "head": "26b7c9cdbd011749480be8ace9b7e8d7d3d5da8c",
+  "customization_path_count": 95,
+  "customization_manifest_sha256": "1ee68f08feb428fbc37ce4c430a28dcbdcaf7e18bd717fed7459b04edc2e4362",
+  "pre_delete_checks": {
+    "head_parity": "pass",
+    "git_status_parity": "pass",
+    "open_handle_check": "pass",
+    "running_process_check": "pass"
+  },
+  "retirement_action": {
+    "delete_physical_source": true,
+    "create_compatibility_symlink": true,
+    "compatibility_target": "/Users/jieyuexing/harness-universe/planet-resources/planet-projects/warp-flash",
+    "deletion_mode": "macos-trash",
+    "recovery_path": "/Users/jieyuexing/.Trash/warp-retired-20260801T1205",
+    "retired_at": "2026-08-01T12:06:29+08:00"
+  },
+  "post_delete_checks": {
+    "former_path_is_symlink": "pass",
+    "compatibility_realpath": "pass",
+    "destination_head": "pass",
+    "original_customization_manifest": "pass",
+    "recovery_copy_size": "113G",
+    "canonical_project_size": "806M",
+    "harness_validation": "failed-unrelated",
+    "harness_validation_detail": "Five learning-note validation errors in planet-wiki/learning/technical-foundations/etech-docker-weblogic-runtime-boundaries.md; no Warp path was reported."
+  }
+}
