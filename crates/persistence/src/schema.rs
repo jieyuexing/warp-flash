@@ -363,6 +363,7 @@ diesel::table! {
         color -> Nullable<Text>,
         collapsed -> Bool,
         pinned -> Bool,
+        persistent_id -> Nullable<Text>,
     }
 }
 
@@ -374,7 +375,7 @@ diesel::table! {
         color -> Nullable<Text>,
         tab_group_id -> Nullable<Integer>,
         pinned -> Bool,
-        archive_id -> Nullable<Text>,
+        persistent_id -> Nullable<Text>,
         archived -> Bool,
         archived_at -> Nullable<BigInt>,
     }
@@ -460,6 +461,8 @@ diesel::table! {
         left_panel_open -> Nullable<Bool>,
         vertical_tabs_panel_open -> Nullable<Bool>,
         team_uid -> Nullable<Text>,
+        vertical_tabs_panel_width -> Nullable<Float>,
+        archived_tabs_expanded -> Bool,
     }
 }
 

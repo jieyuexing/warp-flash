@@ -6,6 +6,8 @@ use ai::workspace::WorkspaceMetadata;
 use chrono::{Local, Utc};
 use cloud_object_persistence::to_cloud_object_permissions;
 use diesel::connection::SimpleConnection;
+use diesel::prelude::*;
+use diesel_migrations::MigrationHarness;
 use pathfinder_geometry::rect::RectF;
 use pathfinder_geometry::vector::Vector2F;
 use warp_core::features::FeatureFlag;
@@ -378,6 +380,7 @@ fn test_deduplicate_no_snapshots() {
 fn test_terminal_window_snapshot(vertical_tabs_panel_open: bool) -> WindowSnapshot {
     WindowSnapshot {
         tabs: vec![TabSnapshot {
+            id: uuid::Uuid::new_v4(),
             custom_title: None,
             root: PaneNodeSnapshot::Leaf(LeafSnapshot {
                 is_focused: true,
@@ -418,6 +421,8 @@ fn test_terminal_window_snapshot(vertical_tabs_panel_open: bool) -> WindowSnapsh
         warp_drive_index_width: None,
         left_panel_open: false,
         vertical_tabs_panel_open,
+        vertical_tabs_panel_width: None,
+        archived_tabs_expanded: false,
         left_panel_width: None,
         right_panel_width: None,
         agent_management_filters: None,
@@ -426,16 +431,20 @@ fn test_terminal_window_snapshot(vertical_tabs_panel_open: bool) -> WindowSnapsh
 }
 
 #[test]
-fn test_sqlite_round_trips_vertical_tabs_panel_open() {
+fn test_sqlite_round_trips_vertical_tabs_panel_state_and_tab_identity() {
     let tempdir = tempfile::tempdir().expect("tempdir should be created");
     let database_path = tempdir.path().join("warp.sqlite");
     let mut conn = setup_database(&database_path).expect("database should initialize");
 
+    let mut collapsed = test_terminal_window_snapshot(false);
+    collapsed.vertical_tabs_panel_width = Some(56.0);
+    let collapsed_tab_id = collapsed.tabs[0].id;
+    let mut expanded = test_terminal_window_snapshot(true);
+    expanded.vertical_tabs_panel_width = Some(248.0);
+    expanded.archived_tabs_expanded = true;
+    let expanded_tab_id = expanded.tabs[0].id;
     let app_state = AppState {
-        windows: vec![
-            test_terminal_window_snapshot(false),
-            test_terminal_window_snapshot(true),
-        ],
+        windows: vec![collapsed, expanded],
         active_window_index: Some(1),
         block_lists: Default::default(),
         running_mcp_servers: Default::default(),
@@ -457,6 +466,64 @@ fn test_sqlite_round_trips_vertical_tabs_panel_open() {
             .collect::<Vec<_>>(),
         vec![false, true]
     );
+    assert_eq!(restored.windows[0].vertical_tabs_panel_width, Some(56.0));
+    assert_eq!(restored.windows[1].vertical_tabs_panel_width, Some(248.0));
+    assert!(!restored.windows[0].archived_tabs_expanded);
+    assert!(restored.windows[1].archived_tabs_expanded);
+    assert_eq!(restored.windows[0].tabs[0].id, collapsed_tab_id);
+    assert_eq!(restored.windows[1].tabs[0].id, expanded_tab_id);
+
+    save_app_state(&mut conn, &restored).expect("restored app state should save again");
+    let restored_again = read_sqlite_data(&mut conn, None, PersistedDataScope::Full)
+        .expect("app state should load a second time")
+        .app_state
+        .expect("app state should remain present");
+    assert_eq!(restored_again.windows[0].tabs[0].id, collapsed_tab_id);
+    assert_eq!(restored_again.windows[1].tabs[0].id, expanded_tab_id);
+}
+
+#[test]
+fn tab_identity_migration_preserves_existing_archive_ids() {
+    let tempdir = tempfile::tempdir().expect("tempdir should be created");
+    let database_path = tempdir.path().join("warp.sqlite");
+    let mut conn = setup_database(&database_path).expect("database should initialize");
+
+    conn.revert_last_migration(persistence::MIGRATIONS)
+        .expect("latest migration should revert");
+    conn.batch_execute(
+        "INSERT INTO windows (active_tab_index, quake_mode, fullscreen_state)
+         VALUES (0, FALSE, 0);
+         INSERT INTO tabs (window_id, pinned, archive_id, archived, archived_at)
+         VALUES (
+             1,
+             FALSE,
+             '00000000-0000-0000-0000-000000000042',
+             TRUE,
+             42
+         );",
+    )
+    .expect("pre-migration archived tab should insert");
+
+    conn.run_pending_migrations(persistence::MIGRATIONS)
+        .expect("latest migration should reapply");
+
+    let identities = crate::persistence::schema::tabs::table
+        .select(crate::persistence::schema::tabs::persistent_id)
+        .load::<Option<String>>(&mut conn)
+        .expect("migrated tab identities should load");
+    assert_eq!(
+        identities,
+        vec![Some("00000000-0000-0000-0000-000000000042".to_string())]
+    );
+
+    let sidebar_state = crate::persistence::schema::windows::table
+        .select((
+            crate::persistence::schema::windows::vertical_tabs_panel_width,
+            crate::persistence::schema::windows::archived_tabs_expanded,
+        ))
+        .first::<(Option<f32>, bool)>(&mut conn)
+        .expect("migrated sidebar state should load");
+    assert_eq!(sidebar_state, (None, false));
 }
 
 #[test]
@@ -468,6 +535,7 @@ fn test_sqlite_round_trips_archived_tab_with_pane_tree() {
     let group_id = TabGroupId::new();
     let mut window = test_terminal_window_snapshot(true);
     let mut archived_tab = window.tabs[0].clone();
+    archived_tab.id = archive_id;
     archived_tab.custom_title = Some("Archived deployment".to_string());
     archived_tab.group_id = Some(group_id);
     if let PaneNodeSnapshot::Leaf(LeafSnapshot {
@@ -479,7 +547,6 @@ fn test_sqlite_round_trips_archived_tab_with_pane_tree() {
         terminal.cwd = Some("/work/deployment".to_string());
     }
     window.archived_tabs = vec![ArchivedTabSnapshot {
-        id: archive_id,
         tab: archived_tab,
         archived_at: 1_788_000_000_000,
     }];
@@ -507,7 +574,7 @@ fn test_sqlite_round_trips_archived_tab_with_pane_tree() {
     assert_eq!(restored_window.tabs.len(), 1);
     assert_eq!(restored_window.archived_tabs.len(), 1);
     let archived = &restored_window.archived_tabs[0];
-    assert_eq!(archived.id, archive_id);
+    assert_eq!(archived.tab.id, archive_id);
     assert_eq!(archived.archived_at, 1_788_000_000_000);
     assert_eq!(
         archived.tab.custom_title.as_deref(),
@@ -517,6 +584,7 @@ fn test_sqlite_round_trips_archived_tab_with_pane_tree() {
         archived.tab.group_id,
         Some(restored_window.tab_groups[0].id)
     );
+    assert_eq!(restored_window.tab_groups[0].id, group_id);
     let PaneNodeSnapshot::Leaf(LeafSnapshot {
         contents: LeafContents::Terminal(terminal),
         ..
@@ -605,6 +673,7 @@ fn test_sqlite_round_trips_custom_vertical_tabs_title() {
     let app_state = AppState {
         windows: vec![WindowSnapshot {
             tabs: vec![TabSnapshot {
+                id: uuid::Uuid::new_v4(),
                 custom_title: None,
                 root: PaneNodeSnapshot::Leaf(LeafSnapshot {
                     is_focused: true,
@@ -645,6 +714,8 @@ fn test_sqlite_round_trips_custom_vertical_tabs_title() {
             warp_drive_index_width: None,
             left_panel_open: false,
             vertical_tabs_panel_open: false,
+            vertical_tabs_panel_width: None,
+            archived_tabs_expanded: false,
             left_panel_width: None,
             right_panel_width: None,
             agent_management_filters: None,
@@ -684,6 +755,7 @@ fn test_sqlite_round_trips_code_pane_with_multiple_tabs() {
     let app_state = AppState {
         windows: vec![WindowSnapshot {
             tabs: vec![TabSnapshot {
+                id: uuid::Uuid::new_v4(),
                 custom_title: None,
                 root: PaneNodeSnapshot::Leaf(LeafSnapshot {
                     is_focused: true,
@@ -725,6 +797,8 @@ fn test_sqlite_round_trips_code_pane_with_multiple_tabs() {
             warp_drive_index_width: None,
             left_panel_open: false,
             vertical_tabs_panel_open: false,
+            vertical_tabs_panel_width: None,
+            archived_tabs_expanded: false,
             left_panel_width: None,
             right_panel_width: None,
             agent_management_filters: None,
@@ -774,6 +848,7 @@ fn test_sqlite_round_trips_tab_groups() {
 
     let group_id = TabGroupId::new();
     let tab_in_group = TabSnapshot {
+        id: uuid::Uuid::new_v4(),
         custom_title: None,
         root: PaneNodeSnapshot::Leaf(LeafSnapshot {
             is_focused: true,
@@ -803,6 +878,7 @@ fn test_sqlite_round_trips_tab_groups() {
         pinned: false,
     };
     let tab_outside_group = TabSnapshot {
+        id: uuid::Uuid::new_v4(),
         custom_title: None,
         root: PaneNodeSnapshot::Leaf(LeafSnapshot {
             is_focused: false,
@@ -847,6 +923,8 @@ fn test_sqlite_round_trips_tab_groups() {
             warp_drive_index_width: None,
             left_panel_open: false,
             vertical_tabs_panel_open: false,
+            vertical_tabs_panel_width: None,
+            archived_tabs_expanded: false,
             left_panel_width: None,
             right_panel_width: None,
             agent_management_filters: None,
@@ -881,9 +959,7 @@ fn test_sqlite_round_trips_tab_groups() {
     );
     assert!(restored_group.collapsed);
 
-    // The in-memory `TabGroupId` is minted fresh on restore, so we check that
-    // the grouped tab points at the restored group, and the ungrouped tab
-    // remains ungrouped.
+    assert_eq!(restored_group.id, group_id);
     assert_eq!(restored_window.tabs.len(), 2);
     assert_eq!(restored_window.tabs[0].group_id, Some(restored_group.id));
     assert_eq!(restored_window.tabs[1].group_id, None);
@@ -901,6 +977,7 @@ fn test_sqlite_round_trips_pinned_state() {
     let unpinned_group_id = TabGroupId::new();
 
     let pinned_tab = TabSnapshot {
+        id: uuid::Uuid::new_v4(),
         custom_title: None,
         root: PaneNodeSnapshot::Leaf(LeafSnapshot {
             is_focused: true,
@@ -930,6 +1007,7 @@ fn test_sqlite_round_trips_pinned_state() {
         pinned: true,
     };
     let unpinned_tab = TabSnapshot {
+        id: uuid::Uuid::new_v4(),
         custom_title: None,
         root: PaneNodeSnapshot::Leaf(LeafSnapshot {
             is_focused: false,
@@ -959,6 +1037,7 @@ fn test_sqlite_round_trips_pinned_state() {
         pinned: false,
     };
     let tab_in_pinned_group = TabSnapshot {
+        id: uuid::Uuid::new_v4(),
         custom_title: None,
         root: PaneNodeSnapshot::Leaf(LeafSnapshot {
             is_focused: false,
@@ -1003,6 +1082,8 @@ fn test_sqlite_round_trips_pinned_state() {
             warp_drive_index_width: None,
             left_panel_open: false,
             vertical_tabs_panel_open: false,
+            vertical_tabs_panel_width: None,
+            archived_tabs_expanded: false,
             left_panel_width: None,
             right_panel_width: None,
             agent_management_filters: None,
@@ -1044,8 +1125,7 @@ fn test_sqlite_round_trips_pinned_state() {
     assert!(!restored_window.tabs[1].pinned);
     assert!(!restored_window.tabs[2].pinned);
 
-    // Both groups round-trip with their pinned state preserved. Group ids are
-    // minted fresh on restore, so we look them up by name.
+    // Both groups round-trip with their identity and pinned state preserved.
     assert_eq!(restored_window.tab_groups.len(), 2);
     let restored_pinned_group = restored_window
         .tab_groups
@@ -1059,6 +1139,8 @@ fn test_sqlite_round_trips_pinned_state() {
         .expect("unpinned group should restore");
     assert!(restored_pinned_group.pinned);
     assert!(!restored_loose_group.pinned);
+    assert_eq!(restored_pinned_group.id, pinned_group_id);
+    assert_eq!(restored_loose_group.id, unpinned_group_id);
 }
 
 fn assert_encode_then_decode_preserves_original_path(original_path: PathBuf) {

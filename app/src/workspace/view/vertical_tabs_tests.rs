@@ -9,17 +9,17 @@ use warpui::elements::PositionedElementOffsetBounds;
 use super::{
     AgentTabTextPreference, SummaryPaneKind, SummaryPaneKindIcons, TerminalAgentText,
     TerminalPrimaryLineData, TerminalPrimaryLineFont, VerticalTabsDetailTarget,
-    VerticalTabsDetailTargetKind, VerticalTabsSummaryBranchEntry, VerticalTabsSummaryData,
-    VerticalTabsSummaryPrimaryLabel, branch_label_display, coalesce_summary_branch_entries,
-    code_detail_kind_label, compact_branch_subtitle_display, detail_sidecar_width_and_bounds,
-    detail_target_for_hovered_row, is_mini_panel_width, non_terminal_search_text_fragments,
-    pane_ids_for_display_granularity, pane_search_text_fragments, preferred_agent_tab_titles,
-    push_normalized_unique_summary_label, search_fragments_contain_query,
-    select_summary_pane_kind_icons, should_keep_detail_sidecar_visible_for_mouse_position,
-    should_show_tab_group_header, shows_synced_inputs_indicator,
-    sort_summary_primary_labels_status_first, summary_overflow_count,
-    summary_search_text_fragments, terminal_kind_badge_label, terminal_primary_line_data,
-    terminal_pull_request_badge_label, terminal_search_text_fragments,
+    VerticalTabsDetailTargetKind, VerticalTabsPanelState, VerticalTabsSummaryBranchEntry,
+    VerticalTabsSummaryData, VerticalTabsSummaryPrimaryLabel, branch_label_display,
+    coalesce_summary_branch_entries, code_detail_kind_label, compact_branch_subtitle_display,
+    detail_sidecar_width_and_bounds, detail_target_for_hovered_row, is_mini_panel_width,
+    non_terminal_search_text_fragments, pane_ids_for_display_granularity,
+    pane_search_text_fragments, preferred_agent_tab_titles, push_normalized_unique_summary_label,
+    search_fragments_contain_query, select_summary_pane_kind_icons,
+    should_keep_detail_sidecar_visible_for_mouse_position, should_show_tab_group_header,
+    shows_synced_inputs_indicator, sort_summary_primary_labels_status_first,
+    summary_overflow_count, summary_search_text_fragments, terminal_kind_badge_label,
+    terminal_primary_line_data, terminal_pull_request_badge_label, terminal_search_text_fragments,
     terminal_title_fallback_font, uses_outer_group_container, visible_pane_ids_for_detail_target,
     vtab_diff_stats_text,
 };
@@ -50,6 +50,25 @@ fn mini_panel_width_switches_to_icon_only_at_the_boundary() {
     assert!(!is_mini_panel_width(113.));
     assert!(!is_mini_panel_width(248.));
 }
+
+#[test]
+fn restored_panel_state_preserves_mini_width_and_archive_expansion() {
+    let mut state = VerticalTabsPanelState::default();
+
+    state.restore_persisted_state(Some(56.0), true);
+
+    assert_eq!(state.persisted_width(), Some(56.0));
+    assert!(state.is_mini());
+    assert!(state.archived_tabs_expanded);
+
+    state.restore_persisted_state(Some(f32::NAN), false);
+    assert_eq!(state.persisted_width(), Some(56.0));
+    assert!(!state.archived_tabs_expanded);
+
+    state.restore_persisted_state(Some(1.0), true);
+    assert_eq!(state.persisted_width(), Some(56.0));
+}
+
 fn code_summary_kind(title: &str) -> SummaryPaneKind {
     SummaryPaneKind::Code {
         title: title.to_string(),

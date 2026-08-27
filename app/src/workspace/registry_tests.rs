@@ -18,6 +18,8 @@ fn snapshot(vertical_tabs_panel_open: bool) -> WindowSnapshot {
         warp_drive_index_width: None,
         left_panel_open: false,
         vertical_tabs_panel_open,
+        vertical_tabs_panel_width: None,
+        archived_tabs_expanded: false,
         left_panel_width: None,
         right_panel_width: None,
         agent_management_filters: None,

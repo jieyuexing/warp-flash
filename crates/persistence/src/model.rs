@@ -44,6 +44,8 @@ pub struct Window {
     pub left_panel_open: Option<bool>,
     pub vertical_tabs_panel_open: Option<bool>,
     pub team_uid: Option<String>,
+    pub vertical_tabs_panel_width: Option<f32>,
+    pub archived_tabs_expanded: bool,
 }
 
 #[derive(Identifiable, Insertable, Queryable)]
@@ -348,6 +350,8 @@ pub struct NewWindow {
     pub left_panel_open: Option<bool>,
     pub vertical_tabs_panel_open: Option<bool>,
     pub team_uid: Option<String>,
+    pub vertical_tabs_panel_width: Option<f32>,
+    pub archived_tabs_expanded: bool,
 }
 
 #[derive(Identifiable, Queryable, Associations)]
@@ -359,7 +363,7 @@ pub struct Tab {
     pub color: Option<String>,
     pub tab_group_id: Option<i32>,
     pub pinned: bool,
-    pub archive_id: Option<String>,
+    pub persistent_id: Option<String>,
     pub archived: bool,
     pub archived_at: Option<i64>,
 }
@@ -372,7 +376,7 @@ pub struct NewTab {
     pub color: Option<String>,
     pub tab_group_id: Option<i32>,
     pub pinned: bool,
-    pub archive_id: Option<String>,
+    pub persistent_id: Option<String>,
     pub archived: bool,
     pub archived_at: Option<i64>,
 }
@@ -389,6 +393,7 @@ pub struct TabGroup {
     pub color: Option<String>,
     pub collapsed: bool,
     pub pinned: bool,
+    pub persistent_id: Option<String>,
 }
 
 #[derive(Insertable)]
@@ -399,6 +404,7 @@ pub struct NewTabGroup {
     pub color: Option<String>,
     pub collapsed: bool,
     pub pinned: bool,
+    pub persistent_id: Option<String>,
 }
 
 /// The panes data model includes pane_nodes, pane_leaves and pane_branches.

@@ -6,6 +6,7 @@ use pathfinder_color::ColorU;
 use pathfinder_geometry::vector::vec2f;
 use serde::{Deserialize, Serialize};
 use settings::Setting as _;
+use uuid::Uuid;
 use warp_core::context_flag::ContextFlag;
 use warp_core::ui::builder::UiBuilder;
 use warp_core::ui::theme::AnsiColors;
@@ -359,6 +360,8 @@ pub struct PaneNameMenuTarget {
 /// where the latter is more of a view model and holds the state handles.
 #[derive(Clone)]
 pub struct TabData {
+    /// Stable identity retained across moves, archiving, and app restarts.
+    pub id: Uuid,
     pub pane_group: ViewHandle<PaneGroup>,
     pub tab_mouse_state: MouseStateHandle,
     pub close_mouse_state: MouseStateHandle,
@@ -386,6 +389,7 @@ const TAB_NO_COLOR_ICON_PATH: &str = "bundled/svg/no_color_ellipse.svg";
 impl TabData {
     pub fn new(pane_group: ViewHandle<PaneGroup>) -> Self {
         Self {
+            id: Uuid::new_v4(),
             pane_group,
             tab_mouse_state: Default::default(),
             close_mouse_state: Default::default(),

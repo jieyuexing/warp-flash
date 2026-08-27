@@ -792,6 +792,27 @@ impl Default for VerticalTabsPanelState {
 }
 
 impl VerticalTabsPanelState {
+    pub(super) fn persisted_width(&self) -> Option<f32> {
+        self.resizable_state
+            .lock()
+            .ok()
+            .map(|state| state.size())
+            .filter(|width| width.is_finite())
+    }
+
+    pub(super) fn restore_persisted_state(
+        &mut self,
+        width: Option<f32>,
+        archived_tabs_expanded: bool,
+    ) {
+        if let Some(width) = width.filter(|width| width.is_finite())
+            && let Ok(mut state) = self.resizable_state.lock()
+        {
+            state.set_size(width.max(MIN_PANEL_WIDTH));
+        }
+        self.archived_tabs_expanded = archived_tabs_expanded;
+    }
+
     fn is_mini(&self) -> bool {
         self.resizable_state
             .lock()
@@ -1801,6 +1822,9 @@ fn render_vertical_tabs_panel(
         .on_resize(|ctx, _| {
             ctx.notify();
         })
+        .on_end_resizing(|ctx, _| {
+            ctx.dispatch_action("workspace:save_app", ());
+        })
         .with_bounds_callback(Box::new(|window_size| {
             let max_width = window_size.x() * MAX_PANEL_WIDTH_RATIO;
             (MIN_PANEL_WIDTH, max_width.max(MIN_PANEL_WIDTH))
@@ -2101,7 +2125,7 @@ fn render_groups(
     let archive_ids: std::collections::HashSet<_> = workspace
         .archived_tabs
         .iter()
-        .map(|archived| archived.id)
+        .map(|archived| archived.tab.id)
         .collect();
     state
         .archived_tab_mouse_states
@@ -2236,7 +2260,7 @@ fn render_archived_tabs_section(
             let mouse_states = state
                 .archived_tab_mouse_states
                 .borrow_mut()
-                .entry(archived.id)
+                .entry(archived.tab.id)
                 .or_default()
                 .clone();
             section.add_child(render_archived_tab_row(
@@ -2266,7 +2290,7 @@ fn render_archived_tab_row(
     sub_text: WarpThemeFill,
 ) -> Box<dyn Element> {
     let theme = appearance.theme();
-    let archive_id = archived.id;
+    let archive_id = archived.tab.id;
     let restore_button = Hoverable::new(mouse_states.restore, move |hover| {
         let background = if hover.is_hovered() {
             internal_colors::fg_overlay_3(theme)
@@ -2290,7 +2314,7 @@ fn render_archived_tab_row(
     })
     .finish();
 
-    let delete_id = archived.id;
+    let delete_id = archived.tab.id;
     let delete_button = Hoverable::new(mouse_states.delete, move |hover| {
         let background = if hover.is_hovered() {
             internal_colors::fg_overlay_3(theme)

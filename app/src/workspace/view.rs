@@ -995,6 +995,8 @@ fn query_for_rewind_prefill(inputs: &[AIAgentInput]) -> Option<String> {
 /// metadata, panel-open state, and `DraggableState` so an in-progress drag
 /// animation continues seamlessly after a handoff.
 pub struct TransferredTab {
+    pub id: uuid::Uuid,
+    pub pinned: bool,
     pub pane_group: ViewHandle<PaneGroup>,
     pub color: Option<AnsiColorIdentifier>,
     pub custom_title: Option<String>,
@@ -4002,6 +4004,10 @@ impl Workspace {
             } => {
                 let active_tab_index = window_snapshot.active_tab_index;
                 let restored_left_panel_open = window_snapshot.left_panel_open;
+                self.vertical_tabs_panel.restore_persisted_state(
+                    window_snapshot.vertical_tabs_panel_width,
+                    window_snapshot.archived_tabs_expanded,
+                );
                 let mut restored_tabs = window_snapshot.tabs.clone();
                 let suppressed_duplicate_resume_targets =
                     Self::deduplicate_external_cli_resume_targets(
@@ -4052,6 +4058,7 @@ impl Workspace {
                             custom_title,
                             ctx,
                         );
+                        self.tabs[tab_index].id = saved_tab.id;
                         self.tabs[tab_index].default_directory_color =
                             saved_tab.default_directory_color;
                         self.tabs[tab_index].selected_color = saved_tab.selected_color;
@@ -4165,6 +4172,8 @@ impl Workspace {
             }
             #[cfg(feature = "local_fs")]
             NewWorkspaceSource::TransferredTab {
+                tab_id,
+                pinned,
                 tab_color,
                 custom_title,
                 left_panel_open,
@@ -4180,8 +4189,12 @@ impl Workspace {
                     custom_title,
                     ctx,
                 );
-                if let (Some(color), Some(tab)) = (tab_color, self.tabs.last_mut()) {
-                    tab.selected_color = SelectedTabColor::Color(color);
+                if let Some(tab) = self.tabs.last_mut() {
+                    tab.id = tab_id;
+                    tab.pinned = FeatureFlag::PinnedTabs.is_enabled() && pinned;
+                    if let Some(color) = tab_color {
+                        tab.selected_color = SelectedTabColor::Color(color);
+                    }
                 }
                 if self.left_panel_visibility_across_tabs_enabled(ctx) {
                     self.left_panel_open = left_panel_open;
@@ -4196,6 +4209,8 @@ impl Workspace {
             }
             #[cfg(not(feature = "local_fs"))]
             NewWorkspaceSource::TransferredTab {
+                tab_id,
+                pinned,
                 tab_color,
                 custom_title,
                 left_panel_open,
@@ -4209,8 +4224,12 @@ impl Workspace {
                     custom_title,
                     ctx,
                 );
-                if let (Some(color), Some(tab)) = (tab_color, self.tabs.last_mut()) {
-                    tab.selected_color = SelectedTabColor::Color(color);
+                if let Some(tab) = self.tabs.last_mut() {
+                    tab.id = tab_id;
+                    tab.pinned = FeatureFlag::PinnedTabs.is_enabled() && pinned;
+                    if let Some(color) = tab_color {
+                        tab.selected_color = SelectedTabColor::Color(color);
+                    }
                 }
                 if self.left_panel_visibility_across_tabs_enabled(ctx) {
                     self.left_panel_open = left_panel_open;
@@ -11950,6 +11969,8 @@ impl Workspace {
             warp_drive_index_width,
             left_panel_open: self.left_panel_open,
             vertical_tabs_panel_open: self.vertical_tabs_panel_open,
+            vertical_tabs_panel_width: self.vertical_tabs_panel.persisted_width(),
+            archived_tabs_expanded: self.vertical_tabs_panel.archived_tabs_expanded,
             left_panel_width,
             right_panel_width,
             agent_management_filters,
@@ -11980,27 +12001,24 @@ impl Workspace {
                 .size()
         });
         let pane_group = pane_group_view.as_ref(app);
+        let tab = self
+            .tabs
+            .get(tab_index)
+            .expect("snapshot tab index should reference a live tab");
 
         TabSnapshot {
+            id: tab.id,
             root: pane_group.snapshot(app),
             custom_title: pane_group.custom_title(app),
-            default_directory_color: self
-                .tabs
-                .get(tab_index)
-                .and_then(|tab| tab.default_directory_color),
-            selected_color: self
-                .tabs
-                .get(tab_index)
-                .map(|tab| tab.selected_color)
-                .unwrap_or_default(),
+            default_directory_color: tab.default_directory_color,
+            selected_color: tab.selected_color,
             left_panel: self.compute_left_panel_snapshot(pane_group_view, left_panel_width, app),
             right_panel: self.compute_right_panel_snapshot(pane_group_view, right_panel_width, app),
             group_id: FeatureFlag::GroupedTabs
                 .is_enabled()
-                .then(|| self.tabs.get(tab_index).and_then(|tab| tab.group_id))
+                .then_some(tab.group_id)
                 .flatten(),
-            pinned: FeatureFlag::PinnedTabs.is_enabled()
-                && self.tabs.get(tab_index).is_some_and(|tab| tab.pinned),
+            pinned: FeatureFlag::PinnedTabs.is_enabled() && tab.pinned,
         }
     }
 
@@ -12262,7 +12280,7 @@ impl Workspace {
 
         if re_adopted && let Some(archive_id) = archive_id {
             self.archived_tabs
-                .retain(|archived| archived.id != archive_id);
+                .retain(|archived| archived.tab.id != archive_id);
         }
 
         if !re_adopted && detach_panes_for_close {
@@ -12444,10 +12462,10 @@ impl Workspace {
                 let Some(pane_group) = self.tabs.get(tab_index).map(|tab| &tab.pane_group) else {
                     continue;
                 };
-                let archive_id = uuid::Uuid::new_v4();
+                let snapshot = self.snapshot_tab(tab_index, pane_group, ctx.window_id(), ctx);
+                let archive_id = snapshot.id;
                 self.archived_tabs.push(ArchivedTabSnapshot {
-                    id: archive_id,
-                    tab: self.snapshot_tab(tab_index, pane_group, ctx.window_id(), ctx),
+                    tab: snapshot,
                     archived_at: chrono::Utc::now().timestamp_millis(),
                 });
                 archive_ids.insert(tab_index, archive_id);
@@ -12671,7 +12689,7 @@ impl Workspace {
     ) {
         if let Some(archive_id) = archive_id {
             self.archived_tabs
-                .retain(|archived| archived.id != archive_id);
+                .retain(|archived| archived.tab.id != archive_id);
         }
         // When restoring a closed tab, we have to reattach its panes so that they know they're
         // user-accessible again.
@@ -12713,7 +12731,7 @@ impl Workspace {
         let Some(archive_index) = self
             .archived_tabs
             .iter()
-            .position(|archived| archived.id == archive_id)
+            .position(|archived| archived.tab.id == archive_id)
         else {
             return;
         };
@@ -12732,6 +12750,7 @@ impl Workspace {
             ctx,
         );
         let restored_index = self.active_tab_index;
+        self.tabs[restored_index].id = snapshot.id;
         self.tabs[restored_index].group_id = None;
         let group_insert_index = group_id.and_then(|group_id| self.index_after_group(group_id));
         self.tabs[restored_index].default_directory_color = snapshot.default_directory_color;
@@ -12771,7 +12790,7 @@ impl Workspace {
         let Some(archive_index) = self
             .archived_tabs
             .iter()
-            .position(|archived| archived.id == archive_id)
+            .position(|archived| archived.tab.id == archive_id)
         else {
             return;
         };
@@ -12841,7 +12860,7 @@ impl Workspace {
     }
 
     fn request_delete_tab(&mut self, tab_index: usize, ctx: &mut ViewContext<Self>) {
-        let Some(pane_group_id) = self.tabs.get(tab_index).map(|tab| tab.pane_group.id()) else {
+        let Some(tab_id) = self.tabs.get(tab_index).map(|tab| tab.id) else {
             return;
         };
         let workspace = ctx.handle();
@@ -12852,10 +12871,8 @@ impl Workspace {
                 ModalButton::for_app("Delete", move |ctx| {
                     if let Some(workspace) = workspace.upgrade(ctx) {
                         workspace.update(ctx, |workspace, ctx| {
-                            if let Some(index) = workspace
-                                .tabs
-                                .iter()
-                                .position(|tab| tab.pane_group.id() == pane_group_id)
+                            if let Some(index) =
+                                workspace.tabs.iter().position(|tab| tab.id == tab_id)
                             {
                                 workspace.delete_tab(index, ctx);
                             }
@@ -25202,6 +25219,7 @@ impl TypedActionView for Workspace {
             ToggleArchivedTabsExpanded => {
                 self.vertical_tabs_panel.archived_tabs_expanded =
                     !self.vertical_tabs_panel.archived_tabs_expanded;
+                ctx.dispatch_global_action("workspace:save_app", ());
                 ctx.notify();
             }
             SetVerticalTabsDisplayGranularity(granularity) => {
@@ -28422,6 +28440,8 @@ impl Workspace {
         let vertical_tabs_panel_open = self.vertical_tabs_panel_open;
 
         Some(TransferredTab {
+            id: tab.id,
+            pinned: tab.pinned,
             pane_group,
             color,
             custom_title,
@@ -28478,6 +28498,8 @@ impl Workspace {
         ctx: &mut ViewContext<Self>,
     ) {
         let TransferredTab {
+            id,
+            pinned,
             pane_group,
             color,
             draggable_state,
@@ -28488,12 +28510,17 @@ impl Workspace {
         });
 
         let index = insertion_index.min(self.tabs.len());
-        // Safety net to ensure the tab lands after all pinned items.
-        let index = self.clamp_to_unpinned_region(&self.tabs, index);
+        let index = if FeatureFlag::PinnedTabs.is_enabled() && pinned {
+            index.min(self.pinned_boundary_index(&self.tabs))
+        } else {
+            self.clamp_to_unpinned_region(&self.tabs, index)
+        };
         // Never split a group: a drop that resolves to the middle of a group's
         // run is pushed past the group's last member instead.
         let index = self.clamp_past_group(index);
         let mut tab_data = TabData::new(pane_group);
+        tab_data.id = id;
+        tab_data.pinned = FeatureFlag::PinnedTabs.is_enabled() && pinned;
         tab_data.selected_color = color.map_or(SelectedTabColor::Unset, SelectedTabColor::Color);
         tab_data.draggable_state = draggable_state;
         self.tabs.insert(index, tab_data);

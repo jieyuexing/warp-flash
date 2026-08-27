@@ -57,6 +57,8 @@ pub struct WindowSnapshot {
     pub warp_drive_index_width: Option<f32>,
     pub left_panel_open: bool,
     pub vertical_tabs_panel_open: bool,
+    pub vertical_tabs_panel_width: Option<f32>,
+    pub archived_tabs_expanded: bool,
     pub left_panel_width: Option<f32>,
     pub right_panel_width: Option<f32>,
     pub agent_management_filters: Option<PersistedAgentManagementFilters>,
@@ -67,7 +69,6 @@ pub struct WindowSnapshot {
 
 #[derive(Clone, Debug, PartialEq)]
 pub struct ArchivedTabSnapshot {
-    pub id: uuid::Uuid,
     pub tab: TabSnapshot,
     pub archived_at: i64,
 }
@@ -83,6 +84,7 @@ pub struct TabGroupSnapshot {
 
 #[derive(Clone, Debug, PartialEq)]
 pub struct TabSnapshot {
+    pub id: uuid::Uuid,
     pub custom_title: Option<String>,
     pub root: PaneNodeSnapshot,
     pub default_directory_color: Option<AnsiColorIdentifier>,

@@ -351,7 +351,9 @@ fn restored_workspace(
 fn transferred_tab_workspace(
     app: &mut App,
     vertical_tabs_panel_open: bool,
-) -> ViewHandle<Workspace> {
+    pinned: bool,
+) -> (ViewHandle<Workspace>, uuid::Uuid) {
+    let tab_id = uuid::Uuid::new_v4();
     let global_resource_handles = GlobalResourceHandles::mock(app);
     let (_, workspace) = app.add_window(WindowStyle::NotStealFocus, |ctx| {
         Workspace::new(
@@ -359,6 +361,8 @@ fn transferred_tab_workspace(
             None,
             NewWorkspaceSource::TransferredTab {
                 source_window_id: ctx.window_id(),
+                tab_id,
+                pinned,
                 tab_color: None,
                 custom_title: None,
                 left_panel_open: false,
@@ -370,7 +374,7 @@ fn transferred_tab_workspace(
             ctx,
         )
     });
-    workspace
+    (workspace, tab_id)
 }
 
 #[test]
@@ -2051,17 +2055,20 @@ fn closing_tab_archives_it_until_explicitly_restored() {
         workspace.update(&mut app, |workspace, ctx| {
             workspace.add_terminal_tab(false, ctx);
             assert_eq!(workspace.tab_count(), 2);
+            let tab_id = workspace.tabs[1].id;
 
             workspace.handle_action(&WorkspaceAction::CloseTab(1), ctx);
 
             assert_eq!(workspace.tab_count(), 1);
             assert_eq!(workspace.archived_tabs.len(), 1);
-            let archive_id = workspace.archived_tabs[0].id;
+            let archive_id = workspace.archived_tabs[0].tab.id;
+            assert_eq!(archive_id, tab_id);
 
             workspace.handle_action(&WorkspaceAction::RestoreArchivedTab(archive_id), ctx);
 
             assert_eq!(workspace.tab_count(), 2);
             assert!(workspace.archived_tabs.is_empty());
+            assert_eq!(workspace.tabs[workspace.active_tab_index()].id, tab_id);
         });
     });
 }
@@ -2128,7 +2135,7 @@ fn restoring_archived_pinned_tab_returns_it_to_pinned_region() {
             workspace.add_terminal_tab(false, ctx);
             workspace.handle_action(&WorkspaceAction::PinTab(2), ctx);
             workspace.handle_action(&WorkspaceAction::CloseTab(0), ctx);
-            let archive_id = workspace.archived_tabs[0].id;
+            let archive_id = workspace.archived_tabs[0].tab.id;
 
             workspace.handle_action(&WorkspaceAction::RestoreArchivedTab(archive_id), ctx);
 
@@ -2155,7 +2162,7 @@ fn restoring_archived_group_tab_rejoins_existing_group_contiguously() {
             workspace.tabs[1].group_id = Some(group_id);
             workspace.tabs[2].group_id = Some(group_id);
             workspace.handle_action(&WorkspaceAction::CloseTab(2), ctx);
-            let archive_id = workspace.archived_tabs[0].id;
+            let archive_id = workspace.archived_tabs[0].tab.id;
             workspace.activate_tab(0, ctx);
 
             workspace.handle_action(&WorkspaceAction::RestoreArchivedTab(archive_id), ctx);
@@ -2205,7 +2212,7 @@ fn deleting_archived_tab_removes_it_after_confirmation() {
         let archive_id = workspace.update(&mut app, |workspace, ctx| {
             workspace.add_terminal_tab(false, ctx);
             workspace.handle_action(&WorkspaceAction::CloseTab(1), ctx);
-            workspace.archived_tabs[0].id
+            workspace.archived_tabs[0].tab.id
         });
 
         workspace.update(&mut app, |workspace, ctx| {
@@ -3577,6 +3584,7 @@ fn test_oss_layout_defaults_tools_panel_open() {
 fn restored_external_cli_session_is_claimed_by_active_tab_only() {
     fn terminal_tab(session_id: &str) -> TabSnapshot {
         TabSnapshot {
+            id: uuid::Uuid::new_v4(),
             custom_title: None,
             root: PaneNodeSnapshot::Leaf(LeafSnapshot {
                 is_focused: true,
@@ -3744,6 +3752,7 @@ fn test_vertical_tabs_panel_defaults_open_for_new_window_when_vertical_tabs_enab
 #[test]
 fn test_vertical_tabs_panel_inherits_transferred_tab_source_window_state() {
     let _vertical_tabs_guard = FeatureFlag::VerticalTabs.override_enabled(true);
+    let _pinned_tabs_guard = FeatureFlag::PinnedTabs.override_enabled(true);
 
     App::test((), |mut app| async move {
         initialize_app(&mut app);
@@ -3753,14 +3762,54 @@ fn test_vertical_tabs_panel_inherits_transferred_tab_source_window_state() {
             });
         });
 
-        let transferred_closed = transferred_tab_workspace(&mut app, false);
-        let transferred_open = transferred_tab_workspace(&mut app, true);
+        let (transferred_closed, closed_tab_id) = transferred_tab_workspace(&mut app, false, false);
+        let (transferred_open, open_tab_id) = transferred_tab_workspace(&mut app, true, true);
 
         transferred_closed.read(&app, |workspace, _| {
             assert!(!workspace.vertical_tabs_panel_open);
+            assert_eq!(workspace.tabs[0].id, closed_tab_id);
+            assert!(!workspace.tabs[0].pinned);
         });
         transferred_open.read(&app, |workspace, _| {
             assert!(workspace.vertical_tabs_panel_open);
+            assert_eq!(workspace.tabs[0].id, open_tab_id);
+            assert!(workspace.tabs[0].pinned);
+        });
+    });
+}
+
+#[test]
+fn transferring_tab_between_existing_windows_preserves_identity_and_pinned_region() {
+    let _pinned_tabs_guard = FeatureFlag::PinnedTabs.override_enabled(true);
+
+    App::test((), |mut app| async move {
+        initialize_app(&mut app);
+        let source = mock_workspace(&mut app);
+        let destination = mock_workspace(&mut app);
+
+        let (transferred_tab, tab_id) = source.update(&mut app, |workspace, ctx| {
+            workspace.add_terminal_tab(false, ctx);
+            workspace.handle_action(&WorkspaceAction::PinTab(1), ctx);
+            let pinned_index = workspace
+                .tabs
+                .iter()
+                .position(|tab| tab.pinned)
+                .expect("source should contain a pinned tab");
+            let tab_id = workspace.tabs[pinned_index].id;
+            let transfer = workspace
+                .get_tab_transfer_info(pinned_index, ctx)
+                .expect("pinned tab should be transferable");
+            (transfer, tab_id)
+        });
+
+        destination.update(&mut app, |workspace, ctx| {
+            workspace.add_terminal_tab(false, ctx);
+            let insertion_index = workspace.tabs.len();
+            workspace.insert_transferred_tab_at_index(transferred_tab, insertion_index, ctx);
+
+            assert_eq!(workspace.tabs[0].id, tab_id);
+            assert!(workspace.tabs[0].pinned);
+            assert!(workspace.tabs[1..].iter().all(|tab| !tab.pinned));
         });
     });
 }

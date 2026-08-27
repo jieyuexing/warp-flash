@@ -12,6 +12,7 @@ fn single_tab_snapshot(root: PaneNodeSnapshot) -> AppState {
     AppState {
         windows: vec![WindowSnapshot {
             tabs: vec![TabSnapshot {
+                id: uuid::Uuid::new_v4(),
                 custom_title: None,
                 default_directory_color: None,
                 selected_color: SelectedTabColor::default(),
@@ -32,6 +33,8 @@ fn single_tab_snapshot(root: PaneNodeSnapshot) -> AppState {
             warp_drive_index_width: None,
             left_panel_open: false,
             vertical_tabs_panel_open: false,
+            vertical_tabs_panel_width: None,
+            archived_tabs_expanded: false,
             fullscreen_state: Default::default(),
             left_panel_width: None,
             right_panel_width: None,
@@ -59,6 +62,8 @@ fn multi_tab_snapshot(active_tab_index: usize, tabs: Vec<TabSnapshot>) -> AppSta
             warp_drive_index_width: None,
             left_panel_open: false,
             vertical_tabs_panel_open: false,
+            vertical_tabs_panel_width: None,
+            archived_tabs_expanded: false,
             fullscreen_state: Default::default(),
             left_panel_width: None,
             right_panel_width: None,
@@ -364,6 +369,7 @@ fn test_config_with_active_tab_index() {
         1,
         vec![
             TabSnapshot {
+                id: uuid::Uuid::new_v4(),
                 custom_title: None,
                 default_directory_color: None,
                 selected_color: SelectedTabColor::default(),
@@ -409,6 +415,7 @@ fn test_config_with_active_tab_index_and_filtered_tabs() {
         1,
         vec![
             TabSnapshot {
+                id: uuid::Uuid::new_v4(),
                 custom_title: None,
                 default_directory_color: None,
                 selected_color: SelectedTabColor::default(),
@@ -432,6 +439,7 @@ fn test_config_with_active_tab_index_and_filtered_tabs() {
                 pinned: false,
             },
             TabSnapshot {
+                id: uuid::Uuid::new_v4(),
                 custom_title: None,
                 default_directory_color: None,
                 selected_color: SelectedTabColor::default(),
@@ -476,6 +484,7 @@ fn test_config_with_active_tab_being_filtered() {
         1,
         vec![
             TabSnapshot {
+                id: uuid::Uuid::new_v4(),
                 custom_title: None,
                 default_directory_color: None,
                 selected_color: SelectedTabColor::default(),
@@ -508,6 +517,7 @@ fn test_config_with_active_tab_being_filtered() {
                 pinned: false,
             },
             TabSnapshot {
+                id: uuid::Uuid::new_v4(),
                 custom_title: None,
                 default_directory_color: None,
                 selected_color: SelectedTabColor::default(),

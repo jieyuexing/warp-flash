@@ -714,6 +714,8 @@ pub fn create_transferred_window(
                 global_resource_handles.clone(),
                 NewWorkspaceSource::TransferredTab {
                     source_window_id,
+                    tab_id: transferred_tab.id,
+                    pinned: transferred_tab.pinned,
                     tab_color: transferred_tab.color,
                     custom_title: transferred_tab.custom_title.clone(),
                     left_panel_open: transferred_tab.left_panel_open,
@@ -1637,6 +1639,10 @@ pub enum NewWorkspaceSource {
     /// PaneGroup after window creation.
     TransferredTab {
         source_window_id: WindowId,
+        /// Stable identity from the source tab.
+        tab_id: uuid::Uuid,
+        /// Whether the source tab was pinned.
+        pinned: bool,
         /// Tab color from the source tab
         tab_color: Option<AnsiColorIdentifier>,
         /// Custom title from the source tab

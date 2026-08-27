@@ -914,7 +914,6 @@ struct SaveAppStateNodeTraversal<'a> {
 
 struct PersistedTabSnapshot<'a> {
     snapshot: &'a TabSnapshot,
-    archive_id: Option<Uuid>,
     archived_at: Option<i64>,
 }
 
@@ -985,6 +984,8 @@ fn save_app_state(conn: &mut SqliteConnection, app_state: &AppState) -> Result<(
                 warp_drive_index_width: window.warp_drive_index_width,
                 left_panel_open: Some(window.left_panel_open),
                 vertical_tabs_panel_open: Some(window.vertical_tabs_panel_open),
+                vertical_tabs_panel_width: window.vertical_tabs_panel_width,
+                archived_tabs_expanded: window.archived_tabs_expanded,
                 fullscreen_state: window.fullscreen_state as i32,
                 agent_management_filters: window
                     .agent_management_filters
@@ -1027,6 +1028,7 @@ fn save_app_state(conn: &mut SqliteConnection, app_state: &AppState) -> Result<(
                         },
                         collapsed: group.collapsed,
                         pinned: group.pinned,
+                        persistent_id: Some(group.id.0.to_string()),
                     })
                     .collect();
                 diesel::insert_into(schema::tab_groups::dsl::tab_groups)
@@ -1050,7 +1052,6 @@ fn save_app_state(conn: &mut SqliteConnection, app_state: &AppState) -> Result<(
                 .iter()
                 .map(|snapshot| PersistedTabSnapshot {
                     snapshot,
-                    archive_id: None,
                     archived_at: None,
                 })
                 .chain(
@@ -1059,7 +1060,6 @@ fn save_app_state(conn: &mut SqliteConnection, app_state: &AppState) -> Result<(
                         .iter()
                         .map(|archived| PersistedTabSnapshot {
                             snapshot: &archived.tab,
-                            archive_id: Some(archived.id),
                             archived_at: Some(archived.archived_at),
                         }),
                 )
@@ -1082,8 +1082,8 @@ fn save_app_state(conn: &mut SqliteConnection, app_state: &AppState) -> Result<(
                         .group_id
                         .and_then(|group_id| tab_group_row_ids.get(&group_id).copied()),
                     pinned: persisted.snapshot.pinned,
-                    archive_id: persisted.archive_id.map(|id| id.to_string()),
-                    archived: persisted.archive_id.is_some(),
+                    persistent_id: Some(persisted.snapshot.id.to_string()),
+                    archived: persisted.archived_at.is_some(),
                     archived_at: persisted.archived_at,
                 })
                 .collect();
@@ -2590,12 +2590,16 @@ fn read_sqlite_data(
             .zip(db_tab_groups)
             .map(
                 |(((idx, window), tabs_for_window), tab_groups_for_window)| {
-                    // Mint a fresh `TabGroupId` per row and build a `row id -> TabGroupId`
-                    // map so tabs can be reattached to their group below.
+                    // Build a `row id -> TabGroupId` map so tabs can be reattached to their group.
                     let mut tab_group_id_by_row_id: HashMap<i32, TabGroupId> = HashMap::new();
                     let mut tab_groups_snapshots: Vec<TabGroupSnapshot> = Vec::new();
                     for group in tab_groups_for_window {
-                        let tab_group_id = TabGroupId::new();
+                        let tab_group_id = group
+                            .persistent_id
+                            .as_deref()
+                            .and_then(|persistent_id| Uuid::parse_str(persistent_id).ok())
+                            .map(TabGroupId)
+                            .unwrap_or_default();
                         tab_group_id_by_row_id.insert(group.id, tab_group_id);
                         let color = group
                             .color
@@ -2627,13 +2631,15 @@ fn read_sqlite_data(
                             let group_id = tab
                                 .tab_group_id
                                 .and_then(|row_id| tab_group_id_by_row_id.get(&row_id).copied());
-                            let archive_id = tab
-                                .archive_id
+                            let persistent_id = tab
+                                .persistent_id
                                 .as_deref()
-                                .and_then(|archive_id_text| Uuid::parse_str(archive_id_text).ok());
+                                .and_then(|persistent_id| Uuid::parse_str(persistent_id).ok())
+                                .unwrap_or_else(Uuid::new_v4);
                             let archived = tab.archived;
                             let archived_at = tab.archived_at;
                             let snapshot = TabSnapshot {
+                                id: persistent_id,
                                 root,
                                 custom_title: tab.custom_title,
                                 default_directory_color: None,
@@ -2656,15 +2662,14 @@ fn read_sqlite_data(
                                 group_id,
                                 pinned: tab.pinned,
                             };
-                            Some((archived, archive_id, archived_at, snapshot))
+                            Some((archived, archived_at, snapshot))
                         })
                         .collect();
                     let mut saved_tabs = Vec::new();
                     let mut archived_tabs = Vec::new();
-                    for (archived, archive_id, archived_at, snapshot) in restored_tabs {
+                    for (archived, archived_at, snapshot) in restored_tabs {
                         if archived {
                             archived_tabs.push(ArchivedTabSnapshot {
-                                id: archive_id.unwrap_or_else(Uuid::new_v4),
                                 tab: snapshot,
                                 archived_at: archived_at.unwrap_or_default(),
                             });
@@ -2758,6 +2763,8 @@ fn read_sqlite_data(
                         warp_drive_index_width: window.warp_drive_index_width,
                         left_panel_open: window_left_panel_open,
                         vertical_tabs_panel_open: window.vertical_tabs_panel_open.unwrap_or(false),
+                        vertical_tabs_panel_width: window.vertical_tabs_panel_width,
+                        archived_tabs_expanded: window.archived_tabs_expanded,
                         fullscreen_state: fullscreen_state_val,
                         left_panel_width,
                         right_panel_width,
