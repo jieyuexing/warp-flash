@@ -1,4 +1,6 @@
-use repo_metadata::file_tree_update::RepoMetadataUpdate;
+use repo_metadata::file_tree_update::{
+    DirectoryNodeMetadata, FileTreeEntryUpdate, RepoMetadataUpdate, RepoNodeMetadata,
+};
 use repo_metadata::{StandingQueryContent, StandingQueryResultsDelta};
 use warp_util::standardized_path::StandardizedPath;
 
@@ -40,6 +42,32 @@ fn incremental_update_round_trip_preserves_standing_results_delta() {
         round_trip.standing_results_delta,
         update.standing_results_delta
     );
+}
+
+#[test]
+fn incremental_update_round_trip_preserves_directory_symlink_metadata() {
+    let update = RepoMetadataUpdate {
+        repo_path: path("/repo"),
+        remove_entries: Vec::new(),
+        update_entries: vec![FileTreeEntryUpdate {
+            parent_path_to_replace: path("/repo"),
+            subtree_metadata: vec![RepoNodeMetadata::Directory(DirectoryNodeMetadata {
+                path: path("/repo/linked"),
+                ignored: false,
+                loaded: false,
+                is_symlink: true,
+            })],
+        }],
+        standing_results_delta: Default::default(),
+    };
+
+    let proto_update = proto::RepoMetadataUpdatePush::from(&update);
+    let round_trip = proto_to_repo_metadata_update(&proto_update).unwrap();
+
+    assert!(matches!(
+        &round_trip.update_entries[0].subtree_metadata[0],
+        RepoNodeMetadata::Directory(directory) if directory.is_symlink
+    ));
 }
 
 #[test]

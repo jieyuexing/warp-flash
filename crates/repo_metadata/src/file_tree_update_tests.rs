@@ -302,6 +302,7 @@ fn apply_complete_update_adds_files_and_directories() {
                     path: std_path("/repo/src/components"),
                     ignored: false,
                     loaded: true,
+                    is_symlink: false,
                 }),
                 RepoNodeMetadata::File(FileNodeMetadata {
                     path: std_path("/repo/src/components/button.rs"),
@@ -391,6 +392,7 @@ fn apply_incomplete_update_missing_children_subtree() {
                 path: std_path("/repo/src/components"),
                 ignored: false,
                 loaded: false,
+                is_symlink: false,
             })],
         }],
         standing_results_delta: Default::default(),

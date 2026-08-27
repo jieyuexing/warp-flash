@@ -101,6 +101,7 @@ impl FileTreeEntry {
             path: Arc::new(target_path.clone()),
             ignored: false,
             loaded: false,
+            is_symlink: target_path.to_local_path_lossy().is_symlink(),
         });
 
         let store = Arc::make_mut(&mut self.state_map);
@@ -128,6 +129,7 @@ impl FileTreeEntry {
                 path: child_arc.clone(),
                 loaded: false,
                 ignored: false,
+                is_symlink: child_path.is_symlink(),
             })
         } else if child_path.is_file() {
             FileTreeEntryState::File(FileTreeFileMetadata {
@@ -233,6 +235,7 @@ impl FileTreeEntry {
                         path: Arc::new(dir.path.clone()),
                         ignored: dir.ignored,
                         loaded: dir.loaded,
+                        is_symlink: dir.is_symlink,
                     });
                     if let Some(parent) = self.find_parent_directory(&dir.path) {
                         self.insert_child_state(&parent, state);
@@ -348,6 +351,7 @@ pub struct FileTreeDirectoryEntryState {
     pub path: Arc<StandardizedPath>,
     pub ignored: bool,
     pub loaded: bool,
+    pub is_symlink: bool,
 }
 
 impl From<Entry> for FileTreeEntry {

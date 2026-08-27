@@ -1249,6 +1249,26 @@ fn directory_symlink_is_visible_and_loads_when_expanded() {
                 assert!(!paths.contains(&std_path(&linked_file)));
             });
 
+            file_tree_view.read(&app, |view, ctx| {
+                let linked_item = view
+                    .root_directories
+                    .get(&std_path(&repo))
+                    .and_then(|root| {
+                        root.items
+                            .iter()
+                            .find(|item| item.path() == &std_path(&linked_directory))
+                    })
+                    .expect("symlinked directory should have a file-tree item");
+                let render_state = linked_item
+                    .to_render_state(Some(false), crate::appearance::Appearance::as_ref(ctx));
+                assert!(matches!(
+                    render_state.icon,
+                    crate::ui_components::item_highlight::ImageOrIcon::Icon(
+                        crate::ui_components::icons::Icon::LinkHorizontal
+                    )
+                ));
+            });
+
             file_tree_view.update(&mut app, |view, ctx| {
                 view.toggle_folder_expansion(&std_path(&repo), &std_path(&linked_directory), ctx);
             });

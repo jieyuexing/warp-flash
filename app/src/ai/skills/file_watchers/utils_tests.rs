@@ -779,17 +779,20 @@ fn find_skill_files_in_tree_returns_remote_skill_paths_for_remote_repos() {
                         path: StandardizedPath::try_new("/repo/.agents").unwrap(),
                         ignored: false,
                         loaded: true,
+                        is_symlink: false,
                     }),
                     RepoNodeMetadata::Directory(DirectoryNodeMetadata {
                         path: StandardizedPath::try_new("/repo/.agents/skills").unwrap(),
                         ignored: false,
                         loaded: true,
+                        is_symlink: false,
                     }),
                     RepoNodeMetadata::Directory(DirectoryNodeMetadata {
                         path: StandardizedPath::try_new("/repo/.agents/skills/remote-skill")
                             .unwrap(),
                         ignored: false,
                         loaded: true,
+                        is_symlink: false,
                     }),
                     RepoNodeMetadata::File(FileNodeMetadata {
                         path: skill_path.clone(),

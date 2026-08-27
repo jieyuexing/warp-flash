@@ -95,6 +95,7 @@ impl From<&RepoNodeMetadata> for proto::RepoNodeMetadata {
                     path: dir.path.to_string(),
                     ignored: dir.ignored,
                     loaded: dir.loaded,
+                    is_symlink: dir.is_symlink,
                 })
             }
             RepoNodeMetadata::File(file) => {
@@ -139,6 +140,7 @@ pub fn file_tree_entry_to_snapshot_proto(
                                 path: dir.path.to_string(),
                                 ignored: dir.ignored,
                                 loaded: dir.loaded,
+                                is_symlink: dir.is_symlink,
                             },
                         )),
                     });
@@ -329,6 +331,7 @@ pub fn file_tree_children_to_proto_entries(
                             path: dir.path.to_string(),
                             ignored: dir.ignored,
                             loaded: dir.loaded,
+                            is_symlink: dir.is_symlink,
                         },
                     )),
                 });
@@ -366,6 +369,7 @@ fn proto_to_repo_node_metadata(proto_node: &proto::RepoNodeMetadata) -> Option<R
                 path,
                 ignored: dir.ignored,
                 loaded: dir.loaded,
+                is_symlink: dir.is_symlink,
             }))
         }
         proto::repo_node_metadata::Node::File(file) => {

@@ -51,7 +51,11 @@ impl FileTreeItem {
                     .unwrap_or_else(|| String::from("Folder"));
                 RenderState {
                     display_name,
-                    icon: ImageOrIcon::Icon(Icon::Folder),
+                    icon: ImageOrIcon::Icon(if directory.is_symlink {
+                        Icon::LinkHorizontal
+                    } else {
+                        Icon::Folder
+                    }),
                     is_expanded,
                     depth: *depth,
                     mouse_state: mouse_state_handle.clone(),

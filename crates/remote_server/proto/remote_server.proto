@@ -303,6 +303,7 @@ message DirectoryNodeMetadata {
   string path = 1;
   bool ignored = 2;
   bool loaded = 3;
+  bool is_symlink = 4;
 }
 
 // Mirrors FileNodeMetadata in Rust.

@@ -68,6 +68,7 @@ pub struct DirectoryNodeMetadata {
     pub path: StandardizedPath,
     pub ignored: bool,
     pub loaded: bool,
+    pub is_symlink: bool,
 }
 
 /// Mirrors `FileNodeMetadata` proto.
@@ -103,6 +104,7 @@ fn collect_directory_metadata(dir: &DirectoryEntry, metadata: &mut Vec<RepoNodeM
         path: dir.path.clone(),
         ignored: dir.ignored,
         loaded: dir.loaded,
+        is_symlink: dir.path.to_local_path_lossy().is_symlink(),
     }));
 
     for child in &dir.children {

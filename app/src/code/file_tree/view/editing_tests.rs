@@ -15,6 +15,7 @@ fn dir_state(path: &str) -> FileTreeEntryState {
         path: Arc::new(std_path(path)),
         ignored: false,
         loaded: true,
+        is_symlink: false,
     })
 }
 

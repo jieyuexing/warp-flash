@@ -19,11 +19,13 @@ impl From<Entry> for FileTreeMapStore {
         match value {
             Entry::File(file) => Self::new_for_entry(FileTreeEntryState::File(file.into())),
             Entry::Directory(dir) => {
+                let is_symlink = dir.path.to_local_path_lossy().is_symlink();
                 let dir_path: Arc<StandardizedPath> = Arc::new(dir.path);
                 let entry = FileTreeEntryState::Directory(FileTreeDirectoryEntryState {
                     path: dir_path.clone(),
                     ignored: dir.ignored,
                     loaded: dir.loaded,
+                    is_symlink,
                 });
 
                 let mut file_tree_map = Self::new_for_entry(entry);
@@ -38,10 +40,12 @@ impl From<Entry> for FileTreeMapStore {
 
 impl FileTreeMapStore {
     pub fn new_for_directory(directory_path: Arc<StandardizedPath>) -> Self {
+        let is_symlink = directory_path.to_local_path_lossy().is_symlink();
         let directory = FileTreeEntryState::Directory(FileTreeDirectoryEntryState {
             path: directory_path.clone(),
             ignored: false,
             loaded: true,
+            is_symlink,
         });
 
         let state_map = HashMap::from_iter([(directory_path, directory)]);
@@ -67,11 +71,13 @@ impl FileTreeMapStore {
                 self.insert_child(parent_path, FileTreeEntryState::File(file.into()));
             }
             Entry::Directory(dir) => {
+                let is_symlink = dir.path.to_local_path_lossy().is_symlink();
                 let directory_path: Arc<StandardizedPath> = Arc::new(dir.path);
                 let entry = FileTreeEntryState::Directory(FileTreeDirectoryEntryState {
                     path: directory_path.clone(),
                     ignored: dir.ignored,
                     loaded: dir.loaded,
+                    is_symlink,
                 });
                 self.insert_child(parent_path, entry);
                 for child in dir.children {

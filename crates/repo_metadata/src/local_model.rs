@@ -1769,6 +1769,7 @@ impl LocalRepoMetadataModel {
                         path: Arc::new(std_path.clone()),
                         ignored: is_ignored,
                         loaded: false,
+                        is_symlink: path.is_symlink(),
                     });
                     root_entry.insert_child_state(&parent_dir, dir_state);
                     if emit {
@@ -1779,6 +1780,7 @@ impl LocalRepoMetadataModel {
                                     path: std_path,
                                     ignored: is_ignored,
                                     loaded: false,
+                                    is_symlink: path.is_symlink(),
                                 },
                             )],
                         });
