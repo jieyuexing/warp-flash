@@ -2066,6 +2066,33 @@ fn closing_tab_archives_it_until_explicitly_restored() {
     });
 }
 
+#[cfg(feature = "local_fs")]
+#[test]
+fn opening_version_control_for_tab_activates_that_tab_and_panel() {
+    App::test((), |mut app| async move {
+        initialize_app(&mut app);
+        let workspace = mock_workspace(&mut app);
+
+        workspace.update(&mut app, |workspace, ctx| {
+            workspace.add_terminal_tab(false, ctx);
+            let target_pane_group_id = workspace.get_pane_group_view(1).unwrap().id();
+            workspace.activate_tab(0, ctx);
+
+            workspace.handle_action(
+                &WorkspaceAction::OpenVersionControlForTab(target_pane_group_id),
+                ctx,
+            );
+
+            assert_eq!(workspace.active_tab_index(), 1);
+            assert!(workspace.is_left_panel_open(ctx));
+            assert_eq!(
+                workspace.left_panel_view.as_ref(ctx).active_view(),
+                ToolPanelView::VersionControl
+            );
+        });
+    });
+}
+
 #[test]
 fn archiving_last_tab_keeps_a_replacement_and_archives_original() {
     App::test((), |mut app| async move {

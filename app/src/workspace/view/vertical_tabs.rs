@@ -591,6 +591,7 @@ fn render_pane_row_element(
 
 #[derive(Clone, Default)]
 struct PaneRowBadgeMouseStates {
+    git_branch: MouseStateHandle,
     diff_stats: MouseStateHandle,
     pull_request: MouseStateHandle,
 }
@@ -5420,7 +5421,13 @@ fn render_terminal_metadata_line(
         MetadataLeftContent::GitBranch(Some(branch)) if !branch.trim().is_empty() => {
             Shrinkable::new(
                 1.,
-                render_git_branch_text(&branch, sub_text_color, 10., appearance),
+                render_git_branch_link(
+                    &branch,
+                    pane_group_id,
+                    badge_mouse_states.git_branch.clone(),
+                    sub_text_color,
+                    appearance,
+                ),
             )
             .finish()
         }
@@ -5456,6 +5463,29 @@ fn render_terminal_metadata_line(
     ConstrainedBox::new(meta.finish())
         .with_height(METADATA_ROW_HEIGHT)
         .finish()
+}
+
+fn render_git_branch_link(
+    branch: &str,
+    pane_group_id: EntityId,
+    mouse_state: MouseStateHandle,
+    text_color: WarpThemeFill,
+    appearance: &Appearance,
+) -> Box<dyn Element> {
+    let theme = appearance.theme();
+    Hoverable::new(mouse_state, move |state| {
+        let color = if state.is_hovered() {
+            theme.main_text_color(theme.background())
+        } else {
+            text_color
+        };
+        render_git_branch_text(branch, color, 10., appearance)
+    })
+    .on_click(move |ctx, _, _| {
+        ctx.dispatch_typed_action(WorkspaceAction::OpenVersionControlForTab(pane_group_id));
+    })
+    .with_cursor(Cursor::PointingHand)
+    .finish()
 }
 
 fn render_terminal_right_badges(

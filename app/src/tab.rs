@@ -465,6 +465,7 @@ impl TabData {
             self.tab_group_menu_items(index, tab_groups, is_only_member_of_group),
             self.session_sharing_menu_items(index, ctx),
             self.copy_metadata_menu_items(pane_name_target, ctx),
+            self.version_control_menu_items(),
             self.modify_tab_menu_items(index, can_move_left, can_move_right, pane_name_target, ctx),
             self.close_tab_menu_items(index, tabs_len, ctx),
             Self::save_config_menu_items(index),
@@ -484,6 +485,21 @@ impl TabData {
             menu_items.extend(section_items);
         }
         menu_items
+    }
+
+    fn version_control_menu_items(&self) -> Vec<MenuItem<WorkspaceAction>> {
+        if !cfg!(feature = "local_fs") {
+            return vec![];
+        }
+
+        vec![
+            MenuItemFields::new("Open version control")
+                .with_on_select_action(WorkspaceAction::OpenVersionControlForTab(
+                    self.pane_group.id(),
+                ))
+                .with_icon(Icon::GitBranch)
+                .into_item(),
+        ]
     }
 
     fn session_sharing_menu_items(

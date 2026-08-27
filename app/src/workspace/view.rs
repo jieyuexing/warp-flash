@@ -26547,6 +26547,17 @@ impl TypedActionView for Workspace {
                     self.open_left_panel_view(&LeftPanelAction::VersionControl, ctx);
                 }
             }
+            OpenVersionControlForTab(pane_group_id) => {
+                if cfg!(feature = "local_fs")
+                    && self
+                        .tabs
+                        .iter()
+                        .any(|tab| tab.pane_group.id() == *pane_group_id)
+                {
+                    self.activate_tab_by_pane_group_id(*pane_group_id, ctx);
+                    self.open_left_panel_view(&LeftPanelAction::VersionControl, ctx);
+                }
+            }
             ToggleWarpDrive => {
                 if WarpDriveSettings::is_warp_drive_enabled(ctx) {
                     let is_showing =

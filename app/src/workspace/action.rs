@@ -725,6 +725,7 @@ pub enum WorkspaceAction {
     OpenProjectExplorer,
     ToggleVersionControl,
     OpenVersionControl,
+    OpenVersionControlForTab(EntityId),
     ToggleGlobalSearch,
     ToggleHiddenFiles,
     OpenGlobalSearch,
@@ -1195,6 +1196,7 @@ impl WorkspaceAction {
             | OpenProjectExplorer
             | ToggleVersionControl
             | OpenVersionControl
+            | OpenVersionControlForTab(_)
             | ToggleGlobalSearch
             | ToggleHiddenFiles
             | OpenGlobalSearch
