@@ -1219,3 +1219,52 @@ fn absorbed_descendant_is_unregistered_from_lazy_loaded_paths() {
         });
     });
 }
+
+#[cfg(unix)]
+#[test]
+fn directory_symlink_is_visible_and_loads_when_expanded() {
+    VirtualFS::test("file_tree_directory_symlink", |dirs, mut vfs| {
+        vfs.mkdir("repo")
+            .mkdir("target")
+            .with_files(vec![Stub::FileWithContent("target/linked.txt", "content")]);
+        let repo = dirs.tests().join("repo");
+        let target = dirs.tests().join("target");
+        let linked_directory = repo.join("linked");
+        let linked_file = linked_directory.join("linked.txt");
+        std::os::unix::fs::symlink(&target, &linked_directory).unwrap();
+
+        App::test((), |mut app| async move {
+            let (_, repository_metadata_model) = initialize_app(&mut app);
+            let (_, file_tree_view) = app.add_window(WindowStyle::NotStealFocus, FileTreeView::new);
+
+            file_tree_view.update(&mut app, |view, ctx| {
+                view.set_is_active(true, ctx);
+                view.set_root_directories(vec![repo.clone()], ctx);
+            });
+            await_repository_indexed(&mut app, &repository_metadata_model, &repo).await;
+
+            file_tree_view.read(&app, |view, _ctx| {
+                let paths = flattened_paths(view, &repo);
+                assert!(paths.contains(&std_path(&linked_directory)));
+                assert!(!paths.contains(&std_path(&linked_file)));
+            });
+
+            file_tree_view.update(&mut app, |view, ctx| {
+                view.toggle_folder_expansion(&std_path(&repo), &std_path(&linked_directory), ctx);
+            });
+            await_directory_loaded(
+                &mut app,
+                &repository_metadata_model,
+                &repo,
+                &linked_directory,
+            )
+            .await;
+
+            file_tree_view.read(&app, |view, _ctx| {
+                let paths = flattened_paths(view, &repo);
+                assert!(paths.contains(&std_path(&linked_file)));
+                assert!(!paths.contains(&std_path(&target.join("linked.txt"))));
+            });
+        });
+    });
+}

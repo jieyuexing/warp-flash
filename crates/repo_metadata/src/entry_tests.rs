@@ -541,16 +541,16 @@ fn standing_queries_report_skills_below_an_ignored_directory() {
 
 #[cfg(unix)]
 #[test]
-fn standing_queries_report_symlinked_skills_without_materializing_symlinked_directories() {
+fn standing_queries_report_symlinked_skills_with_an_unloaded_directory_node() {
     virtual_fs::VirtualFS::test(
         "standing_queries_report_symlinked_skills",
         |dirs, mut vfs| {
             vfs.mkdir("repo/.agents/skills")
                 .mkdir("targets/linked")
-                .with_files(vec![virtual_fs::Stub::FileWithContent(
-                    "targets/linked/SKILL.md",
-                    "name: linked",
-                )]);
+                .with_files(vec![
+                    virtual_fs::Stub::FileWithContent("repo/.gitignore", ".agents/\n"),
+                    virtual_fs::Stub::FileWithContent("targets/linked/SKILL.md", "name: linked"),
+                ]);
             let repo = dirs.tests().join("repo");
             let linked_directory = repo.join(".agents/skills/linked");
             std::os::unix::fs::symlink(dirs.tests().join("targets/linked"), &linked_directory)
@@ -562,6 +562,7 @@ fn standing_queries_report_symlinked_skills_without_materializing_symlinked_dire
             let mut definitions = StandingQueryDefinitions::default();
             definitions
                 .set_project_skill_provider_paths([std::path::PathBuf::from(".agents/skills")]);
+            let force_included_paths = [std::path::PathBuf::from(".agents/skills")];
             let tree = run(Entry::build_tree_with_standing_queries(
                 &repo,
                 &mut files,
@@ -571,7 +572,7 @@ fn standing_queries_report_symlinked_skills_without_materializing_symlinked_dire
                     max_depth: 200,
                     current_depth: 0,
                     ignored_path_strategy: &IgnoredPathStrategy::IncludeLazy,
-                    force_included_paths: &[],
+                    force_included_paths: &force_included_paths,
                     budget_exceeded_behavior: super::BudgetExceededBehavior::StopAndLazyLoad,
                 },
                 false,
@@ -580,7 +581,10 @@ fn standing_queries_report_symlinked_skills_without_materializing_symlinked_dire
             ))
             .unwrap();
 
-            assert!(find_entry(&tree, &linked_directory).is_none());
+            let linked_entry = find_entry(&tree, &linked_directory)
+                .expect("symlinked directory should be visible in the file tree");
+            assert!(!linked_entry.loaded());
+            assert!(find_entry(&tree, &linked_directory.join("SKILL.md")).is_none());
             assert!(results.project_skills().any(|content| {
                 content
                     == &StandingQueryContent::file(
@@ -592,6 +596,138 @@ fn standing_queries_report_symlinked_skills_without_materializing_symlinked_dire
             }));
         },
     );
+}
+
+#[cfg(unix)]
+#[test]
+fn directory_load_follows_symlink_once_and_preserves_lexical_paths() {
+    let temp_dir = tempfile::tempdir().unwrap();
+    let root = dunce::canonicalize(temp_dir.path()).unwrap();
+    let repo = root.join("repo");
+    let target = root.join("target");
+    fs::create_dir_all(&repo).unwrap();
+    fs::create_dir_all(target.join("nested")).unwrap();
+    fs::write(target.join("file.txt"), "content").unwrap();
+    fs::write(target.join("nested/child.txt"), "content").unwrap();
+    let linked_directory = repo.join("linked");
+    std::os::unix::fs::symlink(&target, &linked_directory).unwrap();
+
+    let mut files = Vec::new();
+    let mut gitignores = Vec::new();
+    let mut budget = 10;
+    let result = run(Entry::build_tree_for_directory_load(
+        &repo,
+        &linked_directory,
+        &mut files,
+        &mut gitignores,
+        Some(&mut budget),
+        false,
+    ))
+    .unwrap();
+
+    assert!(result.traverses_symlink);
+    assert!(find_entry(&result.entry, &linked_directory.join("file.txt")).is_some());
+    let nested = find_entry(&result.entry, &linked_directory.join("nested"))
+        .expect("nested directory should be visible");
+    assert!(!nested.loaded());
+    assert!(find_entry(&result.entry, &target.join("file.txt")).is_none());
+}
+
+#[cfg(unix)]
+#[test]
+fn directory_load_rejects_nested_symlink_outside_the_first_target() {
+    let temp_dir = tempfile::tempdir().unwrap();
+    let root = dunce::canonicalize(temp_dir.path()).unwrap();
+    let repo = root.join("repo");
+    let target = root.join("target");
+    let outside = root.join("outside");
+    fs::create_dir_all(&repo).unwrap();
+    fs::create_dir_all(&target).unwrap();
+    fs::create_dir_all(&outside).unwrap();
+    let linked_directory = repo.join("linked");
+    std::os::unix::fs::symlink(&target, &linked_directory).unwrap();
+    std::os::unix::fs::symlink(&outside, target.join("escape")).unwrap();
+
+    let mut files = Vec::new();
+    let mut gitignores = Vec::new();
+    let mut budget = 10;
+    let result = run(Entry::build_tree_for_directory_load(
+        &repo,
+        &linked_directory.join("escape"),
+        &mut files,
+        &mut gitignores,
+        Some(&mut budget),
+        false,
+    ));
+
+    assert!(matches!(
+        result,
+        Err(super::BuildTreeError::SymlinkBoundary)
+    ));
+}
+
+#[cfg(unix)]
+#[test]
+fn directory_load_rejects_symlink_to_an_already_visited_ancestor() {
+    let temp_dir = tempfile::tempdir().unwrap();
+    let root = dunce::canonicalize(temp_dir.path()).unwrap();
+    let repo = root.join("repo");
+    let target = root.join("target");
+    fs::create_dir_all(&repo).unwrap();
+    fs::create_dir_all(&target).unwrap();
+    let linked_directory = repo.join("linked");
+    std::os::unix::fs::symlink(&target, &linked_directory).unwrap();
+    std::os::unix::fs::symlink(&target, target.join("back")).unwrap();
+
+    let mut files = Vec::new();
+    let mut gitignores = Vec::new();
+    let mut budget = 10;
+    let result = run(Entry::build_tree_for_directory_load(
+        &repo,
+        &linked_directory.join("back"),
+        &mut files,
+        &mut gitignores,
+        Some(&mut budget),
+        false,
+    ));
+
+    assert!(matches!(result, Err(super::BuildTreeError::SymlinkCycle)));
+}
+
+#[cfg(unix)]
+#[test]
+fn directory_symlink_load_stops_at_the_file_budget() {
+    let temp_dir = tempfile::tempdir().unwrap();
+    let root = dunce::canonicalize(temp_dir.path()).unwrap();
+    let repo = root.join("repo");
+    let target = root.join("target");
+    fs::create_dir_all(&repo).unwrap();
+    fs::create_dir_all(&target).unwrap();
+    for index in 0..6 {
+        fs::write(target.join(format!("file-{index}.txt")), "content").unwrap();
+    }
+    let linked_directory = repo.join("linked");
+    std::os::unix::fs::symlink(&target, &linked_directory).unwrap();
+
+    let mut files = Vec::new();
+    let mut gitignores = Vec::new();
+    let mut budget = 3;
+    let result = run(Entry::build_tree_for_directory_load(
+        &repo,
+        &linked_directory,
+        &mut files,
+        &mut gitignores,
+        Some(&mut budget),
+        false,
+    ))
+    .unwrap();
+
+    let Entry::Directory(directory) = result.entry else {
+        panic!("symlink target should load as a directory");
+    };
+    assert_eq!(files.len(), 3);
+    assert_eq!(directory.children.len(), 3);
+    assert_eq!(budget, 0);
 }
 #[test]
 fn standing_queries_do_not_report_rules_below_an_unloaded_shallow_directory() {

@@ -1855,7 +1855,7 @@ fn collect_paths_recursive(
 
 #[cfg(unix)]
 #[test]
-fn added_symlinked_skill_directory_refreshes_provider_without_canonical_tree_mutation() {
+fn added_symlinked_skill_directory_adds_unloaded_node_and_refreshes_provider() {
     VirtualFS::test("added_symlinked_skill_directory", |dirs, mut vfs| {
         vfs.mkdir("repo/.agents/skills")
             .mkdir("linked-skill-target")
@@ -1884,7 +1884,12 @@ fn added_symlinked_skill_directory_refreshes_provider_without_canonical_tree_mut
                 false,
             ));
 
-        assert!(mutations.is_empty());
+        assert!(matches!(
+            mutations.as_slice(),
+            [FileTreeMutation::AddDirectorySubtree { dir_path, subtree }]
+                if dir_path == &linked_skill && subtree.path().to_local_path_lossy() == linked_skill
+                    && !subtree.loaded()
+        ));
         assert!(removed_roots.is_empty());
         assert!(discovered.project_skills().any(|content| {
             content
@@ -2686,6 +2691,56 @@ fn load_directory_tracks_expanded_subdir_for_lazy_root() {
                     // Other platforms: a single recursive watch on the root.
                     assert_eq!(repo_watch.root_mode, RootWatchMode::Recursive);
                 }
+            });
+        });
+    });
+}
+
+#[cfg(all(unix, feature = "local_fs"))]
+#[test]
+fn load_directory_does_not_watch_symlink_target() {
+    VirtualFS::test("symlink_load_watch_tracking", |dirs, mut vfs| {
+        vfs.mkdir("workspace")
+            .mkdir("target")
+            .with_files(vec![Stub::FileWithContent("target/file.txt", "x")]);
+        let workspace = dirs.tests().join("workspace");
+        let target = dirs.tests().join("target");
+        let linked = workspace.join("linked");
+        std::os::unix::fs::symlink(&target, &linked).unwrap();
+        let root = StandardizedPath::from_local_canonicalized(&workspace).unwrap();
+        let linked_path = StandardizedPath::try_from_local(&linked).unwrap();
+        let linked_file = StandardizedPath::try_from_local(&linked.join("file.txt")).unwrap();
+
+        App::test((), |mut app| async move {
+            let model_handle = app.add_model(|_| LocalRepoMetadataModel::new_for_test());
+            model_handle.update(&mut app, |model, ctx| {
+                model
+                    .index_lazy_loaded_path(&root, ctx)
+                    .expect("should index lazy path");
+            });
+            await_build_tasks_for_repo(&mut app, &model_handle, &root).await;
+
+            let completion = model_handle.update(&mut app, |model, ctx| {
+                model
+                    .load_directory_with_completion(&root, &linked_path, ctx)
+                    .expect("should load symlinked directory")
+            });
+            await_build_tasks_for_repo(&mut app, &model_handle, &root).await;
+            completion.await.expect("symlinked directory should load");
+
+            model_handle.read(&app, |model, _ctx| {
+                let repo_watch = model
+                    .repo_watches
+                    .get(&root)
+                    .expect("root watch should be recorded");
+                assert!(repo_watch.extra_dirs.is_empty());
+                let Some(IndexedRepoState::Indexed(state)) = model.repository_state(&root) else {
+                    panic!("expected indexed lazy-loaded path");
+                };
+                assert!(state.entry.contains(&linked_file));
+                assert!(!state.entry.contains(
+                    &StandardizedPath::from_local_canonicalized(&target.join("file.txt")).unwrap()
+                ));
             });
         });
     });

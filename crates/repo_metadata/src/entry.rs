@@ -1,6 +1,6 @@
 #![cfg_attr(not(feature = "local_fs"), allow(dead_code))]
 
-use std::collections::VecDeque;
+use std::collections::{HashSet, VecDeque};
 use std::io;
 use std::path::{Component, Path, PathBuf};
 use std::sync::Arc;
@@ -31,8 +31,12 @@ pub enum BuildTreeError {
     Ignored,
     #[error("IO error reading path.")]
     IOError(#[from] io::Error),
-    #[error("Symlink is not supported")]
+    #[error("Symlink target is unavailable")]
     Symlink,
+    #[error("Directory symlink escapes its expansion boundary")]
+    SymlinkBoundary,
+    #[error("Directory symlink points to an already visited ancestor")]
+    SymlinkCycle,
     #[error("Maximum directory depth exceeded")]
     MaxDepthExceeded,
 }
@@ -88,6 +92,18 @@ pub(crate) struct BuildTreeOptions<'a> {
     pub force_included_paths: &'a [PathBuf],
     pub budget_exceeded_behavior: BudgetExceededBehavior,
 }
+
+#[derive(Clone, Copy, Default)]
+struct BuildTreePathOptions {
+    preserve_lexical_paths: bool,
+    follow_root_symlink: bool,
+}
+
+pub(crate) struct DirectoryLoadResult {
+    pub entry: Entry,
+    pub traverses_symlink: bool,
+}
+
 struct StandingQueryBuildState<'a> {
     results: &'a mut StandingQueryResults,
     definitions: &'a StandingQueryDefinitions,
@@ -159,6 +175,7 @@ impl Entry {
             },
             false,
             None,
+            BuildTreePathOptions::default(),
         )
         .await
     }
@@ -187,6 +204,7 @@ impl Entry {
             options,
             ancestor_is_ignored,
             Some(&mut standing_queries),
+            BuildTreePathOptions::default(),
         )
         .await
     }
@@ -210,37 +228,43 @@ impl Entry {
             options,
             false,
             None,
+            BuildTreePathOptions::default(),
         )
         .await
     }
 
-    #[allow(clippy::too_many_arguments)]
-    pub(crate) async fn build_tree_with_ignored_ancestor(
-        path: impl Into<PathBuf>,
+    pub(crate) async fn build_tree_for_directory_load(
+        repo_root: &Path,
+        path: &Path,
         files: &mut Vec<FileMetadata>,
         gitignores: &mut Vec<Arc<Gitignore>>,
         remaining_file_quota: Option<&mut usize>,
-        max_depth: usize,
-        current_depth: usize,
-        ignored_path_strategy: &IgnoredPathStrategy,
         ancestor_is_ignored: bool,
-    ) -> Result<Self, BuildTreeError> {
-        Self::build_tree_with_force_included_paths_and_ancestor(
+    ) -> Result<DirectoryLoadResult, BuildTreeError> {
+        let path_options = directory_load_path_options(repo_root, path)?;
+        let traverses_symlink = path_options.preserve_lexical_paths;
+        let entry = Self::build_tree_with_force_included_paths_and_ancestor(
             path,
             files,
             gitignores,
             remaining_file_quota,
             BuildTreeOptions {
-                max_depth,
-                current_depth,
-                ignored_path_strategy,
+                max_depth: 1,
+                current_depth: 0,
+                ignored_path_strategy: &IgnoredPathStrategy::Include,
                 force_included_paths: &[],
                 budget_exceeded_behavior: BudgetExceededBehavior::StopAndLazyLoad,
             },
             ancestor_is_ignored,
             None,
+            path_options,
         )
-        .await
+        .await?;
+
+        Ok(DirectoryLoadResult {
+            entry,
+            traverses_symlink,
+        })
     }
 
     #[allow(clippy::too_many_arguments)]
@@ -252,6 +276,7 @@ impl Entry {
         options: BuildTreeOptions<'_>,
         ancestor_is_ignored: bool,
         mut standing_queries: Option<&mut StandingQueryBuildState<'_>>,
+        path_options: BuildTreePathOptions,
     ) -> Result<Self, BuildTreeError> {
         let root_path: PathBuf = path.into();
 
@@ -269,12 +294,22 @@ impl Entry {
         let mut nodes: Vec<Option<NodeBuilder>> = Vec::new();
 
         // Classify the root. Unlike child entries (which are simply omitted when
-        // ignored/symlinked), a classification failure at the root propagates to
-        // the caller, preserving existing error behavior.
+        // ignored), a classification failure at the root propagates to the caller.
         if let Some(state) = standing_queries.as_deref_mut() {
             state
                 .results
                 .record_path(&root_path, root_path.is_dir(), state.definitions);
+            if is_directory_symlink(&root_path) {
+                state
+                    .results
+                    .record_direct_project_skill_provider_child_change(
+                        &root_path,
+                        state.definitions,
+                    );
+                state
+                    .results
+                    .record_followed_project_skill_directory(&root_path, state.definitions);
+            }
         }
         match evaluate_entry(
             &root_path,
@@ -282,6 +317,8 @@ impl Entry {
             &options,
             options.current_depth,
             ancestor_is_ignored,
+            true,
+            path_options,
         )? {
             EvaluatedEntry::File { ignored } => {
                 if quota == Some(0)
@@ -353,25 +390,21 @@ impl Entry {
 
                     let child_depth = job.depth + 1;
                     for entry_path in entry_paths {
-                        // Do not materialize directory symlinks in the canonical tree. Standing
-                        // project-skill queries still follow eligible provider children locally
-                        // and retain their lexical paths in the result set.
-                        let canonical_path = if entry_path.is_symlink() {
-                            if entry_path.is_dir() {
-                                if let Some(state) = standing_queries.as_deref_mut() {
-                                    state.results.record_followed_project_skill_directory(
-                                        &entry_path,
-                                        state.definitions,
-                                    );
-                                }
-                                None
-                            } else {
-                                Some(entry_path)
-                            }
+                        let is_symlink = entry_path.is_symlink();
+                        if is_directory_symlink(&entry_path)
+                            && let Some(state) = standing_queries.as_deref_mut()
+                        {
+                            state.results.record_followed_project_skill_directory(
+                                &entry_path,
+                                state.definitions,
+                            );
+                        }
+                        let child_path = if path_options.preserve_lexical_paths || is_symlink {
+                            Some(entry_path)
                         } else {
                             dunce::canonicalize(entry_path).ok()
                         };
-                        let Some(child_path) = canonical_path else {
+                        let Some(child_path) = child_path else {
                             continue;
                         };
                         if let Some(state) = standing_queries.as_deref_mut() {
@@ -388,13 +421,25 @@ impl Entry {
                             &options,
                             child_depth,
                             job.ignored,
+                            false,
+                            path_options,
                         ) {
                             Ok(EvaluatedEntry::File { ignored }) => {
-                                if quota == Some(0)
-                                    && options.budget_exceeded_behavior
-                                        == BudgetExceededBehavior::FailFast
-                                {
-                                    return Err(BuildTreeError::ExceededMaxFileLimit);
+                                if quota == Some(0) {
+                                    match options.budget_exceeded_behavior {
+                                        BudgetExceededBehavior::FailFast => {
+                                            return Err(BuildTreeError::ExceededMaxFileLimit);
+                                        }
+                                        BudgetExceededBehavior::StopAndLazyLoad
+                                            if !matches_force_included_path(
+                                                &job.path,
+                                                options.force_included_paths,
+                                            ) =>
+                                        {
+                                            continue;
+                                        }
+                                        BudgetExceededBehavior::StopAndLazyLoad => {}
+                                    }
                                 }
                                 let metadata =
                                     consume_file(&child_path, ignored, files, &mut quota);
@@ -426,8 +471,7 @@ impl Entry {
                                 }
                             }
                             Err(_) => {
-                                // Ignored / excluded / symlinked-directory entries
-                                // are omitted from the tree.
+                                // Ignored, excluded, and invalid entries are omitted from the tree.
                             }
                         }
                     }
@@ -480,19 +524,18 @@ impl Entry {
         let mut files = Vec::new();
         let ancestor_is_ignored = directory.ignored;
 
-        let result = Entry::build_tree_with_ignored_ancestor(
-            directory.path.to_local_path_lossy(),
+        let directory_path = directory.path.to_local_path_lossy();
+        let result = Entry::build_tree_for_directory_load(
+            &directory_path,
+            &directory_path,
             &mut files,
             gitignores,
             Some(&mut remaining_file_quota),
-            1, /* max_depth */
-            0, /* current_depth */
-            &IgnoredPathStrategy::Include,
             ancestor_is_ignored,
         )
         .await;
 
-        result.map(|entry| match entry {
+        result.map(|result| match result.entry {
             Entry::Directory(entry) => {
                 *directory = entry;
             }
@@ -575,26 +618,74 @@ enum EvaluatedEntry {
     Directory { ignored: bool, lazy: bool },
 }
 
-/// Classifies a single path: rejects directory symlinks, loads any local
-/// `.gitignore`, computes gitignore status, and applies the ignored-path
-/// strategy. Returns `Err(Ignored)`/`Err(Symlink)` for entries that should be
-/// omitted; callers decide whether that is fatal (root) or a skip (child).
+fn is_directory_symlink(path: &Path) -> bool {
+    path.is_symlink() && path.is_dir()
+}
+
+fn directory_load_path_options(
+    repo_root: &Path,
+    path: &Path,
+) -> Result<BuildTreePathOptions, BuildTreeError> {
+    let relative_path = path
+        .strip_prefix(repo_root)
+        .map_err(|_| BuildTreeError::SymlinkBoundary)?;
+    let canonical_repo_root = dunce::canonicalize(repo_root)?;
+    let repo_root_is_symlink = repo_root.is_symlink();
+    let mut canonical_ancestors = HashSet::from([canonical_repo_root.clone()]);
+    let mut symlink_boundary = None;
+    let mut current_path = repo_root.to_path_buf();
+    let mut traverses_symlink = repo_root_is_symlink;
+
+    for component in relative_path.components() {
+        current_path.push(component);
+        let metadata = std::fs::symlink_metadata(&current_path)?;
+        let canonical_path = dunce::canonicalize(&current_path)?;
+
+        if let Some(boundary) = &symlink_boundary
+            && !canonical_path.starts_with(boundary)
+        {
+            return Err(BuildTreeError::SymlinkBoundary);
+        }
+
+        if metadata.file_type().is_symlink() {
+            if canonical_ancestors.contains(&canonical_path) {
+                return Err(BuildTreeError::SymlinkCycle);
+            }
+            traverses_symlink = true;
+            if symlink_boundary.is_none() {
+                symlink_boundary = Some(if canonical_path.starts_with(&canonical_repo_root) {
+                    canonical_repo_root.clone()
+                } else {
+                    canonical_path.clone()
+                });
+            }
+        }
+
+        canonical_ancestors.insert(canonical_path);
+    }
+
+    Ok(BuildTreePathOptions {
+        preserve_lexical_paths: traverses_symlink,
+        follow_root_symlink: path.is_symlink(),
+    })
+}
+
+/// Classifies a single path, computes gitignore status, and applies the ignored-path strategy.
 fn evaluate_entry(
     curr_path: &Path,
     gitignores: &mut Vec<Arc<Gitignore>>,
     options: &BuildTreeOptions<'_>,
     current_depth: usize,
     ancestor_is_ignored: bool,
+    is_root: bool,
+    path_options: BuildTreePathOptions,
 ) -> Result<EvaluatedEntry, BuildTreeError> {
     let is_dir = curr_path.is_dir();
-
-    // Only ignore symlinks to directories. Symlinks to files are preserved (e.g. WARP.md).
-    if curr_path.is_symlink() && is_dir {
-        return Err(BuildTreeError::Symlink);
-    }
+    let is_symlink_directory = curr_path.is_symlink() && is_dir;
+    let follows_root_symlink = is_root && path_options.follow_root_symlink;
 
     let gitignore_path = curr_path.join(".gitignore");
-    if gitignore_path.exists() {
+    if (!is_symlink_directory || follows_root_symlink) && gitignore_path.exists() {
         gitignores.push(gitignore_cache::get_or_parse(&gitignore_path));
     }
 
@@ -611,7 +702,8 @@ fn evaluate_entry(
 
     // If we've reached the max depth, force lazy-loading even of non-ignored folders unless the
     // folder is on the path to a force-included subtree.
-    let mut lazy = current_depth >= options.max_depth && !force_included;
+    let mut lazy = (is_symlink_directory && !follows_root_symlink)
+        || (current_depth >= options.max_depth && !force_included);
 
     if path_is_ignored {
         match options.ignored_path_strategy {
@@ -624,7 +716,7 @@ fn evaluate_entry(
                 }
             }
             IgnoredPathStrategy::IncludeLazy => {
-                lazy = !force_included;
+                lazy = (is_symlink_directory && !follows_root_symlink) || !force_included;
             }
             IgnoredPathStrategy::Include => {}
         }

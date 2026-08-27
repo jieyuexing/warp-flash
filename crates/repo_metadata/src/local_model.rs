@@ -452,8 +452,8 @@ impl LocalRepoMetadataModel {
 
     /// Adds synthetic lexical repository updates for changes beneath resolved symlink targets.
     ///
-    /// Directory symlinks are intentionally absent from the canonical tree, so target changes
-    /// must be replayed through their lexical paths to refresh standing-query results.
+    /// Symlink targets are not watched as part of the repository tree, so target changes must be
+    /// replayed through their lexical paths to refresh standing-query results.
     #[cfg(feature = "local_fs")]
     fn add_symlink_target_updates(
         &self,
@@ -1270,6 +1270,7 @@ impl LocalRepoMetadataModel {
         // Tree building mutates the gitignore stack as it descends, so this needs an owned Vec.
         let mut gitignores = state.gitignores.as_ref().clone();
         let dir_path_for_build = dir_path.to_local_path_lossy();
+        let repo_root_path_for_build = repo_root.to_local_path_lossy();
         let repo_root_for_build = repo_root.clone();
         let dir_path_for_completion = dir_path.clone();
         let task_key_for_completion = task_key.clone();
@@ -1280,14 +1281,12 @@ impl LocalRepoMetadataModel {
             async move {
                 let mut remaining_file_quota = LAZY_LOAD_FILE_LIMIT;
                 let mut files = Vec::new();
-                let result = Entry::build_tree_with_ignored_ancestor(
-                    dir_path_for_build,
+                let result = Entry::build_tree_for_directory_load(
+                    &repo_root_path_for_build,
+                    &dir_path_for_build,
                     &mut files,
                     &mut gitignores,
                     Some(&mut remaining_file_quota),
-                    1, /* max_depth */
-                    0, /* current_depth */
-                    &IgnoredPathStrategy::Include,
                     ancestor_is_ignored,
                 )
                 .await;
@@ -1299,7 +1298,7 @@ impl LocalRepoMetadataModel {
                     task_future_id_for_completion.get(),
                 ) {
                     let completion = match build_result {
-                        Ok(entry) => {
+                        Ok(result) => {
                             if let Some(IndexedRepoState::Indexed(state)) =
                                 model.repositories.get_mut(&repo_root)
                             {
@@ -1320,16 +1319,21 @@ impl LocalRepoMetadataModel {
                                         "Directory load target changed while loading: {dir_path}"
                                     )))
                                 } else {
-                                    state
-                                        .entry
-                                        .insert_entry_at_path(Arc::new(dir_path.clone()), entry);
+                                    state.entry.insert_entry_at_path(
+                                        Arc::new(dir_path.clone()),
+                                        result.entry,
+                                    );
 
                                     // Start watching the directory we just expanded so its direct
                                     // children stay fresh. For a non-recursive root this covers
                                     // every expanded subdir; for a recursive root it covers
                                     // gitignored dirs pruned from the root watch on Linux. No-op
-                                    // when the root watch already covers it.
-                                    model.watch_subdir(&repo_root, &dir_path, ctx);
+                                    // when the root watch already covers it. Symlink traversals
+                                    // remain unwatched so expansion cannot pull external trees
+                                    // into the repository watcher.
+                                    if !result.traverses_symlink {
+                                        model.watch_subdir(&repo_root, &dir_path, ctx);
+                                    }
 
                                     ctx.emit(RepositoryMetadataEvent::FileTreeEntryUpdated {
                                         path: repo_root,
@@ -1522,8 +1526,8 @@ impl LocalRepoMetadataModel {
             if let Ok(path) = StandardizedPath::try_from_local(path_to_remove) {
                 removed_roots.push(path);
             }
-            // A removed direct provider child may have been a symlinked skill directory,
-            // which is intentionally absent from the canonical tree and standing file matches.
+            // A removed direct provider child may have been a symlinked skill directory whose
+            // target files are represented only in standing-query results.
             standing_results.record_direct_project_skill_provider_child_change(
                 path_to_remove,
                 standing_query_definitions,
@@ -1587,9 +1591,8 @@ impl LocalRepoMetadataModel {
                         });
                     }
                     Err(BuildTreeError::Symlink) => {
-                        // Directory symlinks are intentionally absent from the canonical tree.
-                        // Re-hydrate only when the changed entry itself can introduce a
-                        // symlinked skill; ordinary descendants should not wake consumers.
+                        // A broken or otherwise unclassifiable symlink cannot become a file-tree
+                        // node, but it may still affect project-skill discovery.
                         standing_results.record_direct_project_skill_provider_child_change(
                             path_to_add,
                             standing_query_definitions,
