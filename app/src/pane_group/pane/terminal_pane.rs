@@ -40,9 +40,9 @@ use crate::ai::llms::LLMPreferences;
 use crate::ai::orchestration::{RemoteChildLaunchConfig, prepare_remote_child_launch};
 use crate::app_state::{AmbientAgentPaneSnapshot, LeafContents, TerminalPaneSnapshot};
 use crate::code::buffer_location::LocalOrRemotePath;
-#[cfg(not(target_family = "wasm"))]
-use crate::external_cli_resume::active_grok_resume_target;
 use crate::external_cli_resume::{ExternalCliAgent, ExternalCliResumeTarget};
+#[cfg(not(target_family = "wasm"))]
+use crate::external_cli_resume::{active_codex_resume_target, active_grok_resume_target};
 use crate::features::FeatureFlag;
 #[cfg(feature = "local_fs")]
 use crate::pane_group::CodeSource;
@@ -535,6 +535,10 @@ impl PaneContent for TerminalPane {
                         session.session_context.session_id.clone()?,
                         session.session_context.cwd.clone().or_else(|| cwd.clone()),
                     )
+                })
+                .or_else(|| {
+                    view.active_long_running_command()
+                        .and_then(|command| active_codex_resume_target(&command, cwd.as_deref()))
                 });
 
             #[cfg(not(target_family = "wasm"))]

@@ -1,12 +1,20 @@
+#[cfg(not(target_family = "wasm"))]
+use std::fs::File;
+#[cfg(not(target_family = "wasm"))]
+use std::io::{BufRead, BufReader, Read};
 use std::path::Path;
 #[cfg(not(target_family = "wasm"))]
 use std::path::PathBuf;
+#[cfg(not(target_family = "wasm"))]
+use std::time::SystemTime;
 
 use serde::{Deserialize, Serialize};
 
 const MAX_SESSION_ID_CHARS: usize = 256;
 #[cfg(not(target_family = "wasm"))]
 const MAX_ACTIVE_SESSIONS_BYTES: u64 = 256 * 1024;
+#[cfg(not(target_family = "wasm"))]
+const MAX_CODEX_SESSION_META_BYTES: u64 = 256 * 1024;
 
 #[derive(Clone, Copy, Debug, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(rename_all = "snake_case")]
@@ -71,6 +79,107 @@ fn is_safe_session_id(value: &str) -> bool {
 }
 
 #[cfg(not(target_family = "wasm"))]
+pub(crate) fn active_codex_resume_target(
+    command: &str,
+    cwd: Option<&str>,
+) -> Option<ExternalCliResumeTarget> {
+    let cwd = cwd?.trim();
+    if cwd.is_empty() {
+        return None;
+    }
+
+    let home = dirs::home_dir()?;
+    let codex_home = std::env::var_os("CODEX_HOME")
+        .map(PathBuf::from)
+        .unwrap_or_else(|| home.join(".codex"));
+    active_codex_resume_target_from_root(command, cwd, &codex_home)
+}
+
+#[cfg(not(target_family = "wasm"))]
+pub(super) fn active_codex_resume_target_from_root(
+    command: &str,
+    cwd: &str,
+    codex_home: &Path,
+) -> Option<ExternalCliResumeTarget> {
+    if external_cli_agent_from_command(command) != Some(ExternalCliAgent::Codex) {
+        return None;
+    }
+
+    if let Some(session_id) = explicit_codex_resume_session_id(command) {
+        return ExternalCliResumeTarget::new(
+            ExternalCliAgent::Codex,
+            session_id,
+            Some(cwd.to_owned()),
+        );
+    }
+
+    let sessions_root = codex_home.join("sessions");
+    let (_, session_id) = walkdir::WalkDir::new(sessions_root)
+        .follow_links(false)
+        .into_iter()
+        .filter_map(Result::ok)
+        .filter(|entry| entry.file_type().is_file())
+        .filter(|entry| {
+            let name = entry.file_name().to_string_lossy();
+            name.starts_with("rollout-") && name.ends_with(".jsonl")
+        })
+        .filter_map(|entry| codex_session_identity(entry.path(), cwd))
+        .max_by(|(left_modified, left_id), (right_modified, right_id)| {
+            left_modified
+                .cmp(right_modified)
+                .then_with(|| left_id.cmp(right_id))
+        })?;
+
+    ExternalCliResumeTarget::new(ExternalCliAgent::Codex, session_id, Some(cwd.to_owned()))
+}
+
+#[cfg(not(target_family = "wasm"))]
+fn explicit_codex_resume_session_id(command: &str) -> Option<String> {
+    let tokens = shell_words::split(command).ok()?;
+    let resume_index = tokens.iter().position(|token| token == "resume")?;
+    tokens
+        .get(resume_index + 1)
+        .filter(|token| !token.starts_with('-'))
+        .filter(|token| is_safe_session_id(token))
+        .cloned()
+}
+
+#[cfg(not(target_family = "wasm"))]
+fn codex_session_identity(path: &Path, cwd: &str) -> Option<(SystemTime, String)> {
+    let file = File::open(path).ok()?;
+    let mut reader = BufReader::new(file).take(MAX_CODEX_SESSION_META_BYTES);
+    let mut first_line = String::new();
+    reader.read_line(&mut first_line).ok()?;
+    let envelope = serde_json::from_str::<serde_json::Value>(&first_line).ok()?;
+    if envelope.get("type").and_then(serde_json::Value::as_str) != Some("session_meta") {
+        return None;
+    }
+    let payload = envelope.get("payload")?;
+    let recorded_cwd = payload.get("cwd").and_then(serde_json::Value::as_str)?;
+    if !equivalent_existing_paths(Path::new(recorded_cwd), Path::new(cwd))
+        || payload.get("source").and_then(serde_json::Value::as_str) != Some("cli")
+    {
+        return None;
+    }
+    let session_id = payload.get("id")?.as_str()?;
+    if !is_safe_session_id(session_id) {
+        return None;
+    }
+    let modified = path.metadata().ok()?.modified().ok()?;
+    Some((modified, session_id.to_owned()))
+}
+
+#[cfg(not(target_family = "wasm"))]
+fn equivalent_existing_paths(left: &Path, right: &Path) -> bool {
+    left == right
+        || left
+            .canonicalize()
+            .ok()
+            .zip(right.canonicalize().ok())
+            .is_some_and(|(left, right)| left == right)
+}
+
+#[cfg(not(target_family = "wasm"))]
 pub(crate) fn active_grok_resume_target(
     command: &str,
     cwd: Option<&str>,
@@ -93,9 +202,6 @@ pub(crate) fn active_grok_resume_target(
 
 #[cfg(not(target_family = "wasm"))]
 fn active_grok_resume_target_from_file(path: &Path, cwd: &str) -> Option<ExternalCliResumeTarget> {
-    use std::fs::File;
-    use std::io::Read;
-
     #[derive(Deserialize)]
     struct ActiveGrokSession {
         session_id: String,
