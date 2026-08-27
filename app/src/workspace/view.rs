@@ -3952,6 +3952,17 @@ impl Workspace {
         workspace_setting: NewWorkspaceSource,
         ctx: &mut ViewContext<Self>,
     ) {
+        let should_default_open_tools_panel =
+            matches!(&workspace_setting, NewWorkspaceSource::Empty { .. })
+                && cfg!(feature = "local_fs")
+                && Self::should_default_open_tools_panel(
+                    ChannelState::channel(),
+                    *CodeSettings::as_ref(ctx).show_project_explorer.value(),
+                    self.left_panel_visibility_across_tabs_enabled(ctx),
+                );
+        if should_default_open_tools_panel {
+            self.left_panel_open = true;
+        }
         self.vertical_tabs_panel_open =
             Self::initial_vertical_tabs_panel_open(&workspace_setting, ctx);
         match workspace_setting {
@@ -4234,6 +4245,14 @@ impl Workspace {
                 false
             }
         }
+    }
+
+    fn should_default_open_tools_panel(
+        channel: Channel,
+        show_project_explorer: bool,
+        sync_across_tabs: bool,
+    ) -> bool {
+        channel == Channel::Oss && show_project_explorer && sync_across_tabs
     }
 
     fn restore_left_panel_for_tab(

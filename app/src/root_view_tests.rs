@@ -16,6 +16,7 @@ use super::{
     HAS_COMPLETED_ONBOARDING_KEY, NewWorkspaceSource, RootView, WorkspaceArgs,
     has_completed_local_onboarding, offer_variant_for_account_class,
     refresh_pending_onboarding_choices, requires_post_onboarding_login,
+    should_mark_local_onboarding_completed, should_show_pre_login_onboarding,
 };
 use crate::GlobalResourceHandles;
 use crate::appearance::Appearance;
@@ -90,6 +91,21 @@ fn fallback_flow_only_requires_login_for_account_backed_settings() {
     assert!(!requires_post_onboarding_login(false, false, false));
     assert!(requires_post_onboarding_login(false, true, false));
     assert!(requires_post_onboarding_login(false, false, true));
+}
+
+#[test]
+fn account_first_without_account_login_completes_onboarding_locally() {
+    assert!(should_mark_local_onboarding_completed(true, false));
+    assert!(!should_mark_local_onboarding_completed(true, true));
+    assert!(should_mark_local_onboarding_completed(false, true));
+}
+
+#[test]
+fn oss_without_account_login_never_shows_pre_login_onboarding() {
+    assert!(!should_show_pre_login_onboarding(true, false, false));
+    assert!(should_show_pre_login_onboarding(true, false, true));
+    assert!(!should_show_pre_login_onboarding(true, true, true));
+    assert!(!should_show_pre_login_onboarding(false, false, true));
 }
 
 #[test]

@@ -626,6 +626,19 @@ fn requires_post_onboarding_login(
         && ChannelState::channel().allows_account_login()
         && (FeatureFlag::AccountFirstOnboarding.is_enabled() || ai_enabled || warp_drive_enabled)
 }
+
+fn should_show_pre_login_onboarding(
+    onboarding_enabled: bool,
+    onboarding_completed: bool,
+    allows_account_login: bool,
+) -> bool {
+    onboarding_enabled && !onboarding_completed && allows_account_login
+}
+
+fn should_mark_local_onboarding_completed(account_first: bool, allows_account_login: bool) -> bool {
+    !account_first || !allows_account_login
+}
+
 /// Replaces the settings and tutorial snapshots consumed when post-auth
 /// onboarding eventually completes.
 ///
@@ -1896,8 +1909,11 @@ impl RootView {
                     AuthOnboardingState::WebImport(AuthOnboardingTarget::Workspace(workspace_args.into()))
                 } else {
                     // Onboarding runs before login for users who have not completed it locally.
-                    let should_show_pre_login_onboarding = FeatureFlag::AgentOnboarding.is_enabled()
-                        && !has_completed_local_onboarding(ctx);
+                    let should_show_pre_login_onboarding = should_show_pre_login_onboarding(
+                        FeatureFlag::AgentOnboarding.is_enabled(),
+                        has_completed_local_onboarding(ctx),
+                        ChannelState::channel().allows_account_login(),
+                    );
                     if FeatureFlag::ForceLogin.is_enabled() {
                         // ForceLogin is true for Preview
                         AuthOnboardingState::Auth(workspace_args.into())
@@ -2610,7 +2626,10 @@ impl RootView {
                 let target = target.clone();
                 let onboarding_view = onboarding_view.clone();
                 let account_first = FeatureFlag::AccountFirstOnboarding.is_enabled();
-                if !account_first {
+                if should_mark_local_onboarding_completed(
+                    account_first,
+                    ChannelState::channel().allows_account_login(),
+                ) {
                     mark_local_onboarding_completed(ctx);
                     if FeatureFlag::HOAOnboardingFlow.is_enabled() {
                         mark_hoa_onboarding_completed(ctx);

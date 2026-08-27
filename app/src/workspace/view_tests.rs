@@ -3357,6 +3357,30 @@ fn test_vertical_tabs_panel_visibility_restores_from_window_snapshot() {
 }
 
 #[test]
+fn test_oss_layout_defaults_tools_panel_open() {
+    assert!(Workspace::should_default_open_tools_panel(
+        Channel::Oss,
+        true,
+        true
+    ));
+    assert!(!Workspace::should_default_open_tools_panel(
+        Channel::Stable,
+        true,
+        true
+    ));
+    assert!(!Workspace::should_default_open_tools_panel(
+        Channel::Oss,
+        false,
+        true
+    ));
+    assert!(!Workspace::should_default_open_tools_panel(
+        Channel::Oss,
+        true,
+        false
+    ));
+}
+
+#[test]
 fn test_open_vertical_tabs_panel_is_idempotent() {
     App::test((), |mut app| async move {
         initialize_app(&mut app);
