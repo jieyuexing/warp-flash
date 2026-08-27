@@ -92,6 +92,7 @@ use crate::code_review::diff_state::DiffMode;
 use crate::drive::items::WarpDriveItemId;
 use crate::drive::{CloudObjectTypeAndId, OpenWarpDriveObjectArgs};
 use crate::env_vars::EnvVarCollectionType;
+use crate::external_cli_resume::ExternalCliResumeTarget;
 use crate::features::FeatureFlag;
 use crate::launch_configs::launch_config::{self, PaneMode, PaneTemplateType};
 use crate::notebooks::file::FileNotebookView;
@@ -7170,6 +7171,17 @@ impl PaneGroup {
     ) -> Option<ViewHandle<TerminalView>> {
         self.terminal_session_by_id(pane_id)
             .map(|session| session.terminal_view(ctx))
+    }
+
+    /// Returns the external CLI agent session associated with a specific
+    /// terminal pane. Non-terminal and missing panes have no such target.
+    pub(crate) fn external_cli_resume_target_for_pane(
+        &self,
+        pane_id: impl Into<PaneId>,
+        ctx: &AppContext,
+    ) -> Option<ExternalCliResumeTarget> {
+        self.terminal_session_by_id(pane_id)
+            .and_then(|session| session.external_cli_resume_target(ctx))
     }
 
     /// Connects an existing ambient pane to `session_id` so the user lands on a live, writable

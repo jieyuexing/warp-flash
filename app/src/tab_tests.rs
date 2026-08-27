@@ -4,9 +4,10 @@ use warpui::platform::keyboard::KeyCode;
 
 use super::{
     SelectedTabColor, ShortcutModifierKind, TAB_ACTIVATE_BINDING_NAMES,
-    TAB_ACTIVATE_LAST_BINDING_NAME, TabShortcutModifierState, next_tab_color,
-    tab_activate_binding_name, tab_group_menu_entry_flags,
+    TAB_ACTIVATE_LAST_BINDING_NAME, TabShortcutModifierState, external_cli_session_copy_metadata,
+    next_tab_color, tab_activate_binding_name, tab_group_menu_entry_flags,
 };
+use crate::external_cli_resume::{ExternalCliAgent, ExternalCliResumeTarget};
 use crate::themes::theme::AnsiColorIdentifier;
 use crate::ui_components::color_dot::TAB_COLOR_OPTIONS;
 use crate::workspace::tab_group::{TabGroup, TabGroupId};
@@ -20,6 +21,35 @@ fn groups(ids: &[TabGroupId]) -> HashMap<TabGroupId, TabGroup> {
             (*id, group)
         })
         .collect()
+}
+
+#[test]
+fn external_cli_session_copy_metadata_contains_id_and_resume_command() {
+    let target = ExternalCliResumeTarget::new(
+        ExternalCliAgent::Grok,
+        "01a04130-a378-79e1-a617-02b809145371",
+        Some("/tmp/project".to_string()),
+    )
+    .expect("valid Grok session target");
+
+    assert_eq!(
+        external_cli_session_copy_metadata(Some(&target)),
+        vec![
+            (
+                "Copy agent session ID",
+                "01a04130-a378-79e1-a617-02b809145371".to_string(),
+            ),
+            (
+                "Copy agent resume command",
+                "grok --resume 01a04130-a378-79e1-a617-02b809145371".to_string(),
+            ),
+        ]
+    );
+}
+
+#[test]
+fn external_cli_session_copy_metadata_is_hidden_without_a_session() {
+    assert!(external_cli_session_copy_metadata(None).is_empty());
 }
 
 // GH-13073: a tab that is the sole member of its group must NOT be offered

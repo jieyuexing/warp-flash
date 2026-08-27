@@ -34,6 +34,7 @@ use crate::appearance::Appearance;
 /// Tab module contains structures related to Tabs (such as TabData or TabComponent) that simplify
 /// the rendering and management of tabs in general.
 use crate::editor::EditorView;
+use crate::external_cli_resume::ExternalCliResumeTarget;
 use crate::features::FeatureFlag;
 use crate::launch_configs::launch_config::LaunchConfig;
 use crate::menu::{MenuAction, MenuItem, MenuItemFields};
@@ -596,7 +597,7 @@ impl TabData {
         let vertical_tabs_display_granularity = *TabSettings::as_ref(ctx)
             .vertical_tabs_display_granularity
             .value();
-        let (title_label, title, terminal_view) = if matches!(
+        let (title_label, title, pane_id) = if matches!(
             vertical_tabs_display_granularity,
             VerticalTabsDisplayGranularity::Panes
         ) {
@@ -611,19 +612,17 @@ impl TabData {
             (
                 "Copy pane title",
                 Self::copyable_pane_title(pane_group, pane_id, ctx),
-                pane_group.terminal_view_from_pane_id(pane_id, ctx),
+                pane_id,
             )
         } else {
-            let terminal_view = pane_name_target
+            let pane_id = pane_name_target
                 .filter(|target| self.pane_group.id() == target.locator.pane_group_id)
-                .and_then(|target| {
-                    pane_group.terminal_view_from_pane_id(target.locator.pane_id, ctx)
-                })
-                .or_else(|| pane_group.focused_session_view(ctx));
-            ("Copy tab title", tab_title, terminal_view)
+                .map(|target| target.locator.pane_id)
+                .unwrap_or_else(|| pane_group.focused_pane_id(ctx));
+            ("Copy tab title", tab_title, pane_id)
         };
 
-        if let Some(terminal_view) = terminal_view {
+        if let Some(terminal_view) = pane_group.terminal_view_from_pane_id(pane_id, ctx) {
             let terminal_view = terminal_view.as_ref(ctx);
             Self::push_copy_metadata_menu_item(
                 &mut menu_items,
@@ -645,6 +644,14 @@ impl TabData {
                 "Copy pull request link",
                 Self::copyable_metadata_value(terminal_view.current_pull_request_url(ctx)),
             );
+
+            let external_cli_resume_target =
+                pane_group.external_cli_resume_target_for_pane(pane_id, ctx);
+            for (label, value) in
+                external_cli_session_copy_metadata(external_cli_resume_target.as_ref())
+            {
+                Self::push_copy_metadata_menu_item(&mut menu_items, label, Some(value));
+            }
         } else {
             Self::push_copy_metadata_menu_item(&mut menu_items, title_label, title);
         }
@@ -919,6 +926,22 @@ impl TabData {
                 .collect(),
         }]
     }
+}
+
+fn external_cli_session_copy_metadata(
+    target: Option<&ExternalCliResumeTarget>,
+) -> Vec<(&'static str, String)> {
+    let Some(target) = target else {
+        return vec![];
+    };
+    let Some(resume_command) = target.resume_command() else {
+        return vec![];
+    };
+
+    vec![
+        ("Copy agent session ID", target.session_id.clone()),
+        ("Copy agent resume command", resume_command),
+    ]
 }
 
 /// Identifies what a color-picker selection recolors: a single tab or a whole

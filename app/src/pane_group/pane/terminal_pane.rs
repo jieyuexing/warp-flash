@@ -190,6 +190,43 @@ impl TerminalPane {
         self.view.as_ref(ctx).child(ctx)
     }
 
+    /// Returns the resumable external CLI agent session currently associated
+    /// with this pane. The lookup order mirrors persistence so context-menu
+    /// actions and restart restoration always refer to the same session.
+    pub(in crate::pane_group) fn external_cli_resume_target(
+        &self,
+        app: &AppContext,
+    ) -> Option<ExternalCliResumeTarget> {
+        let terminal_view = self.terminal_view(app);
+        let view = terminal_view.as_ref(app);
+        let cwd = view.pwd_if_local(app);
+        let codex_resume_target = CLIAgentSessionsModel::as_ref(app)
+            .session(terminal_view.id())
+            .filter(|session| session.agent == CLIAgent::Codex)
+            .and_then(|session| {
+                ExternalCliResumeTarget::new(
+                    ExternalCliAgent::Codex,
+                    session.session_context.session_id.clone()?,
+                    session.session_context.cwd.clone().or_else(|| cwd.clone()),
+                )
+            })
+            .or_else(|| {
+                view.active_long_running_command()
+                    .and_then(|command| active_codex_resume_target(&command, cwd.as_deref()))
+            });
+
+        #[cfg(not(target_family = "wasm"))]
+        let grok_resume_target = view
+            .active_long_running_command()
+            .and_then(|command| active_grok_resume_target(&command, cwd.as_deref()));
+        #[cfg(target_family = "wasm")]
+        let grok_resume_target = None;
+
+        codex_resume_target
+            .or(grok_resume_target)
+            .or_else(|| self.external_cli_resume_target.clone())
+    }
+
     /// The UUID that identifies this terminal session across app restarts.
     pub(in crate::pane_group) fn session_uuid(&self) -> Vec<u8> {
         self.uuid.clone()
@@ -526,31 +563,7 @@ impl PaneContent for TerminalPane {
                 .sync_id();
 
             let cwd = view.pwd_if_local(app);
-            let codex_resume_target = CLIAgentSessionsModel::as_ref(app)
-                .session(self.terminal_view(app).id())
-                .filter(|session| session.agent == CLIAgent::Codex)
-                .and_then(|session| {
-                    ExternalCliResumeTarget::new(
-                        ExternalCliAgent::Codex,
-                        session.session_context.session_id.clone()?,
-                        session.session_context.cwd.clone().or_else(|| cwd.clone()),
-                    )
-                })
-                .or_else(|| {
-                    view.active_long_running_command()
-                        .and_then(|command| active_codex_resume_target(&command, cwd.as_deref()))
-                });
-
-            #[cfg(not(target_family = "wasm"))]
-            let grok_resume_target = view
-                .active_long_running_command()
-                .and_then(|command| active_grok_resume_target(&command, cwd.as_deref()));
-            #[cfg(target_family = "wasm")]
-            let grok_resume_target = None;
-
-            let external_cli_resume_target = codex_resume_target
-                .or(grok_resume_target)
-                .or_else(|| self.external_cli_resume_target.clone());
+            let external_cli_resume_target = self.external_cli_resume_target(app);
 
             // Collect all conversation IDs for this terminal view
             let conversation_ids_to_restore = BlocklistAIHistoryModel::as_ref(app)

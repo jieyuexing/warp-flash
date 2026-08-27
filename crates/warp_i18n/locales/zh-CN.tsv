@@ -504,6 +504,48 @@ Copy path	复制路径
 Copy prompt	复制提示符
 Copy right prompt	复制右侧提示符
 Copy working directory	复制工作目录
+Copy agent resume command	复制 Agent 恢复命令
+Copy agent session ID	复制 Agent 会话 ID
+Close all tabs in group	关闭组内所有标签页
+Close other tabs	关闭其他标签页
+Close tab	关闭标签页
+Close tabs above	关闭上方标签页
+Close tabs below	关闭下方标签页
+Close tabs to the left	关闭左侧标签页
+Close tabs to the right	关闭右侧标签页
+Close Tabs Below	关闭下方标签页
+Close Tabs to the Right	关闭右侧标签页
+Copy branch	复制分支
+Copy pane title	复制窗格标题
+Copy pull request link	复制拉取请求链接
+Copy tab title	复制标签页标题
+Create group from tabs	将所选标签页新建为组
+Move group down	下移组
+Move group left	左移组
+Move group right	右移组
+Move group up	上移组
+Move Tab Down	下移标签页
+Move Tab Left	左移标签页
+Move Tab Right	右移标签页
+Move Tab Up	上移标签页
+Move to group	移动到组
+New group with tab	用此标签页新建组
+New tab in group	在组中新建标签页
+Pin group	固定组
+Pin tab	固定标签页
+Remove from group	从组中移除
+Rename active pane	重命名活动窗格
+Rename pane	重命名窗格
+Rename tab	重命名标签页
+Reset active pane name	重置活动窗格名称
+Reset pane name	重置窗格名称
+Reset tab name	重置标签页名称
+Save as new config	另存为新配置
+Share session	共享会话
+Stop sharing all	停止全部共享
+Ungroup tabs	取消标签页分组
+Unpin group	取消固定组
+Unpin tab	取消固定标签页
 Insert into input	插入到输入框
 Open in editor	在编辑器中打开
 Open link	打开链接
