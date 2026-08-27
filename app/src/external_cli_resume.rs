@@ -217,7 +217,7 @@ fn active_grok_resume_target_from_file(path: &Path, cwd: &str) -> Option<Externa
 
     let mut matches = sessions
         .into_iter()
-        .filter(|session| Path::new(&session.cwd) == Path::new(cwd))
+        .filter(|session| equivalent_existing_paths(Path::new(&session.cwd), Path::new(cwd)))
         .filter_map(|session| {
             ExternalCliResumeTarget::new(
                 ExternalCliAgent::Grok,

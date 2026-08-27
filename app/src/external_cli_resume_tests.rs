@@ -70,6 +70,29 @@ fn grok_registry_requires_exactly_one_session_for_the_cwd() {
     assert!(active_grok_resume_target_from_contents(one, "/work/other").is_none());
 }
 
+#[cfg(unix)]
+#[test]
+fn grok_registry_accepts_equivalent_cwd_symlinks() {
+    use std::os::unix::fs::symlink;
+
+    let workspace = tempfile::tempdir().expect("workspace");
+    let actual_cwd = workspace.path().join("actual");
+    let alias_cwd = workspace.path().join("alias");
+    fs::create_dir(&actual_cwd).expect("actual cwd");
+    symlink(&actual_cwd, &alias_cwd).expect("cwd symlink");
+
+    let registry = serde_json::json!([{
+        "session_id": "grok-symlink",
+        "cwd": actual_cwd,
+    }])
+    .to_string();
+    let target =
+        active_grok_resume_target_from_contents(&registry, alias_cwd.to_str().expect("alias cwd"))
+            .expect("equivalent cwd target");
+
+    assert_eq!(target.session_id, "grok-symlink");
+}
+
 #[cfg(not(target_family = "wasm"))]
 #[test]
 fn codex_resume_command_preserves_its_explicit_session_id() {
