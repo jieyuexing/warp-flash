@@ -19,7 +19,7 @@ define_settings_group!(GeneralSettings, settings: [
     },
     quit_on_last_window_closed: QuitOnLastWindowClosed {
         type: bool,
-        default: false,
+        default: true,
         supported_platforms: SupportedPlatforms::MAC,
         sync_to_cloud: SyncToCloud::Globally(RespectUserSyncSetting::Yes),
         surface: settings::SettingSurfaces::GUI,
@@ -178,3 +178,15 @@ define_settings_group!(GeneralSettings, settings: [
         private: true,
     },
 ]);
+
+#[cfg(test)]
+mod tests {
+    use settings::Setting;
+
+    use super::QuitOnLastWindowClosed;
+
+    #[test]
+    fn warposs_closes_the_last_window_by_terminating_by_default() {
+        assert!(QuitOnLastWindowClosed::default_value());
+    }
+}
