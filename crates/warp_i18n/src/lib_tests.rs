@@ -62,6 +62,38 @@ fn embedded_catalog_is_valid_and_substantial() {
 }
 
 #[test]
+fn chinese_catalog_covers_new_workspace_ui() {
+    let expected = [
+        ("New file", "新建文件"),
+        ("cd to directory", "进入该目录"),
+        ("Open in new tab", "在新标签页中打开"),
+        ("Reveal in Finder", "在访达中显示"),
+        ("Rename", "重命名"),
+        ("Attach as context", "附加为上下文"),
+        ("Copy relative path", "复制相对路径"),
+        ("Loading", "正在加载"),
+        ("Running", "运行中"),
+        ("Needs input", "等待输入"),
+        ("Idle", "空闲"),
+        ("Open version control", "打开版本控制"),
+        ("Archive tab", "归档标签页"),
+        ("Delete tab…", "删除标签页…"),
+        ("Fetch", "获取"),
+        ("Pull", "拉取"),
+        ("Branches", "分支"),
+        ("Stage all", "全部暂存"),
+        ("Commit staged", "提交已暂存更改"),
+    ];
+
+    for (source, translation) in expected {
+        assert_eq!(
+            localize_ui_for_locale(Locale::ZhCn, Cow::Borrowed(source)),
+            translation
+        );
+    }
+}
+
+#[test]
 fn duplicate_source_is_a_hard_failure() {
     let error = parse_catalog("Cancel\t取消\nCancel\t取消操作\n")
         .expect_err("duplicate source must be rejected");

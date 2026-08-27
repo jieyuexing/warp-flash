@@ -163,7 +163,10 @@ impl VersionControlView {
                 .into(),
                 ctx,
             );
-            editor.set_placeholder_text("Filter files, commits, or branches", ctx);
+            editor.set_placeholder_text(
+                warp_i18n::localize_ref("Filter files, commits, or branches"),
+                ctx,
+            );
             editor
         });
         let commit_editor = ctx.add_typed_action_view(|ctx| {
@@ -190,7 +193,7 @@ impl VersionControlView {
                 .into(),
                 ctx,
             );
-            editor.set_placeholder_text("New branch name", ctx);
+            editor.set_placeholder_text(warp_i18n::localize_ref("New branch name"), ctx);
             editor
         });
         ctx.subscribe_to_view(&filter_editor, |me, _, event, ctx| match event {
@@ -483,7 +486,7 @@ impl VersionControlView {
             return;
         };
         let root = snapshot.root.clone();
-        self.detail = "Loading diff\u{2026}".to_string();
+        self.detail = warp_i18n::localize_ui("Loading diff\u{2026}").into_owned();
         ctx.spawn(
             async move { load_diff(&root, &change, target).await },
             |me, result, ctx| {
@@ -505,7 +508,7 @@ impl VersionControlView {
         else {
             return;
         };
-        self.detail = "Loading commit\u{2026}".to_string();
+        self.detail = warp_i18n::localize_ui("Loading commit\u{2026}").into_owned();
         ctx.spawn(
             async move { load_commit_diff(&root, &hash).await },
             |me, result, ctx| {
@@ -622,7 +625,7 @@ impl VersionControlView {
                         | GitOperation::DeleteBranch => {}
                     }
                     me.status_message = Some(if output.trim().is_empty() {
-                        success_message.to_string()
+                        warp_i18n::localize_ref(success_message).to_string()
                     } else {
                         truncate_detail(output, 2_000)
                     });
@@ -655,7 +658,7 @@ impl VersionControlView {
         appearance
             .ui_builder()
             .button(variant, mouse_state)
-            .with_text_label(label.to_string())
+            .with_text_label(warp_i18n::localize_ui(label.to_owned()).into_owned())
             .with_style(UiComponentStyles {
                 height: Some(24.),
                 font_size: Some(11.),
@@ -757,7 +760,11 @@ impl VersionControlView {
         match row {
             ListRow::Section { label, count } => Container::new(
                 Text::new_inline(
-                    format!("{label}  {count}"),
+                    warp_i18n::localize_format!(
+                        "{label}  {count}",
+                        label = warp_i18n::localize_ui(label.clone()),
+                        count = count,
+                    ),
                     appearance.ui_font_family(),
                     10.,
                 )
@@ -849,9 +856,11 @@ impl VersionControlView {
                         )
                         .with_child(
                             Text::new_inline(
-                                format!(
-                                    "{}  {}  {}",
-                                    commit.short_hash, commit.author_name, commit.authored_at
+                                warp_i18n::localize_format!(
+                                    "{short_hash}  {author_name}  {authored_at}",
+                                    short_hash = commit.short_hash,
+                                    author_name = commit.author_name,
+                                    authored_at = commit.authored_at,
                                 ),
                                 appearance.ui_font_family(),
                                 10.,
@@ -890,7 +899,12 @@ impl VersionControlView {
                     let content = Flex::column()
                         .with_child(
                             Text::new_inline(
-                                format!("{marker} {}{tracking}", branch.name),
+                                warp_i18n::localize_format!(
+                                    "{marker} {name}{tracking}",
+                                    marker = marker,
+                                    name = branch.name,
+                                    tracking = tracking,
+                                ),
                                 appearance.ui_font_family(),
                                 appearance.ui_font_size(),
                             )
@@ -899,7 +913,11 @@ impl VersionControlView {
                         )
                         .with_child(
                             Text::new_inline(
-                                format!("{}  {}", branch.short_hash, branch.subject),
+                                warp_i18n::localize_format!(
+                                    "{short_hash}  {subject}",
+                                    short_hash = branch.short_hash,
+                                    subject = branch.subject,
+                                ),
                                 appearance.ui_font_family(),
                                 10.,
                             )
@@ -1133,16 +1151,17 @@ impl VersionControlView {
         }
         if let Some(pending) = &self.pending_destructive_operation {
             let warning = match pending {
-                PendingDestructiveOperation::Discard { paths } => format!(
-                    "Discard uncommitted changes in {}? This cannot be undone.",
-                    paths
+                PendingDestructiveOperation::Discard { paths } => warp_i18n::localize_format!(
+                    "Discard uncommitted changes in {path}? This cannot be undone.",
+                    path = paths
                         .first()
                         .map(|path| path.to_string_lossy())
-                        .unwrap_or_default()
+                        .unwrap_or_default(),
                 ),
-                PendingDestructiveOperation::DeleteBranch { name } => {
-                    format!("Delete local branch {name}? Git will refuse if it is unmerged.")
-                }
+                PendingDestructiveOperation::DeleteBranch { name } => warp_i18n::localize_format!(
+                    "Delete local branch {name}? Git will refuse if it is unmerged.",
+                    name = name,
+                ),
             };
             footer = footer
                 .with_child(
@@ -1176,7 +1195,7 @@ impl VersionControlView {
         {
             footer = footer.with_child(
                 Text::new_inline(
-                    "Change list truncated at 1,000 files.",
+                    warp_i18n::localize_ref("Change list truncated at 1,000 files."),
                     appearance.ui_font_family(),
                     10.,
                 )
@@ -1250,12 +1269,16 @@ impl TypedActionView for VersionControlView {
                 });
                 if selected.is_some_and(GitChange::is_untracked) {
                     self.error_message = Some(
-                        "Unversioned files are not deleted from the Version Control panel"
-                            .to_string(),
+                        warp_i18n::localize_ui(
+                            "Unversioned files are not deleted from the Version Control panel",
+                        )
+                        .into_owned(),
                     );
                 } else if selected.is_some_and(GitChange::is_conflicted) {
-                    self.error_message =
-                        Some("Resolve the merge conflict before rolling it back".to_string());
+                    self.error_message = Some(
+                        warp_i18n::localize_ui("Resolve the merge conflict before rolling it back")
+                            .into_owned(),
+                    );
                 } else {
                     self.pending_destructive_operation =
                         Some(PendingDestructiveOperation::Discard { paths });
@@ -1332,7 +1355,8 @@ impl TypedActionView for VersionControlView {
                 let branch = self.branch_editor.as_ref(ctx).buffer_text(ctx);
                 let branch = branch.trim().to_string();
                 if branch.is_empty() {
-                    self.error_message = Some("Enter a branch name".to_string());
+                    self.error_message =
+                        Some(warp_i18n::localize_ui("Enter a branch name").into_owned());
                     ctx.notify();
                     return;
                 }
@@ -1444,7 +1468,8 @@ impl TypedActionView for VersionControlView {
                     let message = self.commit_editor.as_ref(ctx).buffer_text(ctx);
                     let message = message.trim().to_string();
                     if message.is_empty() {
-                        self.error_message = Some("Enter a commit message".to_string());
+                        self.error_message =
+                            Some(warp_i18n::localize_ui("Enter a commit message").into_owned());
                         ctx.notify();
                         return;
                     }
@@ -1471,9 +1496,9 @@ impl View for VersionControlView {
         let repository_label = self.current_snapshot().map_or_else(
             || {
                 if self.loading {
-                    "Loading repositories\u{2026}".to_string()
+                    warp_i18n::localize_ui("Loading repositories\u{2026}").into_owned()
                 } else {
-                    "No Git repository".to_string()
+                    warp_i18n::localize_ui("No Git repository").into_owned()
                 }
             },
             |snapshot| {

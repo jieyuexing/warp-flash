@@ -9,11 +9,13 @@ Add	添加
 Add Profile	添加配置
 Add repo	添加仓库
 Add rule	添加规则
+Attach as context	附加为上下文
 Add-on credits	附加额度
 Agent	智能体
 AI	AI
 All	全部
 Allow	允许
+Archived ({archived_count})	已归档（{archived_count}）
 Auto-reload	自动重新加载
 Auto reload	自动重新加载
 AWS Region:	AWS 区域：
@@ -32,6 +34,7 @@ Cancelled	已取消
 Cannot detect diffs for this folder	无法检测此文件夹的差异
 Change default model	更改默认模型
 Change keybinding	更改快捷键
+Change list truncated at 1,000 files.	更改列表已截断为 1,000 个文件。
 Changes	更改
 Character limit exceeded.	已超出字符限制。
 Choose how you'd like to set up your environment	选择环境设置方式
@@ -56,10 +59,12 @@ Configure	配置
 Configure access on GitHub	在 GitHub 上配置访问权限
 Connect	连接
 Connecting	正在连接
+Loading	正在加载
 Context window	上下文窗口
 Continue	继续
 Continue locally	在本地继续
 Copy on Select within the Terminal	在终端中选中即复制
+Copy relative path	复制相对路径
 Create	创建
 Create anonymous user	创建匿名用户
 Create an environment	创建环境
@@ -95,6 +100,7 @@ Enable notifications	启用通知
 Environment details	环境详情
 Environment setup commands	环境设置命令
 Error	错误
+Idle	空闲
 Error loading diffs	加载差异时出错
 Example queries	示例查询
 Expiration	到期时间
@@ -102,6 +108,7 @@ Failed to start environment	启动环境失败
 File	文件
 File explorer	文件资源管理器
 File renamed without changes	文件仅重命名，内容未更改
+Filter files, commits, or branches	筛选文件、提交或分支
 Finish	完成
 Fork current conversation	派生当前对话
 Free credits	免费额度
@@ -159,6 +166,7 @@ New terminal session	新建终端会话
 New Terminal Tab	新建终端标签页
 New Window	新建窗口
 New worktree	新建工作树
+New branch name	新分支名称
 Next	下一步
 No agents available. Create one first.	没有可用智能体，请先创建一个。
 No API Keys	没有 API 密钥
@@ -182,6 +190,8 @@ No secrets found. Save to use this value directly or click the key to add a secr
 No settings match your search.	没有与搜索匹配的设置。
 No tabs match your search.	没有与搜索匹配的标签页。
 No tabs open	没有打开的标签页
+Needs input	等待输入
+New file	新建文件
 No tools available	没有可用工具
 No updates available	没有可用更新
 No usage history	没有使用记录
@@ -190,6 +200,8 @@ Not now	暂不
 Notifications setup instructions	通知设置说明
 Open all in code review	在代码审查中打开全部
 Open file	打开文件
+Open in new pane	在新窗格中打开
+Open in new tab	在新标签页中打开
 Open in code review	在代码审查中打开
 Open in Warp	在 Warp 中打开
 Open Recent	打开最近项目
@@ -207,6 +219,12 @@ Plan	计划
 Plan auto-sync	计划自动同步
 Please authenticate with GitHub to continue	请通过 GitHub 身份验证以继续
 Preferences	偏好设置
+Ready	就绪
+Rename	重命名
+Reveal in Explorer	在资源管理器中显示
+Reveal in file manager	在文件管理器中显示
+Reveal in Finder	在访达中显示
+Running	运行中
 Press new keyboard shortcut	按下新的快捷键
 Previous	上一步
 Project explorer unavailable	项目资源管理器不可用
@@ -1560,6 +1578,8 @@ turn it back on	重新启用
 upgrading to a Build plan	升级到 Build 套餐
 use your own API keys	使用你自己的 API 密钥
 visit the admin panel	访问管理面板
+Waiting	等待中
+cd to directory	进入该目录
 workspace admin panel	工作区管理面板
 Warping...	执行中...
 Adjusting tasks...	正在调整任务...
@@ -1582,3 +1602,62 @@ Searching the web...	正在搜索网页...
 {message} with {model}	{message}（使用 {model}）
 {message} with {model}.	{message}（使用 {model}）。
 Warping with another model.	正在使用其他模型执行。
+CHANGES	更改
+LOCAL	本地
+MERGE CONFLICTS	合并冲突
+REMOTE	远程
+STAGED	已暂存
+UNVERSIONED FILES	未版本控制的文件
+{label}  {count}	{label}  {count}
+{marker} {name}{tracking}	{marker} {name}{tracking}
+{short_hash}  {author_name}  {authored_at}	{short_hash}  {author_name}  {authored_at}
+{short_hash}  {subject}	{short_hash}  {subject}
+Applied stash	已应用储藏
+Archive other tabs	归档其他标签页
+Archive tab	归档标签页
+Archive Tabs Below	归档下方标签页
+Archive Tabs to the Right	归档右侧标签页
+Branches	分支
+Checked out branch	已检出分支
+Checkout	检出
+Commit staged	提交已暂存更改
+Committed staged changes	已提交暂存的更改
+Created branch	已创建分支
+Delete local branch {name}? Git will refuse if it is unmerged.	删除本地分支 {name}？如果分支尚未合并，Git 将拒绝此操作。
+Delete tab…	删除标签页…
+Delete this archived tab?	删除这个已归档标签页？
+Delete this tab?	删除这个标签页？
+Deleted branch	已删除分支
+Discard uncommitted changes in {path}? This cannot be undone.	放弃 {path} 中未提交的更改？此操作无法撤销。
+Enter a branch name	输入分支名称
+Enter a commit message	输入提交信息
+Fetch	获取
+Fetched remote changes	已获取远程更改
+Loading commit…	正在加载提交…
+Loading diff…	正在加载差异…
+Loading repositories…	正在加载仓库…
+Log	日志
+Merge	合并
+Merged branch	已合并分支
+No Git repository	没有 Git 仓库
+No matching items.	没有匹配项。
+Open a directory inside a Git repository to use Version Control.	请打开 Git 仓库中的目录以使用版本控制。
+Open version control	打开版本控制
+Pop	应用储藏
+Pull	拉取
+Pulled remote changes	已拉取远程更改
+Pushed branch	已推送分支
+Resolve the merge conflict before rolling it back	请先解决合并冲突，再回滚更改
+Rolled back changes	已回滚更改
+Rollback	回滚
+Stage	暂存
+Stage all	全部暂存
+Staged changes	已暂存更改
+Stash	储藏
+Stashed changes	已储藏更改
+This permanently removes the saved tab and cannot be undone.	这会永久移除已保存的标签页，且无法撤销。
+This permanently removes the tab instead of keeping it in Archived.	这会永久移除标签页，而不会将其保留在“已归档”中。
+Unstage	取消暂存
+Unstage all	全部取消暂存
+Unstaged changes	已取消暂存更改
+Unversioned files are not deleted from the Version Control panel	版本控制面板不会删除未纳入版本控制的文件

@@ -2344,20 +2344,20 @@ impl FileTreeView {
                     let path_local = item.path().to_local_path_lossy();
                     if !is_file_content_binary(&path_local) {
                         items.extend([
-                            MenuItemFields::new("Open in new pane")
-                                .with_on_select_action(FileTreeAction::OpenInNewPane {
-                                    id: id.clone(),
-                                })
-                                .into_item(),
-                            MenuItemFields::new("Open in new tab")
-                                .with_on_select_action(FileTreeAction::OpenInNewTab {
-                                    id: id.clone(),
-                                })
-                                .into_item(),
+                            MenuItemFields::new(
+                                warp_i18n::localize_ui("Open in new pane").into_owned(),
+                            )
+                            .with_on_select_action(FileTreeAction::OpenInNewPane { id: id.clone() })
+                            .into_item(),
+                            MenuItemFields::new(
+                                warp_i18n::localize_ui("Open in new tab").into_owned(),
+                            )
+                            .with_on_select_action(FileTreeAction::OpenInNewTab { id: id.clone() })
+                            .into_item(),
                         ]);
                     } else {
                         items.push(
-                            MenuItemFields::new("Open file")
+                            MenuItemFields::new(warp_i18n::localize_ui("Open file").into_owned())
                                 .with_on_select_action(FileTreeAction::ItemClicked {
                                     id: id.clone(),
                                 })
@@ -2367,7 +2367,7 @@ impl FileTreeView {
                 }
                 FileTreeItem::DirectoryHeader { .. } => {
                     items.push(
-                        MenuItemFields::new("New file")
+                        MenuItemFields::new(warp_i18n::localize_ui("New file").into_owned())
                             .with_on_select_action(FileTreeAction::NewFileBelowDirectory {
                                 id: id.clone(),
                             })
@@ -2376,15 +2376,15 @@ impl FileTreeView {
                     items.push(MenuItem::Separator);
                     if self.has_terminal_session {
                         items.push(
-                            MenuItemFields::new("cd to directory")
-                                .with_on_select_action(FileTreeAction::CDToDirectory {
-                                    id: id.clone(),
-                                })
-                                .into_item(),
+                            MenuItemFields::new(
+                                warp_i18n::localize_ui("cd to directory").into_owned(),
+                            )
+                            .with_on_select_action(FileTreeAction::CDToDirectory { id: id.clone() })
+                            .into_item(),
                         );
                     }
                     items.push(
-                        MenuItemFields::new("Open in new tab")
+                        MenuItemFields::new(warp_i18n::localize_ui("Open in new tab").into_owned())
                             .with_on_select_action(FileTreeAction::OpenInNewTab { id: id.clone() })
                             .into_item(),
                     );
@@ -2399,7 +2399,7 @@ impl FileTreeView {
                 "Reveal in file manager"
             };
             items.push(
-                MenuItemFields::new(open_text)
+                MenuItemFields::new(warp_i18n::localize_ui(open_text).into_owned())
                     .with_on_select_action(FileTreeAction::OpenInFinder { id: id.clone() })
                     .into_item(),
             );
@@ -2409,12 +2409,12 @@ impl FileTreeView {
             let is_repo_root_dir = id.index == 0;
             if !is_repo_root_dir {
                 items.push(
-                    MenuItemFields::new("Rename")
+                    MenuItemFields::new(warp_i18n::localize_ui("Rename").into_owned())
                         .with_on_select_action(FileTreeAction::Rename { id: id.clone() })
                         .into_item(),
                 );
                 items.push(
-                    MenuItemFields::new("Delete")
+                    MenuItemFields::new(warp_i18n::localize_ui("Delete").into_owned())
                         .with_on_select_action(FileTreeAction::Delete { id: id.clone() })
                         .into_item(),
                 );
@@ -2426,7 +2426,7 @@ impl FileTreeView {
                 items.push(MenuItem::Separator);
             }
             items.push(
-                MenuItemFields::new("Attach as context")
+                MenuItemFields::new(warp_i18n::localize_ui("Attach as context").into_owned())
                     .with_on_select_action(FileTreeAction::AttachAsContext { id: id.clone() })
                     .into_item(),
             );
@@ -2436,10 +2436,10 @@ impl FileTreeView {
             items.push(MenuItem::Separator);
         }
         items.extend([
-            MenuItemFields::new("Copy path")
+            MenuItemFields::new(warp_i18n::localize_ui("Copy path").into_owned())
                 .with_on_select_action(FileTreeAction::CopyPath { id: id.clone() })
                 .into_item(),
-            MenuItemFields::new("Copy relative path")
+            MenuItemFields::new(warp_i18n::localize_ui("Copy relative path").into_owned())
                 .with_on_select_action(FileTreeAction::CopyRelativePath { id: id.clone() })
                 .into_item(),
         ]);
