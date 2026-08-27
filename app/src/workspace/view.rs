@@ -104,7 +104,7 @@ use warpui::event::KeyState;
 use warpui::fonts::{Properties, Weight};
 use warpui::geometry::vector::{Vector2F, vec2f};
 use warpui::keymap::Context;
-use warpui::modals::{AlertDialogWithCallbacks, AppModalCallback};
+use warpui::modals::{AlertDialogWithCallbacks, AppModalCallback, ModalButton};
 use warpui::notification::{NotificationSendError, RequestPermissionsOutcome, UserNotification};
 use warpui::platform::{
     Cursor, FilePickerConfiguration, FullscreenState, SystemTheme, TerminationMode,
@@ -159,7 +159,10 @@ use super::util::{
     PaneViewLocator, TabMovement, TerminalSessionFallbackBehavior, WelcomeTipsViewState,
     WorkspaceMouseStates, WorkspaceState,
 };
-use super::{ActiveSession, TabBarDropTargetData, TabBarLocation, WorkspaceRegistry, util};
+use super::{
+    ActiveSession, ClosedWorkspaceSnapshots, TabBarDropTargetData, TabBarLocation,
+    WorkspaceRegistry, util,
+};
 use crate::ai::active_agent_views_model::ActiveAgentViewsModel;
 #[cfg(all(feature = "local_fs", not(target_family = "wasm")))]
 use crate::ai::agent::CancellationReason;
@@ -229,9 +232,9 @@ use crate::ai_assistant::execution_context::execution_context_for_session;
 use crate::ai_assistant::panel::{AIAssistantPanelEvent, AIAssistantPanelView};
 use crate::ai_assistant::{AI_ASSISTANT_FEATURE_NAME, AI_ASSISTANT_LOGO_COLOR, AskAIType};
 use crate::app_state::{
-    LeafContents, LeafSnapshot, LeftPanelDisplayedTab, LeftPanelSnapshot, NotebookPaneSnapshot,
-    PaneNodeSnapshot, PaneUuid, RightPanelSnapshot, SettingsPaneSnapshot, TabGroupSnapshot,
-    TabSnapshot, TerminalPaneSnapshot, WindowSnapshot, WorkflowPaneSnapshot,
+    ArchivedTabSnapshot, LeafContents, LeafSnapshot, LeftPanelDisplayedTab, LeftPanelSnapshot,
+    NotebookPaneSnapshot, PaneNodeSnapshot, PaneUuid, RightPanelSnapshot, SettingsPaneSnapshot,
+    TabGroupSnapshot, TabSnapshot, TerminalPaneSnapshot, WindowSnapshot, WorkflowPaneSnapshot,
 };
 use crate::appearance::{Appearance, AppearanceManager};
 use crate::auth::AuthStateProvider;
@@ -1035,6 +1038,7 @@ enum TabBarSlot {
 pub struct Workspace {
     window_id: WindowId,
     pub(crate) tabs: Vec<TabData>,
+    pub(crate) archived_tabs: Vec<ArchivedTabSnapshot>,
     active_tab_index: usize,
     /// Tracks tab activation order (most-recently-used first).
     /// Each entry is the `pane_group.id()` of the corresponding tab.
@@ -3442,6 +3446,7 @@ impl Workspace {
 
         let mut ws = Self {
             tabs: Vec::new(),
+            archived_tabs: Vec::new(),
             active_tab_index: 0,
             tab_mru_order: Vec::new(),
             hovered_tab_index: None,
@@ -4033,6 +4038,8 @@ impl Workspace {
                         })
                         .collect();
                 }
+
+                self.archived_tabs = window_snapshot.archived_tabs.clone();
 
                 restored_tabs
                     .iter()
@@ -7429,11 +7436,11 @@ impl Workspace {
         ctx.dispatch_typed_action_deferred(WorkspaceAction::RenameTabGroup(group_id));
     }
 
-    /// Closes every tab in the given group and removes the group.
+    /// Archives every tab in the given group.
     pub fn close_tab_group(&mut self, group_id: TabGroupId, ctx: &mut ViewContext<Self>) {
         let indices: Vec<usize> = group_member_indices(&self.tabs, group_id).collect();
         if indices.is_empty() {
-            self.tab_groups.remove(&group_id);
+            self.prune_empty_tab_group(group_id, ctx);
             ctx.dispatch_global_action("workspace:save_app", ());
             ctx.notify();
             return;
@@ -7449,7 +7456,7 @@ impl Workspace {
             ctx,
         );
         if closed {
-            self.tab_groups.remove(&group_id);
+            self.prune_empty_tab_group(group_id, ctx);
             ctx.notify();
         }
     }
@@ -7925,7 +7932,11 @@ impl Workspace {
 
     /// Removes a tab group from the workspace if no tabs reference it.
     fn prune_empty_tab_group(&mut self, group_id: TabGroupId, ctx: &mut ViewContext<Self>) {
-        let has_members = group_member_indices(&self.tabs, group_id).next().is_some();
+        let has_members = group_member_indices(&self.tabs, group_id).next().is_some()
+            || self
+                .archived_tabs
+                .iter()
+                .any(|archived| archived.tab.group_id == Some(group_id));
         if !has_members {
             self.tab_groups.remove(&group_id);
             ctx.notify();
@@ -10213,22 +10224,22 @@ impl Workspace {
 
         let close_section = {
             let mut items = vec![
-                MenuItemFields::new("Close all tabs in group")
+                MenuItemFields::new("Archive all tabs in group")
                     .with_on_select_action(WorkspaceAction::CloseTabGroup(group_id))
                     .into_item(),
             ];
             if has_tabs_outside {
                 items.push(
-                    MenuItemFields::new("Close other tabs")
+                    MenuItemFields::new("Archive other tabs")
                         .with_on_select_action(WorkspaceAction::CloseTabsOutsideGroup(group_id))
                         .into_item(),
                 );
             }
             if has_tabs_above {
                 let label = if is_vertical {
-                    "Close tabs above"
+                    "Archive tabs above"
                 } else {
-                    "Close tabs to the left"
+                    "Archive tabs to the left"
                 };
                 items.push(
                     MenuItemFields::new(label)
@@ -10238,9 +10249,9 @@ impl Workspace {
             }
             if has_tabs_below {
                 let label = if is_vertical {
-                    "Close tabs below"
+                    "Archive tabs below"
                 } else {
-                    "Close tabs to the right"
+                    "Archive tabs to the right"
                 };
                 items.push(
                     MenuItemFields::new(label)
@@ -11024,7 +11035,7 @@ impl Workspace {
             .iter()
             .position(|tab| tab.pane_group.id() == pane_group_id)
         {
-            self.remove_tab(index, false, true, ctx);
+            self.remove_tab(index, false, true, None, ctx);
         }
     }
 
@@ -11609,7 +11620,13 @@ impl Workspace {
                 };
                 match *open_confirmation_source {
                     OpenDialogSource::CloseTab { tab_index } => {
-                        self.remove_tab(tab_index, true, true, ctx);
+                        self.close_tabs(
+                            std::iter::once(tab_index),
+                            OpenDialogSource::CloseTab { tab_index },
+                            true,
+                            true,
+                            ctx,
+                        );
                     }
                     OpenDialogSource::ClosePane {
                         pane_group_id,
@@ -11824,53 +11841,7 @@ impl Workspace {
             .enumerate()
             .filter(|(tab_index, _)| Some(*tab_index) != transferred_tab_index)
             .map(|(tab_index, pane_group_view)| {
-                let resizable_data = ResizableData::handle(app);
-                let modal_sizes = resizable_data.as_ref(app).get_all_handles(window_id);
-
-                let left_panel_width = modal_sizes.map(|ms| {
-                    ms.left_panel_width
-                        .lock()
-                        .expect("should be able to lock left panel handle")
-                        .size()
-                });
-
-                let right_panel_width = modal_sizes.map(|ms| {
-                    ms.right_panel_width
-                        .lock()
-                        .expect("should be able to lock right panel handle")
-                        .size()
-                });
-
-                let pane_group = pane_group_view.as_ref(app);
-                let root = pane_group.snapshot(app);
-                let left_panel =
-                    self.compute_left_panel_snapshot(pane_group_view, left_panel_width, app);
-                let right_panel =
-                    self.compute_right_panel_snapshot(pane_group_view, right_panel_width, app);
-                TabSnapshot {
-                    root,
-                    custom_title: pane_group.custom_title(app),
-                    default_directory_color: self
-                        .tabs
-                        .get(tab_index)
-                        .and_then(|tab| tab.default_directory_color),
-                    selected_color: self
-                        .tabs
-                        .get(tab_index)
-                        .map(|tab| tab.selected_color)
-                        .unwrap_or_default(),
-                    left_panel,
-                    right_panel,
-                    group_id: if FeatureFlag::GroupedTabs.is_enabled() {
-                        self.tabs.get(tab_index).and_then(|tab| tab.group_id)
-                    } else {
-                        None
-                    },
-                    // Only persist pinned state when the Pinned Tabs feature is
-                    // enabled.
-                    pinned: FeatureFlag::PinnedTabs.is_enabled()
-                        && self.tabs.get(tab_index).is_some_and(|tab| tab.pinned),
-                }
+                self.snapshot_tab(tab_index, pane_group_view, window_id, app)
             })
             .filter(|tab| {
                 // Filter out any tab that contains a single, read-only session.
@@ -11890,8 +11861,15 @@ impl Workspace {
         // Skip orphan groups whose members were all filtered out above.
         // This is a safety net and ensures empty groups are not saved/restored.
         let tab_groups: Vec<TabGroupSnapshot> = if FeatureFlag::GroupedTabs.is_enabled() {
-            let referenced_group_ids: HashSet<TabGroupId> =
-                tabs.iter().filter_map(|tab| tab.group_id).collect();
+            let referenced_group_ids: HashSet<TabGroupId> = tabs
+                .iter()
+                .filter_map(|tab| tab.group_id)
+                .chain(
+                    self.archived_tabs
+                        .iter()
+                        .filter_map(|archived| archived.tab.group_id),
+                )
+                .collect();
             self.tab_groups
                 .values()
                 .filter(|group| referenced_group_ids.contains(&group.id))
@@ -11960,6 +11938,7 @@ impl Workspace {
 
         WindowSnapshot {
             tabs,
+            archived_tabs: self.archived_tabs.clone(),
             active_tab_index,
             team_uid: UserWorkspaces::as_ref(app).team_uid_for_window(window_id),
             bounds: window_bounds,
@@ -11975,6 +11954,53 @@ impl Workspace {
             right_panel_width,
             agent_management_filters,
             tab_groups,
+        }
+    }
+
+    fn snapshot_tab(
+        &self,
+        tab_index: usize,
+        pane_group_view: &ViewHandle<PaneGroup>,
+        window_id: WindowId,
+        app: &AppContext,
+    ) -> TabSnapshot {
+        let modal_sizes = ResizableData::as_ref(app).get_all_handles(window_id);
+        let left_panel_width = modal_sizes.map(|sizes| {
+            sizes
+                .left_panel_width
+                .lock()
+                .expect("should be able to lock left panel handle")
+                .size()
+        });
+        let right_panel_width = modal_sizes.map(|sizes| {
+            sizes
+                .right_panel_width
+                .lock()
+                .expect("should be able to lock right panel handle")
+                .size()
+        });
+        let pane_group = pane_group_view.as_ref(app);
+
+        TabSnapshot {
+            root: pane_group.snapshot(app),
+            custom_title: pane_group.custom_title(app),
+            default_directory_color: self
+                .tabs
+                .get(tab_index)
+                .and_then(|tab| tab.default_directory_color),
+            selected_color: self
+                .tabs
+                .get(tab_index)
+                .map(|tab| tab.selected_color)
+                .unwrap_or_default(),
+            left_panel: self.compute_left_panel_snapshot(pane_group_view, left_panel_width, app),
+            right_panel: self.compute_right_panel_snapshot(pane_group_view, right_panel_width, app),
+            group_id: FeatureFlag::GroupedTabs
+                .is_enabled()
+                .then(|| self.tabs.get(tab_index).and_then(|tab| tab.group_id))
+                .flatten(),
+            pinned: FeatureFlag::PinnedTabs.is_enabled()
+                && self.tabs.get(tab_index).is_some_and(|tab| tab.pinned),
         }
     }
 
@@ -12207,6 +12233,7 @@ impl Workspace {
         index: usize,
         add_to_undo_stack: bool,
         detach_panes_for_close: bool,
+        archive_id: Option<uuid::Uuid>,
         ctx: &mut ViewContext<Self>,
     ) {
         let Some(pane_group) = self.tabs.get(index).map(|t| t.pane_group.clone()) else {
@@ -12220,7 +12247,7 @@ impl Workspace {
 
         // If this is the last tab, close the window instead of actually removing
         // the tab.
-        if self.tabs.len() == 1 {
+        if self.tabs.len() == 1 && archive_id.is_none() {
             if ContextFlag::CloseWindow.is_enabled() {
                 ctx.close_window();
             }
@@ -12232,6 +12259,11 @@ impl Workspace {
         // pane.
         let re_adopted =
             detach_panes_for_close && self.try_re_adopt_split_off_child_agent_tab(index, ctx);
+
+        if re_adopted && let Some(archive_id) = archive_id {
+            self.archived_tabs
+                .retain(|archived| archived.id != archive_id);
+        }
 
         if !re_adopted && detach_panes_for_close {
             let working_directories_model = self.working_directories_model.clone();
@@ -12272,26 +12304,30 @@ impl Workspace {
             let handle = ctx.handle();
             UndoCloseStack::handle(ctx).update(ctx, |stack, ctx| {
                 log::info!("storing data for closed tab");
-                stack.handle_tab_closed(handle, index, tab_data, ctx);
+                stack.handle_tab_closed(handle, index, tab_data, archive_id, ctx);
             });
         }
 
-        match index.cmp(&self.active_tab_index) {
-            Ordering::Equal => {
-                // Activate the tab that was immediately after the closed one — to the
-                // right for horizontal tabs, below for vertical tabs. After removal that
-                // tab occupies the same index. If the closed tab was the last one, fall
-                // back to the new last tab (the previous neighbor). This matches the
-                // browser / macOS convention for both layouts.
-                let active_index = index.min(self.tabs.len() - 1);
-                self.activate_tab_internal(active_index, ctx);
+        if self.tabs.is_empty() {
+            self.active_tab_index = 0;
+        } else {
+            match index.cmp(&self.active_tab_index) {
+                Ordering::Equal => {
+                    // Activate the tab that was immediately after the closed one — to the
+                    // right for horizontal tabs, below for vertical tabs. After removal that
+                    // tab occupies the same index. If the closed tab was the last one, fall
+                    // back to the new last tab (the previous neighbor). This matches the
+                    // browser / macOS convention for both layouts.
+                    let active_index = index.min(self.tabs.len() - 1);
+                    self.activate_tab_internal(active_index, ctx);
+                }
+                Ordering::Less => {
+                    // If we are closing a tab before the active tab we need to adjust
+                    // the active tab index.
+                    self.active_tab_index -= 1;
+                }
+                _ => {}
             }
-            Ordering::Less => {
-                // If we are closing a tab before the active tab we need to adjust
-                // the active tab index.
-                self.active_tab_index -= 1;
-            }
-            _ => {}
         }
 
         ctx.dispatch_global_action("workspace:save_app", ());
@@ -12299,11 +12335,6 @@ impl Workspace {
     }
 
     fn should_confirm_close_session(&self, ctx: &mut ViewContext<Self>) -> bool {
-        // If we're closing the only remaining tab, we're actually going to close the window.
-        // We don't need a user confirmation here because there's already another one on window close.
-        if self.tab_count() == 1 {
-            return false;
-        }
         // TODO: remove session sharing flag check when long-running commands are included
         FeatureFlag::CreatingSharedSessions.is_enabled()
             && ContextFlag::CreateSharedSession.is_enabled()
@@ -12407,9 +12438,41 @@ impl Workspace {
         // to fall out of sync.  This can cause inconsistencies.
         self.cancel_tab_rename(ctx);
 
+        let mut archive_ids = HashMap::new();
+        if add_to_undo_stack {
+            for &tab_index in &tab_indices_vec {
+                let Some(pane_group) = self.tabs.get(tab_index).map(|tab| &tab.pane_group) else {
+                    continue;
+                };
+                let archive_id = uuid::Uuid::new_v4();
+                self.archived_tabs.push(ArchivedTabSnapshot {
+                    id: archive_id,
+                    tab: self.snapshot_tab(tab_index, pane_group, ctx.window_id(), ctx),
+                    archived_at: chrono::Utc::now().timestamp_millis(),
+                });
+                archive_ids.insert(tab_index, archive_id);
+            }
+        }
+
         // Remove the tabs in reverse order to avoid indexing OOB.
         for i in tab_indices_vec.into_iter().sorted().rev() {
-            self.remove_tab(i, add_to_undo_stack, true, ctx);
+            self.remove_tab(
+                i,
+                add_to_undo_stack,
+                true,
+                archive_ids.get(&i).copied(),
+                ctx,
+            );
+        }
+        if self.tabs.is_empty() {
+            self.add_new_session_tab_with_default_mode(
+                NewSessionSource::Tab,
+                Some(ctx.window_id()),
+                None,
+                None,
+                false,
+                ctx,
+            );
         }
         true
     }
@@ -12424,7 +12487,7 @@ impl Workspace {
         ctx: &mut ViewContext<Self>,
     ) {
         let is_last_tab = self.tabs.len() == 1;
-        if !ContextFlag::CloseWindow.is_enabled() && is_last_tab {
+        if !ContextFlag::CloseWindow.is_enabled() && is_last_tab && !add_to_undo_stack {
             return;
         }
 
@@ -12433,7 +12496,7 @@ impl Workspace {
         let tabs_closed = self.close_tabs(
             vec![index].into_iter(),
             OpenDialogSource::CloseTab { tab_index: index },
-            skip_confirmation || is_last_tab, // If this is the last tab, the confirmation dialog will be handled by the window close.
+            skip_confirmation || (is_last_tab && !add_to_undo_stack),
             add_to_undo_stack,
             ctx,
         );
@@ -12451,7 +12514,11 @@ impl Workspace {
             ctx.dispatch_global_action("workspace:save_app", ());
             send_telemetry_from_ctx!(
                 TelemetryEvent::TabOperations {
-                    action: TabTelemetryAction::CloseTab,
+                    action: if add_to_undo_stack {
+                        TabTelemetryAction::ArchiveTab
+                    } else {
+                        TabTelemetryAction::CloseTab
+                    },
                 },
                 ctx
             );
@@ -12481,7 +12548,7 @@ impl Workspace {
         if tabs_closed {
             send_telemetry_from_ctx!(
                 TelemetryEvent::TabOperations {
-                    action: TabTelemetryAction::CloseOtherTabs,
+                    action: TabTelemetryAction::ArchiveOtherTabs,
                 },
                 ctx
             );
@@ -12518,7 +12585,7 @@ impl Workspace {
                 TabMovement::Right if self.active_tab_index > index => {
                     send_telemetry_from_ctx!(
                         TelemetryEvent::TabOperations {
-                            action: TabTelemetryAction::CloseTabsToRight,
+                            action: TabTelemetryAction::ArchiveTabsToRight,
                         },
                         ctx
                     );
@@ -12590,14 +12657,22 @@ impl Workspace {
         WorkspaceRegistry::handle(ctx).update(ctx, |registry, _| {
             registry.register(window_id, weak_handle);
         });
+        ClosedWorkspaceSnapshots::handle(ctx).update(ctx, |snapshots, _| {
+            snapshots.remove(window_id);
+        });
     }
 
     pub fn restore_closed_tab(
         &mut self,
         tab_index: usize,
         mut tab_data: TabData,
+        archive_id: Option<uuid::Uuid>,
         ctx: &mut ViewContext<Self>,
     ) {
+        if let Some(archive_id) = archive_id {
+            self.archived_tabs
+                .retain(|archived| archived.id != archive_id);
+        }
         // When restoring a closed tab, we have to reattach its panes so that they know they're
         // user-accessible again.
         tab_data.pane_group.update(ctx, |pane_group, ctx| {
@@ -12632,6 +12707,166 @@ impl Workspace {
         self.activate_tab(insert_index, ctx);
 
         ctx.notify();
+    }
+
+    fn restore_archived_tab(&mut self, archive_id: uuid::Uuid, ctx: &mut ViewContext<Self>) {
+        let Some(archive_index) = self
+            .archived_tabs
+            .iter()
+            .position(|archived| archived.id == archive_id)
+        else {
+            return;
+        };
+        let archived = self.archived_tabs.remove(archive_index);
+        UndoCloseStack::handle(ctx).update(ctx, |stack, ctx| {
+            stack.discard_archived_tab(archive_id, ctx);
+        });
+        let snapshot = archived.tab;
+        let group_id = snapshot
+            .group_id
+            .filter(|group_id| self.tab_groups.contains_key(group_id));
+        self.add_tab_with_pane_layout(
+            PanesLayout::Snapshot(Box::new(snapshot.root.clone())),
+            Arc::new(HashMap::new()),
+            snapshot.custom_title.clone(),
+            ctx,
+        );
+        let restored_index = self.active_tab_index;
+        self.tabs[restored_index].group_id = None;
+        let group_insert_index = group_id.and_then(|group_id| self.index_after_group(group_id));
+        self.tabs[restored_index].default_directory_color = snapshot.default_directory_color;
+        self.tabs[restored_index].selected_color = snapshot.selected_color;
+        self.tabs[restored_index].pinned = FeatureFlag::PinnedTabs.is_enabled() && snapshot.pinned;
+        self.tabs[restored_index].group_id = group_id;
+
+        let pane_group = self.tabs[restored_index].pane_group.clone();
+        if let Some(left_panel) = &snapshot.left_panel {
+            self.restore_left_panel_for_tab(&pane_group, left_panel, ctx);
+        }
+        if let Some(right_panel) = &snapshot.right_panel {
+            self.restore_right_panel_for_tab(&pane_group, right_panel, ctx);
+        }
+
+        let insert_index = group_insert_index.or_else(|| {
+            self.is_tab_effectively_pinned(&self.tabs[restored_index])
+                .then(|| self.pinned_boundary_index(&self.tabs))
+        });
+        if let Some(insert_index) = insert_index {
+            self.move_tab_to_index(restored_index, insert_index, ctx);
+        }
+        if let Some(group_id) = group_id {
+            self.expand_tab_group(group_id, ctx);
+        }
+        send_telemetry_from_ctx!(
+            TelemetryEvent::TabOperations {
+                action: TabTelemetryAction::RestoreArchivedTab,
+            },
+            ctx
+        );
+        ctx.dispatch_global_action("workspace:save_app", ());
+        ctx.notify();
+    }
+
+    fn delete_archived_tab(&mut self, archive_id: uuid::Uuid, ctx: &mut ViewContext<Self>) {
+        let Some(archive_index) = self
+            .archived_tabs
+            .iter()
+            .position(|archived| archived.id == archive_id)
+        else {
+            return;
+        };
+        let group_id = self.archived_tabs.remove(archive_index).tab.group_id;
+        UndoCloseStack::handle(ctx).update(ctx, |stack, ctx| {
+            stack.discard_archived_tab(archive_id, ctx);
+        });
+        if let Some(group_id) = group_id {
+            self.prune_empty_tab_group(group_id, ctx);
+        }
+        send_telemetry_from_ctx!(
+            TelemetryEvent::TabOperations {
+                action: TabTelemetryAction::DeleteArchivedTab,
+            },
+            ctx
+        );
+        ctx.dispatch_global_action("workspace:save_app", ());
+        ctx.notify();
+    }
+
+    fn delete_tab(&mut self, tab_index: usize, ctx: &mut ViewContext<Self>) {
+        if self.tabs.len() == 1 {
+            self.add_new_session_tab_with_default_mode(
+                NewSessionSource::Tab,
+                Some(ctx.window_id()),
+                None,
+                None,
+                false,
+                ctx,
+            );
+        }
+        if self.close_tabs(
+            std::iter::once(tab_index),
+            OpenDialogSource::CloseTab { tab_index },
+            true,
+            false,
+            ctx,
+        ) {
+            send_telemetry_from_ctx!(
+                TelemetryEvent::TabOperations {
+                    action: TabTelemetryAction::DeleteTab,
+                },
+                ctx
+            );
+            ctx.dispatch_global_action("workspace:save_app", ());
+        }
+    }
+
+    fn request_delete_archived_tab(&mut self, archive_id: uuid::Uuid, ctx: &mut ViewContext<Self>) {
+        let workspace = ctx.handle();
+        let dialog = AlertDialogWithCallbacks::for_app(
+            "Delete this archived tab?",
+            "This permanently removes the saved tab and cannot be undone.",
+            vec![
+                ModalButton::for_app("Delete", move |ctx| {
+                    if let Some(workspace) = workspace.upgrade(ctx) {
+                        workspace.update(ctx, |workspace, ctx| {
+                            workspace.delete_archived_tab(archive_id, ctx);
+                        });
+                    }
+                }),
+                ModalButton::for_app("Cancel", |_| {}),
+            ],
+            |_| {},
+        );
+        self.show_native_modal(dialog, ctx);
+    }
+
+    fn request_delete_tab(&mut self, tab_index: usize, ctx: &mut ViewContext<Self>) {
+        let Some(pane_group_id) = self.tabs.get(tab_index).map(|tab| tab.pane_group.id()) else {
+            return;
+        };
+        let workspace = ctx.handle();
+        let dialog = AlertDialogWithCallbacks::for_app(
+            "Delete this tab?",
+            "This permanently removes the tab instead of keeping it in Archived.",
+            vec![
+                ModalButton::for_app("Delete", move |ctx| {
+                    if let Some(workspace) = workspace.upgrade(ctx) {
+                        workspace.update(ctx, |workspace, ctx| {
+                            if let Some(index) = workspace
+                                .tabs
+                                .iter()
+                                .position(|tab| tab.pane_group.id() == pane_group_id)
+                            {
+                                workspace.delete_tab(index, ctx);
+                            }
+                        });
+                    }
+                }),
+                ModalButton::for_app("Cancel", |_| {}),
+            ],
+            |_| {},
+        );
+        self.show_native_modal(dialog, ctx);
     }
 
     /// Insertion index for a restored tab that is not part of an existing group.
@@ -24156,6 +24391,9 @@ impl TypedActionView for Workspace {
             ToggleBlockSnackbar => self.toggle_block_snackbar(ctx),
             ToggleWelcomeTips => self.toggle_welcome_tips_visiblity(ctx),
             CloseTab(index) => self.close_tab(*index, false, true, ctx),
+            DeleteTab(index) => self.request_delete_tab(*index, ctx),
+            RestoreArchivedTab(archive_id) => self.restore_archived_tab(*archive_id, ctx),
+            DeleteArchivedTab(archive_id) => self.request_delete_archived_tab(*archive_id, ctx),
             CloseActiveTab => self.close_tab(self.active_tab_index, false, true, ctx),
             CloseOtherTabs(index) => self.close_other_tabs(*index, false, ctx),
             CloseNonActiveTabs => self.close_other_tabs(self.active_tab_index, false, ctx),
@@ -28110,6 +28348,18 @@ impl View for Workspace {
 
     /// Update this workspace when it has been closed, but may still be restored.
     fn on_window_closed(&mut self, ctx: &mut ViewContext<Self>) {
+        let window_id = ctx.window_id();
+        let should_persist_closed_window = ctx.windows().stage() != ApplicationStage::Terminating
+            && !self.is_tab_drag_preview
+            && !CrossWindowTabDrag::as_ref(ctx).is_active();
+        if should_persist_closed_window {
+            let quake_mode = crate::root_view::quake_mode_window_id() == Some(window_id);
+            let snapshot = self.snapshot(window_id, quake_mode, ctx);
+            ClosedWorkspaceSnapshots::handle(ctx).update(ctx, |snapshots, _| {
+                snapshots.insert(window_id, snapshot);
+            });
+        }
+
         if !self.suppress_detach_panes_on_window_close {
             for pane_group in self.tab_views() {
                 pane_group.update(ctx, |pane_group, ctx| {
@@ -28118,11 +28368,12 @@ impl View for Workspace {
             }
         }
 
-        let window_id = ctx.window_id();
-
         WorkspaceRegistry::handle(ctx).update(ctx, |registry, _| {
             registry.unregister(window_id);
         });
+        if should_persist_closed_window {
+            ctx.dispatch_global_action("workspace:save_app", ());
+        }
 
         // If this workspace's close was registered as part of a tab-drag
         // handoff, clear the entry now that the workspace is gone from the
@@ -28433,7 +28684,7 @@ impl Workspace {
     }
 
     pub fn remove_tab_without_undo(&mut self, index: usize, ctx: &mut ViewContext<Self>) {
-        self.remove_tab(index, false, false, ctx);
+        self.remove_tab(index, false, false, None, ctx);
     }
 
     /// Replaces the placeholder pane group (created by

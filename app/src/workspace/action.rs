@@ -4,6 +4,7 @@ use std::sync::Arc;
 
 use session_sharing_protocol::common::SessionId;
 use ui_components::lightbox;
+use uuid::Uuid;
 use warp_util::path::LineAndColumnArg;
 use warpui::accessibility::AccessibilityVerbosity;
 use warpui::geometry::rect::RectF;
@@ -179,6 +180,9 @@ pub enum WorkspaceAction {
     RefreshGrokRateLimits,
     ToggleWelcomeTips,
     CloseTab(usize),
+    DeleteTab(usize),
+    RestoreArchivedTab(Uuid),
+    DeleteArchivedTab(Uuid),
     CloseActiveTab,
     CloseOtherTabs(usize),
     CloseNonActiveTabs,
@@ -964,6 +968,9 @@ impl WorkspaceAction {
             | CycleActiveTabColor
             | SetActiveTabColor(_)
             | CloseTab(_)
+            | DeleteTab(_)
+            | RestoreArchivedTab(_)
+            | DeleteArchivedTab(_)
             | CloseActiveTab
             | CloseOtherTabs(_)
             | CloseNonActiveTabs

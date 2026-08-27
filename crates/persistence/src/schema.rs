@@ -374,6 +374,9 @@ diesel::table! {
         color -> Nullable<Text>,
         tab_group_id -> Nullable<Integer>,
         pinned -> Bool,
+        archive_id -> Nullable<Text>,
+        archived -> Bool,
+        archived_at -> Nullable<BigInt>,
     }
 }
 

@@ -17,8 +17,9 @@ use super::{
     read_sqlite_data, save_app_state, save_codebase_index_metadata, setup_database, start_writer,
 };
 use crate::app_state::{
-    AppState, CodePaneSnapShot, CodePaneTabSnapshot, LeafContents, LeafSnapshot, PaneNodeSnapshot,
-    TabGroupSnapshot, TabSnapshot, TerminalPaneSnapshot, WindowSnapshot,
+    AppState, ArchivedTabSnapshot, CodePaneSnapShot, CodePaneTabSnapshot, LeafContents,
+    LeafSnapshot, PaneNodeSnapshot, TabGroupSnapshot, TabSnapshot, TerminalPaneSnapshot,
+    WindowSnapshot,
 };
 use crate::auth::UserUid;
 use crate::cloud_object::{CloudObjectPermissions, Owner};
@@ -405,6 +406,7 @@ fn test_terminal_window_snapshot(vertical_tabs_panel_open: bool) -> WindowSnapsh
             group_id: None,
             pinned: false,
         }],
+        archived_tabs: vec![],
         active_tab_index: 0,
         team_uid: None,
         bounds: None,
@@ -455,6 +457,74 @@ fn test_sqlite_round_trips_vertical_tabs_panel_open() {
             .collect::<Vec<_>>(),
         vec![false, true]
     );
+}
+
+#[test]
+fn test_sqlite_round_trips_archived_tab_with_pane_tree() {
+    let tempdir = tempfile::tempdir().expect("tempdir should be created");
+    let database_path = tempdir.path().join("warp.sqlite");
+    let mut conn = setup_database(&database_path).expect("database should initialize");
+    let archive_id = uuid::Uuid::new_v4();
+    let group_id = TabGroupId::new();
+    let mut window = test_terminal_window_snapshot(true);
+    let mut archived_tab = window.tabs[0].clone();
+    archived_tab.custom_title = Some("Archived deployment".to_string());
+    archived_tab.group_id = Some(group_id);
+    if let PaneNodeSnapshot::Leaf(LeafSnapshot {
+        contents: LeafContents::Terminal(terminal),
+        ..
+    }) = &mut archived_tab.root
+    {
+        terminal.uuid = vec![99];
+        terminal.cwd = Some("/work/deployment".to_string());
+    }
+    window.archived_tabs = vec![ArchivedTabSnapshot {
+        id: archive_id,
+        tab: archived_tab,
+        archived_at: 1_788_000_000_000,
+    }];
+    window.tab_groups = vec![TabGroupSnapshot {
+        id: group_id,
+        name: Some("Deployments".to_string()),
+        color: SelectedTabColor::default(),
+        collapsed: false,
+        pinned: false,
+    }];
+    let app_state = AppState {
+        windows: vec![window],
+        active_window_index: Some(0),
+        block_lists: Default::default(),
+        running_mcp_servers: Default::default(),
+    };
+
+    save_app_state(&mut conn, &app_state).expect("app state should save");
+    let restored = read_sqlite_data(&mut conn, None, PersistedDataScope::Full)
+        .expect("app state should load")
+        .app_state
+        .expect("app state should be present for the full scope");
+
+    let restored_window = &restored.windows[0];
+    assert_eq!(restored_window.tabs.len(), 1);
+    assert_eq!(restored_window.archived_tabs.len(), 1);
+    let archived = &restored_window.archived_tabs[0];
+    assert_eq!(archived.id, archive_id);
+    assert_eq!(archived.archived_at, 1_788_000_000_000);
+    assert_eq!(
+        archived.tab.custom_title.as_deref(),
+        Some("Archived deployment")
+    );
+    assert_eq!(
+        archived.tab.group_id,
+        Some(restored_window.tab_groups[0].id)
+    );
+    let PaneNodeSnapshot::Leaf(LeafSnapshot {
+        contents: LeafContents::Terminal(terminal),
+        ..
+    }) = &archived.tab.root
+    else {
+        panic!("archived tab should restore its terminal pane");
+    };
+    assert_eq!(terminal.cwd.as_deref(), Some("/work/deployment"));
 }
 
 #[test]
@@ -563,6 +633,7 @@ fn test_sqlite_round_trips_custom_vertical_tabs_title() {
                 group_id: None,
                 pinned: false,
             }],
+            archived_tabs: vec![],
             active_tab_index: 0,
             team_uid: None,
             bounds: None,
@@ -642,6 +713,7 @@ fn test_sqlite_round_trips_code_pane_with_multiple_tabs() {
                 group_id: None,
                 pinned: false,
             }],
+            archived_tabs: vec![],
             active_tab_index: 0,
             team_uid: None,
             bounds: None,
@@ -763,6 +835,7 @@ fn test_sqlite_round_trips_tab_groups() {
     let app_state = AppState {
         windows: vec![WindowSnapshot {
             tabs: vec![tab_in_group, tab_outside_group],
+            archived_tabs: vec![],
             active_tab_index: 0,
             team_uid: None,
             bounds: None,
@@ -918,6 +991,7 @@ fn test_sqlite_round_trips_pinned_state() {
     let app_state = AppState {
         windows: vec![WindowSnapshot {
             tabs: vec![pinned_tab, tab_in_pinned_group, unpinned_tab],
+            archived_tabs: vec![],
             active_tab_index: 0,
             team_uid: None,
             bounds: None,

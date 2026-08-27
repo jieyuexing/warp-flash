@@ -73,11 +73,11 @@ use crate::ai::mcp::templatable_installation::VariableValue;
 use crate::ai::mcp::{TemplatableMCPServer, TemplatableMCPServerInstallation};
 use crate::ai::persisted_workspace::EnablementState;
 use crate::app_state::{
-    AIFactPaneSnapshot, AmbientAgentPaneSnapshot, AppState, BranchSnapshot, CodePaneSnapShot,
-    CodePaneTabSnapshot, CodeReviewPaneSnapshot, EnvVarCollectionPaneSnapshot, LeafContents,
-    LeafSnapshot, LeftPanelSnapshot, NotebookPaneSnapshot, PaneFlex, PaneNodeSnapshot,
-    RightPanelSnapshot, SettingsPaneSnapshot, SplitDirection, TabGroupSnapshot, TabSnapshot,
-    TerminalPaneSnapshot, WindowSnapshot, WorkflowPaneSnapshot,
+    AIFactPaneSnapshot, AmbientAgentPaneSnapshot, AppState, ArchivedTabSnapshot, BranchSnapshot,
+    CodePaneSnapShot, CodePaneTabSnapshot, CodeReviewPaneSnapshot, EnvVarCollectionPaneSnapshot,
+    LeafContents, LeafSnapshot, LeftPanelSnapshot, NotebookPaneSnapshot, PaneFlex,
+    PaneNodeSnapshot, RightPanelSnapshot, SettingsPaneSnapshot, SplitDirection, TabGroupSnapshot,
+    TabSnapshot, TerminalPaneSnapshot, WindowSnapshot, WorkflowPaneSnapshot,
 };
 use crate::auth::UserUid;
 use crate::auth::auth_manager::PersistedCurrentUserInformation;
@@ -912,6 +912,12 @@ struct SaveAppStateNodeTraversal<'a> {
     parent_pane_node_id: Option<i32>,
 }
 
+struct PersistedTabSnapshot<'a> {
+    snapshot: &'a TabSnapshot,
+    archive_id: Option<Uuid>,
+    archived_at: Option<i64>,
+}
+
 // Saves the app state snapshot in the sqlite database. Removes any old app state.
 // Does so in a transaction so we're never in a partial state.
 fn save_app_state(conn: &mut SqliteConnection, app_state: &AppState) -> Result<()> {
@@ -1039,23 +1045,46 @@ fn save_app_state(conn: &mut SqliteConnection, app_state: &AppState) -> Result<(
                 }
             }
 
-            let tabs: Vec<NewTab> = window
+            let persisted_tabs: Vec<_> = window
                 .tabs
                 .iter()
-                .map(|tab| NewTab {
+                .map(|snapshot| PersistedTabSnapshot {
+                    snapshot,
+                    archive_id: None,
+                    archived_at: None,
+                })
+                .chain(
+                    window
+                        .archived_tabs
+                        .iter()
+                        .map(|archived| PersistedTabSnapshot {
+                            snapshot: &archived.tab,
+                            archive_id: Some(archived.id),
+                            archived_at: Some(archived.archived_at),
+                        }),
+                )
+                .collect();
+
+            let tabs: Vec<NewTab> = persisted_tabs
+                .iter()
+                .map(|persisted| NewTab {
                     window_id,
-                    custom_title: tab.custom_title.clone(),
+                    custom_title: persisted.snapshot.custom_title.clone(),
                     // We only persist and restore the selected color here
                     // (the default color based on the pwd is separately persisted and then applied on-restore)
-                    color: match tab.selected_color {
+                    color: match persisted.snapshot.selected_color {
                         // Keep the column NULL for the common no-override case
                         SelectedTabColor::Unset => None,
-                        _ => serde_yaml::to_string(&tab.selected_color).ok(),
+                        _ => serde_yaml::to_string(&persisted.snapshot.selected_color).ok(),
                     },
-                    tab_group_id: tab
+                    tab_group_id: persisted
+                        .snapshot
                         .group_id
                         .and_then(|group_id| tab_group_row_ids.get(&group_id).copied()),
-                    pinned: tab.pinned,
+                    pinned: persisted.snapshot.pinned,
+                    archive_id: persisted.archive_id.map(|id| id.to_string()),
+                    archived: persisted.archive_id.is_some(),
+                    archived_at: persisted.archived_at,
                 })
                 .collect();
 
@@ -1072,7 +1101,8 @@ fn save_app_state(conn: &mut SqliteConnection, app_state: &AppState) -> Result<(
 
             // Since we retrieved the tab ids in descending order, we need to reverse them when we
             // iterate to restore the correct order.
-            for (tab_id, tab) in tab_ids.iter().rev().zip(window.tabs.iter()) {
+            for (tab_id, persisted) in tab_ids.iter().rev().zip(persisted_tabs) {
+                let tab = persisted.snapshot;
                 let mut pane_nodes = VecDeque::new();
                 pane_nodes.push_back(SaveAppStateNodeTraversal {
                     node: &tab.root,
@@ -2580,7 +2610,7 @@ fn read_sqlite_data(
                             pinned: group.pinned,
                         });
                     }
-                    let saved_tabs: Vec<_> = tabs_for_window
+                    let restored_tabs: Vec<_> = tabs_for_window
                         .into_iter()
                         .filter_map(|tab| {
                             let root = read_root_node(conn, tab.id).ok()?;
@@ -2597,7 +2627,13 @@ fn read_sqlite_data(
                             let group_id = tab
                                 .tab_group_id
                                 .and_then(|row_id| tab_group_id_by_row_id.get(&row_id).copied());
-                            Some(TabSnapshot {
+                            let archive_id = tab
+                                .archive_id
+                                .as_deref()
+                                .and_then(|archive_id_text| Uuid::parse_str(archive_id_text).ok());
+                            let archived = tab.archived;
+                            let archived_at = tab.archived_at;
+                            let snapshot = TabSnapshot {
                                 root,
                                 custom_title: tab.custom_title,
                                 default_directory_color: None,
@@ -2619,9 +2655,23 @@ fn read_sqlite_data(
                                 right_panel,
                                 group_id,
                                 pinned: tab.pinned,
-                            })
+                            };
+                            Some((archived, archive_id, archived_at, snapshot))
                         })
                         .collect();
+                    let mut saved_tabs = Vec::new();
+                    let mut archived_tabs = Vec::new();
+                    for (archived, archive_id, archived_at, snapshot) in restored_tabs {
+                        if archived {
+                            archived_tabs.push(ArchivedTabSnapshot {
+                                id: archive_id.unwrap_or_else(Uuid::new_v4),
+                                tab: snapshot,
+                                archived_at: archived_at.unwrap_or_default(),
+                            });
+                        } else {
+                            saved_tabs.push(snapshot);
+                        }
+                    }
 
                     if active_window_id
                         .map(|window_id| window.id == window_id)
@@ -2695,6 +2745,7 @@ fn read_sqlite_data(
 
                     WindowSnapshot {
                         tabs: saved_tabs,
+                        archived_tabs,
                         active_tab_index: tab_index,
                         team_uid: window.team_uid.and_then(|persisted_team_uid| {
                             ServerId::try_from(persisted_team_uid).ok()

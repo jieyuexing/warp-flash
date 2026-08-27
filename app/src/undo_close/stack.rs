@@ -61,6 +61,7 @@ pub enum ClosedItem {
         workspace: WeakViewHandle<Workspace>,
         tab_index: usize,
         data: TabData,
+        archive_id: Option<Uuid>,
     },
     Pane {
         data: PaneData,
@@ -205,6 +206,22 @@ impl UndoCloseStack {
         }
     }
 
+    pub fn discard_archived_tab(&mut self, archive_id: Uuid, ctx: &mut ModelContext<Self>) {
+        let Some(position) = self.stack.iter().position(|undo_data| {
+            matches!(
+                &undo_data.closed_item,
+                ClosedItem::Tab {
+                    archive_id: Some(id),
+                    ..
+                } if *id == archive_id
+            )
+        }) else {
+            return;
+        };
+        let removed = self.stack.remove(position);
+        removed.closed_item.discard(ctx);
+    }
+
     /// Handles a window being closed, adding the necessary data to the undo
     /// stack.
     pub fn handle_window_closed(&mut self, data: ClosedWindowData, ctx: &mut ModelContext<Self>) {
@@ -218,6 +235,7 @@ impl UndoCloseStack {
         workspace: WeakViewHandle<Workspace>,
         tab_index: usize,
         data: TabData,
+        archive_id: Option<Uuid>,
         ctx: &mut ModelContext<Self>,
     ) {
         self.push_item(
@@ -225,6 +243,7 @@ impl UndoCloseStack {
                 workspace,
                 tab_index,
                 data,
+                archive_id,
             },
             ctx,
         );
@@ -277,6 +296,7 @@ impl UndoCloseStack {
                 workspace,
                 tab_index,
                 data,
+                archive_id,
             } => {
                 if let Some(workspace) = workspace.upgrade(ctx) {
                     send_telemetry_from_app_ctx!(
@@ -286,7 +306,7 @@ impl UndoCloseStack {
                         ctx
                     );
                     workspace.update(ctx, |workspace, ctx| {
-                        workspace.restore_closed_tab(tab_index, data, ctx);
+                        workspace.restore_closed_tab(tab_index, data, archive_id, ctx);
                     });
                     ctx.windows()
                         .show_window_and_focus_app(workspace.window_id(ctx));

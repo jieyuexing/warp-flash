@@ -2043,6 +2043,157 @@ fn test_close_active_horizontal_tab_activates_tab_to_right() {
 }
 
 #[test]
+fn closing_tab_archives_it_until_explicitly_restored() {
+    App::test((), |mut app| async move {
+        initialize_app(&mut app);
+        let workspace = mock_workspace(&mut app);
+
+        workspace.update(&mut app, |workspace, ctx| {
+            workspace.add_terminal_tab(false, ctx);
+            assert_eq!(workspace.tab_count(), 2);
+
+            workspace.handle_action(&WorkspaceAction::CloseTab(1), ctx);
+
+            assert_eq!(workspace.tab_count(), 1);
+            assert_eq!(workspace.archived_tabs.len(), 1);
+            let archive_id = workspace.archived_tabs[0].id;
+
+            workspace.handle_action(&WorkspaceAction::RestoreArchivedTab(archive_id), ctx);
+
+            assert_eq!(workspace.tab_count(), 2);
+            assert!(workspace.archived_tabs.is_empty());
+        });
+    });
+}
+
+#[test]
+fn archiving_last_tab_keeps_a_replacement_and_archives_original() {
+    App::test((), |mut app| async move {
+        initialize_app(&mut app);
+        let workspace = mock_workspace(&mut app);
+        let archived_pane_group_id = workspace.read(&app, |workspace, _| {
+            workspace.get_pane_group_view(0).unwrap().id()
+        });
+
+        workspace.update(&mut app, |workspace, ctx| {
+            workspace.handle_action(&WorkspaceAction::CloseTab(0), ctx);
+
+            assert_eq!(workspace.tab_count(), 1);
+            assert_eq!(workspace.archived_tabs.len(), 1);
+            assert_ne!(
+                workspace.get_pane_group_view(0).unwrap().id(),
+                archived_pane_group_id
+            );
+        });
+    });
+}
+
+#[test]
+fn restoring_archived_pinned_tab_returns_it_to_pinned_region() {
+    let _pinned_guard = FeatureFlag::PinnedTabs.override_enabled(true);
+
+    App::test((), |mut app| async move {
+        initialize_app(&mut app);
+        let workspace = mock_workspace(&mut app);
+
+        workspace.update(&mut app, |workspace, ctx| {
+            workspace.add_terminal_tab(false, ctx);
+            workspace.add_terminal_tab(false, ctx);
+            workspace.handle_action(&WorkspaceAction::PinTab(2), ctx);
+            workspace.handle_action(&WorkspaceAction::CloseTab(0), ctx);
+            let archive_id = workspace.archived_tabs[0].id;
+
+            workspace.handle_action(&WorkspaceAction::RestoreArchivedTab(archive_id), ctx);
+
+            assert!(workspace.tabs[0].pinned);
+            assert!(workspace.tabs[1..].iter().all(|tab| !tab.pinned));
+        });
+    });
+}
+
+#[test]
+fn restoring_archived_group_tab_rejoins_existing_group_contiguously() {
+    let _grouped_tabs_guard = FeatureFlag::GroupedTabs.override_enabled(true);
+
+    App::test((), |mut app| async move {
+        initialize_app(&mut app);
+        let workspace = mock_workspace(&mut app);
+
+        workspace.update(&mut app, |workspace, ctx| {
+            workspace.add_terminal_tab(false, ctx);
+            workspace.add_terminal_tab(false, ctx);
+            let group = TabGroup::new();
+            let group_id = group.id;
+            workspace.tab_groups.insert(group_id, group);
+            workspace.tabs[1].group_id = Some(group_id);
+            workspace.tabs[2].group_id = Some(group_id);
+            workspace.handle_action(&WorkspaceAction::CloseTab(2), ctx);
+            let archive_id = workspace.archived_tabs[0].id;
+            workspace.activate_tab(0, ctx);
+
+            workspace.handle_action(&WorkspaceAction::RestoreArchivedTab(archive_id), ctx);
+
+            let group_members: Vec<_> = workspace
+                .tabs
+                .iter()
+                .enumerate()
+                .filter_map(|(index, tab)| (tab.group_id == Some(group_id)).then_some(index))
+                .collect();
+            assert_eq!(group_members, vec![1, 2]);
+        });
+    });
+}
+
+#[test]
+fn deleting_last_tab_keeps_a_replacement_without_archiving_deleted_tab() {
+    App::test((), |mut app| async move {
+        initialize_app(&mut app);
+        let workspace = mock_workspace(&mut app);
+        let deleted_pane_group_id = workspace.read(&app, |workspace, _| {
+            workspace.get_pane_group_view(0).unwrap().id()
+        });
+
+        workspace.update(&mut app, |workspace, ctx| {
+            workspace.handle_action(&WorkspaceAction::DeleteTab(0), ctx);
+            assert!(workspace.is_native_quit_modal_open(ctx));
+        });
+        app.update(|ctx| Workspace::press_native_modal_button(&workspace, 0, ctx));
+
+        workspace.read(&app, |workspace, _| {
+            assert_eq!(workspace.tab_count(), 1);
+            assert!(workspace.archived_tabs.is_empty());
+            assert_ne!(
+                workspace.get_pane_group_view(0).unwrap().id(),
+                deleted_pane_group_id
+            );
+        });
+    });
+}
+
+#[test]
+fn deleting_archived_tab_removes_it_after_confirmation() {
+    App::test((), |mut app| async move {
+        initialize_app(&mut app);
+        let workspace = mock_workspace(&mut app);
+        let archive_id = workspace.update(&mut app, |workspace, ctx| {
+            workspace.add_terminal_tab(false, ctx);
+            workspace.handle_action(&WorkspaceAction::CloseTab(1), ctx);
+            workspace.archived_tabs[0].id
+        });
+
+        workspace.update(&mut app, |workspace, ctx| {
+            workspace.handle_action(&WorkspaceAction::DeleteArchivedTab(archive_id), ctx);
+            assert!(workspace.is_native_quit_modal_open(ctx));
+        });
+        app.update(|ctx| Workspace::press_native_modal_button(&workspace, 0, ctx));
+
+        workspace.read(&app, |workspace, _| {
+            assert!(workspace.archived_tabs.is_empty());
+        });
+    });
+}
+
+#[test]
 fn test_close_last_horizontal_tab_activates_tab_to_left() {
     let _vertical_tabs_guard = FeatureFlag::VerticalTabs.override_enabled(true);
     App::test((), |mut app| async move {
@@ -2198,7 +2349,7 @@ fn test_reopen_closed_shared_tab() {
             assert_eq!(workspace.tab_count(), 2);
 
             // Restore the shared tab.
-            workspace.restore_closed_tab(1, TabData::new(shared_pane_group.to_owned()), ctx);
+            workspace.restore_closed_tab(1, TabData::new(shared_pane_group.to_owned()), None, ctx);
         });
         // Restored tab should no longer be shared.
         workspace.read(&app, |workspace, ctx| {
@@ -2363,8 +2514,8 @@ fn test_close_last_tab_skip_confirmation() {
             workspace.handle_action(&WorkspaceAction::CloseTab(2), ctx);
             workspace.handle_action(&WorkspaceAction::CloseTab(0), ctx);
             assert_eq!(workspace.tab_count(), 1);
-            // Close the last remaining tab with the shared pane, no dialog should come up because
-            // we're going to close the window and there's already a confirmation on window close.
+            // Archiving the last remaining tab is reversible and leaves a replacement tab, so it
+            // does not need the destructive window-close confirmation.
             workspace.handle_action(&WorkspaceAction::CloseActiveTab, ctx);
             assert!(
                 !workspace
@@ -2526,7 +2677,7 @@ fn test_terminal_model_isnt_leaked() {
 
         workspace.update(&mut app, |workspace, ctx| {
             // Remove the tab. This should destroy the corresponding terminal view.
-            workspace.remove_tab(workspace.active_tab_index(), true, true, ctx);
+            workspace.remove_tab(workspace.active_tab_index(), true, true, None, ctx);
         });
         // For some reason, the update call above results in more pending effects, one of which
         // contains the actual logic that drops the `TerminalModel`.
@@ -3340,6 +3491,11 @@ fn test_vertical_tabs_panel_visibility_restores_from_window_snapshot() {
         app.update(|ctx| {
             TabSettings::handle(ctx).update(ctx, |settings, ctx| {
                 report_if_error!(settings.use_vertical_tabs.set_value(true, ctx));
+                report_if_error!(
+                    settings
+                        .show_vertical_tab_panel_in_restored_windows
+                        .set_value(false, ctx)
+                );
             });
         });
 
@@ -3588,6 +3744,12 @@ fn test_vertical_tabs_panel_auto_shows_when_setting_enabled() {
 
     App::test((), |mut app| async move {
         initialize_app(&mut app);
+
+        app.update(|ctx| {
+            TabSettings::handle(ctx).update(ctx, |settings, ctx| {
+                report_if_error!(settings.use_vertical_tabs.set_value(false, ctx));
+            });
+        });
 
         let workspace = mock_workspace(&mut app);
 
@@ -3939,7 +4101,7 @@ fn test_unified_new_session_menu_includes_reopen_closed_session() {
             ));
 
             workspace.add_terminal_tab(false, ctx);
-            workspace.remove_tab(workspace.active_tab_index(), true, true, ctx);
+            workspace.remove_tab(workspace.active_tab_index(), true, true, None, ctx);
 
             let menu_items = workspace.unified_new_session_menu_items(ctx);
             let reopen_item = reopen_closed_session_menu_item(&menu_items);
@@ -4538,7 +4700,7 @@ fn test_toggle_tab_group_collapsed_flips_state() {
 }
 
 #[test]
-fn test_close_tab_group_removes_group_and_members() {
+fn test_close_tab_group_archives_members_and_preserves_group() {
     let _grouped_tabs_guard = FeatureFlag::GroupedTabs.override_enabled(true);
 
     App::test((), |mut app| async move {
@@ -4573,13 +4735,19 @@ fn test_close_tab_group_removes_group_and_members() {
 
             workspace.handle_action(&WorkspaceAction::CloseTabGroup(group_id), ctx);
 
-            // All group members are closed and the group entry is removed.
-            assert!(!workspace.tab_groups.contains_key(&group_id));
+            assert!(workspace.tab_groups.contains_key(&group_id));
             assert!(
                 workspace
                     .tabs
                     .iter()
                     .all(|tab| tab.group_id != Some(group_id))
+            );
+            assert_eq!(workspace.archived_tabs.len(), 2);
+            assert!(
+                workspace
+                    .archived_tabs
+                    .iter()
+                    .all(|archived| archived.tab.group_id == Some(group_id))
             );
         });
     });

@@ -60,7 +60,7 @@ pub fn panel_header_corner_radius() -> warpui::elements::CornerRadius {
 }
 
 pub use one_time_modal_model::OneTimeModalModel;
-pub use registry::WorkspaceRegistry;
+pub use registry::{ClosedWorkspaceSnapshots, WorkspaceRegistry};
 pub use toast_stack::{ToastStack, ToastStackEvent};
 
 use crate::workspace::view::{
@@ -77,6 +77,7 @@ use crate::workspace::view::{
 
 pub fn init(app: &mut AppContext) {
     app.add_singleton_model(|_| WorkspaceRegistry::new());
+    app.add_singleton_model(|_| ClosedWorkspaceSnapshots::default());
     app.add_singleton_model(|_| cross_window_tab_drag::CrossWindowTabDrag::new());
     use warpui::keymap::macros::*;
     app.register_binding_validator::<Workspace>(is_binding_pty_compliant);
@@ -1104,17 +1105,15 @@ pub fn init(app: &mut AppContext) {
         .with_enabled(|| ContextFlag::CloseWindow.is_enabled()),
         EditableBinding::new(
             "workspace:close_active_tab",
-            "Close the current tab",
+            "Archive the current tab",
             WorkspaceAction::CloseActiveTab,
         )
         .with_custom_action(CustomAction::CloseTab)
         .with_group(bindings::BindingGroup::Close.as_str())
-        .with_context_predicate(
-            id!("Workspace") & (id!("Workspace_CloseWindow") | id!("Workspace_MultipleTabs")),
-        ),
+        .with_context_predicate(id!("Workspace")),
         EditableBinding::new(
             "workspace:close_other_tabs",
-            "Close other tabs",
+            "Archive other tabs",
             WorkspaceAction::CloseNonActiveTabs,
         )
         .with_custom_action(CustomAction::CloseOtherTabs)
@@ -1122,8 +1121,8 @@ pub fn init(app: &mut AppContext) {
         .with_context_predicate(id!("Workspace")),
         EditableBinding::new(
             "workspace:close_tabs_right_active_tab",
-            BindingDescription::new("Close tabs to the right").with_dynamic_override(|ctx| {
-                uses_vertical_tabs(ctx).then(|| "close tabs below".into())
+            BindingDescription::new("Archive tabs to the right").with_dynamic_override(|ctx| {
+                uses_vertical_tabs(ctx).then(|| "archive tabs below".into())
             }),
             WorkspaceAction::CloseTabsRightActiveTab,
         )

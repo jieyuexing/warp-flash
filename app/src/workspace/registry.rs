@@ -3,6 +3,7 @@ use std::collections::HashMap;
 use warpui::{AppContext, Entity, SingletonEntity, WeakViewHandle, WindowId};
 
 use super::Workspace;
+use crate::app_state::WindowSnapshot;
 
 /// A registry that tracks all workspace views by their window ID.
 ///
@@ -64,3 +65,41 @@ impl Entity for WorkspaceRegistry {
 }
 
 impl SingletonEntity for WorkspaceRegistry {}
+
+#[derive(Default)]
+pub struct ClosedWorkspaceSnapshots {
+    snapshots: Vec<(WindowId, WindowSnapshot)>,
+}
+
+impl ClosedWorkspaceSnapshots {
+    pub fn insert(&mut self, window_id: WindowId, snapshot: WindowSnapshot) {
+        if let Some((_, stored)) = self
+            .snapshots
+            .iter_mut()
+            .find(|(stored_window_id, _)| *stored_window_id == window_id)
+        {
+            *stored = snapshot;
+        } else {
+            self.snapshots.push((window_id, snapshot));
+        }
+    }
+
+    pub fn remove(&mut self, window_id: WindowId) {
+        self.snapshots
+            .retain(|(stored_window_id, _)| *stored_window_id != window_id);
+    }
+
+    pub fn snapshots(&self) -> impl Iterator<Item = &WindowSnapshot> {
+        self.snapshots.iter().map(|(_, snapshot)| snapshot)
+    }
+}
+
+impl Entity for ClosedWorkspaceSnapshots {
+    type Event = ();
+}
+
+impl SingletonEntity for ClosedWorkspaceSnapshots {}
+
+#[cfg(test)]
+#[path = "registry_tests.rs"]
+mod tests;

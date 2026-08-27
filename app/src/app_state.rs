@@ -21,9 +21,9 @@ use crate::settings_view::environments_page::EnvironmentsPage;
 use crate::tab::SelectedTabColor;
 use crate::terminal::ShellLaunchData;
 use crate::themes::theme::AnsiColorIdentifier;
-use crate::workspace::WorkspaceRegistry;
 use crate::workspace::tab_group::TabGroupId;
 use crate::workspace::view::left_panel::ToolPanelView;
+use crate::workspace::{ClosedWorkspaceSnapshots, WorkspaceRegistry};
 
 #[derive(Debug, Clone, PartialEq)]
 pub struct AppState {
@@ -45,6 +45,7 @@ pub struct PersistedAgentManagementFilters {
 #[derive(Clone, Debug, PartialEq)]
 pub struct WindowSnapshot {
     pub tabs: Vec<TabSnapshot>,
+    pub archived_tabs: Vec<ArchivedTabSnapshot>,
     pub active_tab_index: usize,
     pub team_uid: Option<ServerId>,
     pub bounds: Option<RectF>,
@@ -62,6 +63,13 @@ pub struct WindowSnapshot {
     /// Tab groups defined in this window. Group order is implicit from
     /// member tabs' positions, so no explicit ordering is persisted.
     pub tab_groups: Vec<TabGroupSnapshot>,
+}
+
+#[derive(Clone, Debug, PartialEq)]
+pub struct ArchivedTabSnapshot {
+    pub id: uuid::Uuid,
+    pub tab: TabSnapshot,
+    pub archived_at: i64,
 }
 
 #[derive(Clone, Debug, PartialEq)]
@@ -392,6 +400,8 @@ pub fn get_app_state(app: &AppContext) -> AppState {
             }
         }
     }
+
+    windows.extend(ClosedWorkspaceSnapshots::as_ref(app).snapshots().cloned());
 
     AppState {
         windows,

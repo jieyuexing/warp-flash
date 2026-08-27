@@ -325,6 +325,12 @@ pub enum TabTelemetryAction {
     CloseTab,
     CloseOtherTabs,
     CloseTabsToRight,
+    ArchiveTab,
+    ArchiveOtherTabs,
+    ArchiveTabsToRight,
+    RestoreArchivedTab,
+    DeleteTab,
+    DeleteArchivedTab,
     SetColor,
     ResetColor,
 }
@@ -783,16 +789,19 @@ impl TabData {
         let mut menu_items = vec![];
         let uses_vertical_tabs = uses_vertical_tabs(ctx);
 
-        if ContextFlag::CloseWindow.is_enabled() || tabs_len != 1 {
-            menu_items.push(
-                MenuItemFields::new("Close tab")
-                    .with_on_select_action(WorkspaceAction::CloseTab(index))
-                    .into_item(),
-            );
-        }
+        menu_items.push(
+            MenuItemFields::new("Archive tab")
+                .with_on_select_action(WorkspaceAction::CloseTab(index))
+                .into_item(),
+        );
+        menu_items.push(
+            MenuItemFields::new("Delete tab…")
+                .with_on_select_action(WorkspaceAction::DeleteTab(index))
+                .into_item(),
+        );
         if tabs_len > 1 {
             menu_items.push(
-                MenuItemFields::new("Close other tabs")
+                MenuItemFields::new("Archive other tabs")
                     .with_on_select_action(WorkspaceAction::CloseOtherTabs(index))
                     .into_item(),
             );
@@ -801,9 +810,9 @@ impl TabData {
         if not_last_tab {
             menu_items.push(
                 MenuItemFields::new(if uses_vertical_tabs {
-                    "Close Tabs Below"
+                    "Archive Tabs Below"
                 } else {
-                    "Close Tabs to the Right"
+                    "Archive Tabs to the Right"
                 })
                 .with_on_select_action(WorkspaceAction::CloseTabsRight(index))
                 .into_item(),
@@ -1553,11 +1562,7 @@ impl<'a> TabComponent<'a> {
         is_narrow: bool,
         is_hovered: bool,
     ) -> Box<dyn Element> {
-        let should_render = {
-            let is_last_tab = self.tab_bar.tab_count == 1;
-            ContextFlag::CloseWindow.is_enabled() || !is_last_tab
-        };
-        let button = if is_hovered && should_render {
+        let button = if is_hovered {
             let tab_index = self.tab_index;
             let close_mouse_state = self.tab.close_mouse_state.clone();
             let position_id = tab_position_id(tab_index);
@@ -2175,7 +2180,6 @@ impl UiComponent for TabComponent<'_> {
         let tab_mouse_state = self.tab.tab_mouse_state.clone();
         let tab_index = self.tab_index;
         let is_tab_being_renamed = self.is_tab_being_renamed();
-        let is_last_tab = self.tab_bar.tab_count == 1;
         let hover_fixed_width = self.tab_bar.hover_fixed_width;
         let is_any_tab_dragging = self.tab_bar.is_any_tab_dragging;
         let draggable_state = self.tab.draggable_state.clone();
@@ -2368,11 +2372,9 @@ impl UiComponent for TabComponent<'_> {
                 });
             }
         });
-        if ContextFlag::CloseWindow.is_enabled() || !is_last_tab {
-            tab = tab.on_middle_click(move |ctx, _app, _position| {
-                ctx.dispatch_typed_action(WorkspaceAction::CloseTab(tab_index));
-            });
-        }
+        tab = tab.on_middle_click(move |ctx, _app, _position| {
+            ctx.dispatch_typed_action(WorkspaceAction::CloseTab(tab_index));
+        });
 
         // Note: Tooltip delay is now handled separately in the tooltip overlay
 
