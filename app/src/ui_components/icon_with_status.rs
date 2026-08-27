@@ -1,12 +1,18 @@
+use std::time::Duration;
+
+use instant::Instant;
 use pathfinder_color::ColorU;
-use pathfinder_geometry::vector::vec2f;
+use pathfinder_geometry::rect::RectF;
+use pathfinder_geometry::vector::{Vector2F, vec2f};
 use warp_core::ui::icons::Icon as WarpIcon;
 use warp_core::ui::theme::color::internal_colors;
 use warp_core::ui::theme::{ColorScheme, Fill as WarpThemeFill, WarpTheme};
 use warpui::elements::{
-    ChildAnchor, ConstrainedBox, Container, CornerRadius, Element, OffsetPositioning, ParentAnchor,
-    ParentElement, ParentOffsetBounds, Radius, Stack,
+    AfterLayoutContext, AppContext, ChildAnchor, ConstrainedBox, Container, CornerRadius, Element,
+    EventContext, Fill as ElementFill, LayoutContext, OffsetPositioning, PaintContext,
+    ParentAnchor, ParentElement, ParentOffsetBounds, Point, Radius, SizeConstraint, Stack,
 };
+use warpui::event::DispatchedEvent;
 
 use crate::ai::agent::conversation::{ConversationStatus, StatusColorStyle};
 use crate::terminal::CLIAgent;
@@ -218,6 +224,7 @@ pub(crate) fn render_icon_with_status_with_badge_style(
                 circle,
                 status.as_ref(),
                 is_ambient,
+                false,
                 total_size,
                 overlay_extra_overhang_ratio,
                 badge_style,
@@ -246,6 +253,7 @@ pub(crate) fn render_icon_with_status_with_badge_style(
                 circle,
                 status.as_ref(),
                 is_ambient,
+                true,
                 total_size,
                 overlay_extra_overhang_ratio,
                 badge_style,
@@ -261,6 +269,7 @@ pub(crate) fn render_icon_with_status_with_badge_style(
             avatar,
             status.as_ref(),
             is_ambient,
+            false,
             total_size,
             overlay_extra_overhang_ratio,
             badge_style,
@@ -337,6 +346,7 @@ fn attach_status_overlay(
     circle: Box<dyn Element>,
     status: Option<&ConversationStatus>,
     is_ambient: bool,
+    animate_in_progress: bool,
     total_size: f32,
     overlay_extra_overhang_ratio: f32,
     badge_style: StatusBadgeStyle,
@@ -358,6 +368,7 @@ fn attach_status_overlay(
             total_size,
             overlay_extra_overhang_ratio,
             badge_style,
+            animate_in_progress,
             theme,
             status_container_background,
         )
@@ -440,6 +451,7 @@ fn render_with_optional_status_badge(
     total_size: f32,
     overlay_extra_overhang_ratio: f32,
     badge_style: StatusBadgeStyle,
+    animate_in_progress: bool,
     theme: &WarpTheme,
     status_container_background: WarpThemeFill,
 ) -> Box<dyn Element> {
@@ -457,7 +469,13 @@ fn render_with_optional_status_badge(
     let (icon, color) = status.status_icon_and_color(theme, StatusColorStyle::Standard);
     let badge_icon_diameter = badge_icon_size(total_size, badge_style);
     let pad = badge_padding(total_size, badge_style);
-    let badge_icon = ConstrainedBox::new(icon.to_warpui_icon(WarpThemeFill::Solid(color)).finish())
+    let status_element = if animate_in_progress && matches!(status, ConversationStatus::InProgress)
+    {
+        PulsingStatusDot::new(color).finish()
+    } else {
+        icon.to_warpui_icon(WarpThemeFill::Solid(color)).finish()
+    };
+    let badge_icon = ConstrainedBox::new(status_element)
         .with_width(badge_icon_diameter)
         .with_height(badge_icon_diameter)
         .finish();
@@ -496,6 +514,83 @@ fn render_with_optional_status_badge(
         .with_width(total_size)
         .with_height(total_size)
         .finish()
+}
+
+/// A paint-driven pulse used only while a rich CLI-agent session is actively running.
+/// It requests its own next frame, so idle and terminal states cause no periodic repaint.
+struct PulsingStatusDot {
+    color: ColorU,
+    started_at: Instant,
+    size: Option<Vector2F>,
+    origin: Option<Point>,
+}
+
+impl PulsingStatusDot {
+    fn new(color: ColorU) -> Self {
+        Self {
+            color,
+            started_at: Instant::now(),
+            size: None,
+            origin: None,
+        }
+    }
+}
+
+impl Element for PulsingStatusDot {
+    fn layout(
+        &mut self,
+        constraint: SizeConstraint,
+        _ctx: &mut LayoutContext,
+        _app: &AppContext,
+    ) -> Vector2F {
+        self.size = Some(constraint.max);
+        constraint.max
+    }
+
+    fn after_layout(&mut self, _ctx: &mut AfterLayoutContext, _app: &AppContext) {}
+
+    fn paint(&mut self, origin: Vector2F, ctx: &mut PaintContext, _app: &AppContext) {
+        let Some(size) = self.size else {
+            return;
+        };
+        self.origin = Some(Point::from_vec2f(origin, ctx.scene.z_index()));
+        let color = ColorU::new(
+            self.color.r,
+            self.color.g,
+            self.color.b,
+            pulse_alpha(self.started_at.elapsed()),
+        );
+        ctx.scene
+            .draw_rect_with_hit_recording(RectF::new(origin, size))
+            .with_background(ElementFill::Solid(color))
+            .with_corner_radius(CornerRadius::with_all(Radius::Percentage(50.)));
+        ctx.repaint_after(Duration::from_millis(50));
+    }
+
+    fn size(&self) -> Option<Vector2F> {
+        self.size
+    }
+
+    fn origin(&self) -> Option<Point> {
+        self.origin
+    }
+
+    fn dispatch_event(
+        &mut self,
+        _event: &DispatchedEvent,
+        _ctx: &mut EventContext,
+        _app: &AppContext,
+    ) -> bool {
+        false
+    }
+}
+
+fn pulse_alpha(elapsed: Duration) -> u8 {
+    const PERIOD_MS: u128 = 1_200;
+    const MIN_ALPHA: f32 = 0.45;
+    let position = (elapsed.as_millis() % PERIOD_MS) as f32 / PERIOD_MS as f32;
+    let intensity = 1.0 - (position * 2.0 - 1.0).abs();
+    ((MIN_ALPHA + (1.0 - MIN_ALPHA) * intensity) * 255.0).round() as u8
 }
 
 #[cfg(test)]

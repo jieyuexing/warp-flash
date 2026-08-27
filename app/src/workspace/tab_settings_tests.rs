@@ -33,12 +33,17 @@ fn use_latest_user_prompt_as_conversation_title_in_tab_names_uses_vertical_tabs_
 }
 
 #[test]
-fn show_vertical_tab_panel_in_restored_windows_defaults_to_false() {
+fn vertical_tab_session_layout_is_enabled_by_default() {
     App::test((), |mut app| async move {
         initialize_settings_for_tests(&mut app);
 
         TabSettings::handle(&app).read(&app, |settings, _ctx| {
-            assert!(!*settings.show_vertical_tab_panel_in_restored_windows);
+            assert!(*settings.use_vertical_tabs);
+            assert!(*settings.show_vertical_tab_panel_in_restored_windows);
+            assert_eq!(
+                settings.vertical_tabs_display_granularity,
+                VerticalTabsDisplayGranularity::Tabs
+            );
         });
     });
 }
@@ -90,6 +95,26 @@ fn hide_title_bar_search_bar_in_vertical_tabs_uses_vertical_tabs_path() {
 fn header_toolbar_chip_selection_default_contains_code_review() {
     let config = HeaderToolbarChipSelection::Default;
     assert!(config.contains_item(&HeaderToolbarItemKind::CodeReview));
+}
+
+#[test]
+fn header_toolbar_default_keeps_tools_left_and_tabs_right() {
+    let config = HeaderToolbarChipSelection::Default;
+    assert!(
+        config
+            .left_items()
+            .contains(&HeaderToolbarItemKind::ToolsPanel)
+    );
+    assert!(
+        !config
+            .left_items()
+            .contains(&HeaderToolbarItemKind::TabsPanel)
+    );
+    assert!(
+        config
+            .right_items()
+            .contains(&HeaderToolbarItemKind::TabsPanel)
+    );
 }
 
 #[test]

@@ -141,7 +141,7 @@ impl TerminalView {
                     if is_ambient_agent {
                         default_agent_conversation_title(is_ambient_agent)
                     } else {
-                        self.terminal_title.clone()
+                        self.generated_terminal_title(ctx)
                     }
                 }
             }

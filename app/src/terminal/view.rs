@@ -2860,6 +2860,10 @@ pub struct TerminalView {
     /// The title of the terminal view to show when there is no selected conversation.
     terminal_title: String,
 
+    /// A stable, local title derived from the first non-empty prompt submitted to the
+    /// active CLI-agent session. Later prompts must not rename the task underneath the user.
+    first_cli_user_prompt_title: Option<String>,
+
     // If there is a selected conversation in the view before bootstrapping (from loading a conversation into a new pane),
     // we want to keep the title as the conversation title, so we should ignore the model event setting the title after bootstrapping finishes
     ignore_next_set_title_event: bool,
@@ -4468,6 +4472,7 @@ impl TerminalView {
             conversation_completed_callbacks: Default::default(),
             current_repo_path: None,
             terminal_title: Default::default(),
+            first_cli_user_prompt_title: None,
             ignore_next_set_title_event: false,
             cli_subagent_views: Default::default(),
             cli_subagent_controller,
@@ -13324,7 +13329,14 @@ impl TerminalView {
             return;
         }
 
-        if !self.register_cli_agent_listener_from_event(&notification, ctx) {
+        // Command detection may have created a lightweight session before the
+        // structured Codex hook arrives. In that case, keep the existing listener
+        // but still merge the richer event (notably its submitted prompt).
+        if CLIAgentSessionsModel::as_ref(ctx)
+            .session(self.view_id)
+            .is_none()
+            && !self.register_cli_agent_listener_from_event(&notification, ctx)
+        {
             return;
         }
 
@@ -13484,6 +13496,7 @@ impl TerminalView {
             CLIAgentSessionsModelEvent::Started {
                 terminal_view_id, ..
             } if *terminal_view_id == self.view_id => {
+                self.first_cli_user_prompt_title = None;
                 let mut model = self.model.lock();
                 let active_block = model.block_list_mut().active_block_mut();
                 active_block.enable_full_grid_clear_behavior();
@@ -13501,6 +13514,11 @@ impl TerminalView {
                 }
             }
             _ => {}
+        }
+        if event.terminal_view_id() == self.view_id && self.first_cli_user_prompt_title.is_none() {
+            self.first_cli_user_prompt_title = CLIAgentSessionsModel::as_ref(ctx)
+                .session(self.view_id)
+                .and_then(|session| session.session_context.latest_user_prompt());
         }
         if event.terminal_view_id() == self.view_id
             && matches!(

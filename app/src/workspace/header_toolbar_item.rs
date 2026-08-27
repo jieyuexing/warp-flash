@@ -98,11 +98,15 @@ impl HeaderToolbarItemKind {
     }
 
     pub fn default_left() -> Vec<Self> {
-        vec![Self::TabsPanel, Self::ToolsPanel, Self::AgentManagement]
+        vec![Self::ToolsPanel, Self::AgentManagement]
     }
 
     pub fn default_right() -> Vec<Self> {
-        vec![Self::CodeReview, Self::NotificationsMailbox]
+        vec![
+            Self::TabsPanel,
+            Self::CodeReview,
+            Self::NotificationsMailbox,
+        ]
     }
 
     /// All toolbar item variants (availability filtering is done at the call site).

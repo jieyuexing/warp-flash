@@ -63,6 +63,7 @@ use crate::tab::{
 };
 use crate::terminal::cli_agent_sessions::CLIAgentSessionsModel;
 use crate::terminal::session_settings::SessionSettings;
+use crate::terminal::title_generator::is_contextual_directory_title;
 use crate::terminal::view::TerminalViewState;
 use crate::terminal::{CLIAgent, TerminalView};
 use crate::themes::theme::Fill as ThemeFill;
@@ -3798,7 +3799,7 @@ fn build_vertical_tabs_summary_data(
                 let terminal_view = terminal_view.as_ref(app);
                 has_unread_activity |=
                     has_unread_activity_for_terminal_view(terminal_view.id(), app);
-                let title_text = terminal_view.terminal_title_from_shell();
+                let title_text = terminal_view.generated_terminal_title(app);
                 let working_directory = resolved_terminal_working_directory(terminal_view, app);
                 let working_directory_text = working_directory
                     .clone()
@@ -3940,6 +3941,37 @@ impl<'a> PaneProps<'a> {
             pane_configuration.title().trim(),
             pane_configuration.title_secondary().trim(),
         );
+        let display_title_override = match (&typed, display_title_override) {
+            (TypedPane::Terminal(terminal_pane), Some(title)) => {
+                let terminal_view = terminal_pane.terminal_view(app);
+                let terminal_view = terminal_view.as_ref(app);
+                let has_cli_agent = terminal_view.detected_cli_agent(app).is_some();
+                let working_directory = terminal_view.display_working_directory(app);
+                if has_cli_agent
+                    && is_contextual_directory_title(&title, working_directory.as_deref())
+                {
+                    None
+                } else {
+                    Some(title)
+                }
+            }
+            (TypedPane::Terminal(_), None) => None,
+            (
+                TypedPane::Code(_)
+                | TypedPane::CodeDiff
+                | TypedPane::File
+                | TypedPane::Notebook { .. }
+                | TypedPane::Workflow { .. }
+                | TypedPane::Settings
+                | TypedPane::EnvVarCollection
+                | TypedPane::EnvironmentManagement
+                | TypedPane::AIFact
+                | TypedPane::AIDocument
+                | TypedPane::ExecutionProfileEditor
+                | TypedPane::Other,
+                display_title_override,
+            ) => display_title_override,
+        };
 
         Some(Self {
             pane_id,
@@ -4101,7 +4133,7 @@ fn terminal_pane_search_text_fragments(
 ) -> Vec<String> {
     let terminal_view = terminal_pane.terminal_view(app);
     let terminal_view = terminal_view.as_ref(app);
-    let title_text = terminal_view.terminal_title_from_shell();
+    let title_text = terminal_view.generated_terminal_title(app);
     let working_directory = resolved_terminal_working_directory(terminal_view, app)
         .unwrap_or_else(|| title_text.clone());
     let agent_text = terminal_agent_text(terminal_view, app);
@@ -4440,7 +4472,7 @@ fn render_terminal_row_content(
     let sub_text_color = theme.sub_text_color(theme.background());
     let primary_info = *TabSettings::as_ref(app).vertical_tabs_primary_info.value();
 
-    let title_text = terminal_view.terminal_title_from_shell();
+    let title_text = terminal_view.generated_terminal_title(app);
     let working_directory = resolved_terminal_working_directory(terminal_view, app)
         .unwrap_or_else(|| title_text.clone());
 
@@ -5284,7 +5316,7 @@ fn render_terminal_primary_line_for_view(
     text_color: WarpThemeFill,
     app: &AppContext,
 ) -> Box<dyn Element> {
-    let title_text = terminal_view.terminal_title_from_shell();
+    let title_text = terminal_view.generated_terminal_title(app);
     let working_directory = resolved_terminal_working_directory(terminal_view, app)
         .unwrap_or_else(|| title_text.clone());
     let agent_text = terminal_agent_text(terminal_view, app);
@@ -6842,7 +6874,7 @@ fn render_terminal_detail_section(
         None
     };
 
-    let title_text = terminal_view.terminal_title_from_shell();
+    let title_text = terminal_view.generated_terminal_title(app);
     let primary_line = terminal_primary_line_data(
         terminal_view.is_long_running_and_user_controlled(),
         conversation_display_title,
@@ -7288,7 +7320,7 @@ fn render_compact_pane_row(props: PaneProps<'_>, app: &AppContext) -> Box<dyn El
     let (title_element, subtitle_element): (Box<dyn Element>, Option<Box<dyn Element>>) =
         if let TypedPane::Terminal(terminal_pane) = &props.typed {
             let terminal_view = terminal_pane.terminal_view(app).as_ref(app);
-            let terminal_title = terminal_view.terminal_title_from_shell();
+            let terminal_title = terminal_view.generated_terminal_title(app);
             let git_branch = terminal_view.current_git_branch(app);
             let working_directory = resolved_terminal_working_directory(terminal_view, app);
             let working_directory_text = working_directory

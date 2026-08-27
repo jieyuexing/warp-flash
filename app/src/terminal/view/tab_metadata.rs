@@ -1,8 +1,10 @@
-use warpui::AppContext;
+use warpui::{AppContext, SingletonEntity};
 
 use crate::context_chips::display_chip::GitLineChanges;
 use crate::context_chips::{ContextChipKind, git_line_changes_from_chips};
 use crate::terminal::TerminalView;
+use crate::terminal::cli_agent_sessions::CLIAgentSessionsModel;
+use crate::terminal::title_generator::{TerminalTitleGenerator, cli_agent_from_command};
 
 impl TerminalView {
     fn prompt_chip_value(&self, chip_kind: &ContextChipKind, ctx: &AppContext) -> Option<String> {
@@ -31,6 +33,55 @@ impl TerminalView {
             .terminal_title()
             .filter(|title| !title.trim().is_empty())
             .unwrap_or(fallback_title)
+    }
+
+    pub fn generated_terminal_title(&self, ctx: &AppContext) -> String {
+        let (osc_title, shell_title) = {
+            let model = self.model.lock();
+            (
+                model.terminal_title(),
+                model.shell_launch_state().display_name().to_owned(),
+            )
+        };
+        let working_directory = self.display_working_directory(ctx);
+        let cli_session = CLIAgentSessionsModel::as_ref(ctx).session(self.id());
+        let cli_agent = cli_session
+            .map(|session| session.agent)
+            .or_else(|| self.active_cli_agent_from_command());
+        let cli_project = cli_session.and_then(|session| {
+            session
+                .session_context
+                .project
+                .as_deref()
+                .or(session.session_context.cwd.as_deref())
+        });
+
+        TerminalTitleGenerator {
+            cli_agent,
+            task_title: self.first_cli_user_prompt_title.as_deref(),
+            project: cli_project,
+            working_directory: working_directory.as_deref(),
+            osc_title: osc_title.as_deref(),
+            shell_title: &shell_title,
+        }
+        .generate()
+    }
+
+    pub fn detected_cli_agent(&self, ctx: &AppContext) -> Option<crate::terminal::CLIAgent> {
+        CLIAgentSessionsModel::as_ref(ctx)
+            .session(self.id())
+            .map(|session| session.agent)
+            .or_else(|| self.active_cli_agent_from_command())
+    }
+
+    fn active_cli_agent_from_command(&self) -> Option<crate::terminal::CLIAgent> {
+        let model = self.model.lock();
+        let active_block = model.block_list().active_block();
+        active_block
+            .is_active_and_long_running()
+            .then(|| active_block.command_to_string())
+            .as_deref()
+            .and_then(cli_agent_from_command)
     }
 
     pub fn current_git_branch(&self, ctx: &AppContext) -> Option<String> {
