@@ -23,6 +23,7 @@ use crate::app_state::{
 use crate::auth::UserUid;
 use crate::cloud_object::{CloudObjectPermissions, Owner};
 use crate::code::editor_management::CodeSource;
+use crate::external_cli_resume::{ExternalCliAgent, ExternalCliResumeTarget};
 use crate::notebooks::{CloudNotebook, CloudNotebookModel};
 use crate::persistence::model::ObjectPermissions;
 use crate::persistence::{
@@ -393,6 +394,7 @@ fn test_terminal_window_snapshot(vertical_tabs_panel_open: bool) -> WindowSnapsh
                     llm_model_override: None,
                     active_profile_id: None,
                     conversation_ids_to_restore: vec![],
+                    external_cli_resume_target: None,
                     active_conversation_id: None,
                 }),
             }),
@@ -483,6 +485,48 @@ fn test_sqlite_round_trips_window_team_uid() {
 }
 
 #[test]
+fn test_sqlite_round_trips_external_cli_resume_target() {
+    let tempdir = tempfile::tempdir().expect("tempdir should be created");
+    let database_path = tempdir.path().join("warp.sqlite");
+    let mut conn = setup_database(&database_path).expect("database should initialize");
+    let mut window = test_terminal_window_snapshot(false);
+    let target = ExternalCliResumeTarget::new(
+        ExternalCliAgent::Codex,
+        "019f6965-fb39-7101-9a0c-21706ff06d7b",
+        Some("/tmp".to_owned()),
+    )
+    .expect("valid resume target");
+
+    let PaneNodeSnapshot::Leaf(leaf) = &mut window.tabs[0].root else {
+        panic!("test window should contain a terminal leaf");
+    };
+    let LeafContents::Terminal(terminal) = &mut leaf.contents else {
+        panic!("test window should contain a terminal snapshot");
+    };
+    terminal.external_cli_resume_target = Some(target.clone());
+
+    let app_state = AppState {
+        windows: vec![window],
+        active_window_index: Some(0),
+        block_lists: Default::default(),
+        running_mcp_servers: Default::default(),
+    };
+    save_app_state(&mut conn, &app_state).expect("app state should save");
+
+    let restored = read_sqlite_data(&mut conn, None, PersistedDataScope::Full)
+        .expect("app state should load")
+        .app_state
+        .expect("app state should be present for the full scope");
+    let PaneNodeSnapshot::Leaf(leaf) = &restored.windows[0].tabs[0].root else {
+        panic!("restored window should contain a terminal leaf");
+    };
+    let LeafContents::Terminal(terminal) = &leaf.contents else {
+        panic!("restored window should contain a terminal snapshot");
+    };
+    assert_eq!(terminal.external_cli_resume_target, Some(target));
+}
+
+#[test]
 fn test_sqlite_round_trips_custom_vertical_tabs_title() {
     let tempdir = tempfile::tempdir().expect("tempdir should be created");
     let database_path = tempdir.path().join("warp.sqlite");
@@ -508,6 +552,7 @@ fn test_sqlite_round_trips_custom_vertical_tabs_title() {
                         llm_model_override: None,
                         active_profile_id: None,
                         conversation_ids_to_restore: vec![],
+                        external_cli_resume_target: None,
                         active_conversation_id: None,
                     }),
                 }),
@@ -674,6 +719,7 @@ fn test_sqlite_round_trips_tab_groups() {
                 llm_model_override: None,
                 active_profile_id: None,
                 conversation_ids_to_restore: vec![],
+                external_cli_resume_target: None,
                 active_conversation_id: None,
             }),
         }),
@@ -702,6 +748,7 @@ fn test_sqlite_round_trips_tab_groups() {
                 llm_model_override: None,
                 active_profile_id: None,
                 conversation_ids_to_restore: vec![],
+                external_cli_resume_target: None,
                 active_conversation_id: None,
             }),
         }),
@@ -798,6 +845,7 @@ fn test_sqlite_round_trips_pinned_state() {
                 llm_model_override: None,
                 active_profile_id: None,
                 conversation_ids_to_restore: vec![],
+                external_cli_resume_target: None,
                 active_conversation_id: None,
             }),
         }),
@@ -826,6 +874,7 @@ fn test_sqlite_round_trips_pinned_state() {
                 llm_model_override: None,
                 active_profile_id: None,
                 conversation_ids_to_restore: vec![],
+                external_cli_resume_target: None,
                 active_conversation_id: None,
             }),
         }),
@@ -854,6 +903,7 @@ fn test_sqlite_round_trips_pinned_state() {
                 llm_model_override: None,
                 active_profile_id: None,
                 conversation_ids_to_restore: vec![],
+                external_cli_resume_target: None,
                 active_conversation_id: None,
             }),
         }),

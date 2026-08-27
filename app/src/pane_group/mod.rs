@@ -1662,6 +1662,10 @@ impl PaneGroup {
             LeafContents::Terminal(terminal_snapshot) => {
                 let uuid = PaneUuid(terminal_snapshot.uuid.clone());
                 let block_list = block_lists.get(&uuid);
+                let external_cli_resume_target = terminal_snapshot
+                    .external_cli_resume_target
+                    .clone()
+                    .filter(|target| target.resume_command().is_some());
 
                 let chosen_shell = terminal_snapshot
                     .shell_launch_data
@@ -1676,6 +1680,12 @@ impl PaneGroup {
 
                 let startup_directory = terminal_snapshot
                     .cwd
+                    .as_deref()
+                    .or_else(|| {
+                        external_cli_resume_target
+                            .as_ref()
+                            .and_then(|target| target.cwd.as_deref())
+                    })
                     .map(PathBuf::from)
                     .filter(|path| path.is_dir());
 
@@ -1736,13 +1746,23 @@ impl PaneGroup {
 
                 let terminal_view_id = terminal_view.id();
 
+                if let Some(command) = external_cli_resume_target
+                    .as_ref()
+                    .and_then(|target| target.resume_command())
+                {
+                    terminal_view.update(ctx, |view, ctx| {
+                        view.execute_command_or_set_pending(&command, ctx);
+                    });
+                }
+
                 let pane_data = TerminalPane::new(
                     uuid.0,
                     terminal_manager,
                     terminal_view,
                     model_event_sender,
                     ctx,
-                );
+                )
+                .with_external_cli_resume_target(external_cli_resume_target);
 
                 let terminal_pane_id = pane_data.terminal_pane_id();
                 let pane_id = terminal_pane_id.into();
@@ -2202,6 +2222,7 @@ impl PaneGroup {
                             llm_model_override: None,
                             active_profile_id: None,
                             conversation_ids_to_restore: Vec::new(),
+                            external_cli_resume_target: None,
                             active_conversation_id: None,
                         })
                     }

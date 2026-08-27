@@ -40,6 +40,9 @@ use crate::ai::llms::LLMPreferences;
 use crate::ai::orchestration::{RemoteChildLaunchConfig, prepare_remote_child_launch};
 use crate::app_state::{AmbientAgentPaneSnapshot, LeafContents, TerminalPaneSnapshot};
 use crate::code::buffer_location::LocalOrRemotePath;
+#[cfg(not(target_family = "wasm"))]
+use crate::external_cli_resume::active_grok_resume_target;
+use crate::external_cli_resume::{ExternalCliAgent, ExternalCliResumeTarget};
 use crate::features::FeatureFlag;
 #[cfg(feature = "local_fs")]
 use crate::pane_group::CodeSource;
@@ -60,7 +63,7 @@ use crate::terminal::shared_session::manager::{Manager, ManagerEvent};
 use crate::terminal::shared_session::role_change_modal::RoleChangeOpenSource;
 use crate::terminal::shared_session::{SharedSessionStatus, join_link};
 use crate::terminal::view::Event;
-use crate::terminal::{TerminalManager, TerminalView};
+use crate::terminal::{CLIAgent, TerminalManager, TerminalView};
 use crate::view_components::ToastFlavor;
 use crate::workspace::sync_inputs::SyncedInputState;
 use crate::workspace::{PaneViewLocator, WorkspaceRegistry};
@@ -83,6 +86,9 @@ pub struct TerminalPane {
     uuid: Vec<u8>,
 
     pane_configuration: ModelHandle<PaneConfiguration>,
+
+    /// The external CLI session associated with this pane before the current process started.
+    external_cli_resume_target: Option<ExternalCliResumeTarget>,
 
     /// Defining `terminal_manager` before `view` means that `terminal_manager`
     /// gets dropped first (guaranteed by the language), which halts the event
@@ -160,8 +166,17 @@ impl TerminalPane {
             model_event_sender,
             uuid,
             pane_configuration,
+            external_cli_resume_target: None,
             view,
         }
+    }
+
+    pub(in crate::pane_group) fn with_external_cli_resume_target(
+        mut self,
+        target: Option<ExternalCliResumeTarget>,
+    ) -> Self {
+        self.external_cli_resume_target = target;
+        self
     }
 
     /// The [`PaneView<TerminalView>`] for this pane.
@@ -467,6 +482,7 @@ impl PaneContent for TerminalPane {
                 llm_model_override: None,
                 active_profile_id: None,
                 conversation_ids_to_restore: vec![],
+                external_cli_resume_target: None,
                 active_conversation_id: None,
             })
         } else if let Some(task_id) = view
@@ -497,6 +513,7 @@ impl PaneContent for TerminalPane {
                     llm_model_override: None,
                     active_profile_id: None,
                     conversation_ids_to_restore: vec![],
+                    external_cli_resume_target: None,
                     active_conversation_id: None,
                 })
             }
@@ -507,6 +524,29 @@ impl PaneContent for TerminalPane {
             let active_profile_id = AIExecutionProfilesModel::as_ref(app)
                 .active_profile(Some(self.terminal_view(app).id()), app)
                 .sync_id();
+
+            let cwd = view.pwd_if_local(app);
+            let codex_resume_target = CLIAgentSessionsModel::as_ref(app)
+                .session(self.terminal_view(app).id())
+                .filter(|session| session.agent == CLIAgent::Codex)
+                .and_then(|session| {
+                    ExternalCliResumeTarget::new(
+                        ExternalCliAgent::Codex,
+                        session.session_context.session_id.clone()?,
+                        session.session_context.cwd.clone().or_else(|| cwd.clone()),
+                    )
+                });
+
+            #[cfg(not(target_family = "wasm"))]
+            let grok_resume_target = view
+                .active_long_running_command()
+                .and_then(|command| active_grok_resume_target(&command, cwd.as_deref()));
+            #[cfg(target_family = "wasm")]
+            let grok_resume_target = None;
+
+            let external_cli_resume_target = codex_resume_target
+                .or(grok_resume_target)
+                .or_else(|| self.external_cli_resume_target.clone());
 
             // Collect all conversation IDs for this terminal view
             let conversation_ids_to_restore = BlocklistAIHistoryModel::as_ref(app)
@@ -530,7 +570,7 @@ impl PaneContent for TerminalPane {
 
             LeafContents::Terminal(TerminalPaneSnapshot {
                 uuid: self.uuid.clone(),
-                cwd: view.pwd_if_local(app),
+                cwd,
                 is_active,
                 is_read_only: view.model.lock().is_read_only(),
                 shell_launch_data: view.shell_launch_data_if_local(app),
@@ -538,6 +578,7 @@ impl PaneContent for TerminalPane {
                 llm_model_override,
                 active_profile_id,
                 conversation_ids_to_restore,
+                external_cli_resume_target,
                 active_conversation_id,
             })
         }

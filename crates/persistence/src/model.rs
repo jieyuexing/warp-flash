@@ -427,6 +427,8 @@ pub struct TerminalPane {
     pub active_profile_id: Option<String>,
     /// This is serialized JSON data for a Vec<AIConversationId>.
     pub conversation_ids: Option<String>,
+    /// This is serialized JSON data for an ExternalCliResumeTarget struct.
+    pub external_cli_resume_target: Option<String>,
     /// The active conversation ID if the agent view was open in fullscreen mode.
     pub active_conversation_id: Option<String>,
 }
@@ -605,6 +607,8 @@ pub struct NewTerminalPane {
     pub active_profile_id: Option<String>,
     /// This is serialized JSON data for a Vec<AIConversationId>.
     pub conversation_ids: Option<String>,
+    /// This is serialized JSON data for an ExternalCliResumeTarget struct.
+    pub external_cli_resume_target: Option<String>,
     /// The active conversation ID if the agent view was open in fullscreen mode.
     pub active_conversation_id: Option<String>,
 }

@@ -1267,6 +1267,10 @@ fn save_pane_state(
                     .as_ref()
                     .and_then(|sync_id| serde_json::to_string(sync_id).ok()),
                 conversation_ids,
+                external_cli_resume_target: terminal_snapshot
+                    .external_cli_resume_target
+                    .as_ref()
+                    .and_then(|target| serde_json::to_string(target).ok()),
                 active_conversation_id: terminal_snapshot
                     .active_conversation_id
                     .map(|id| id.to_string()),
@@ -2235,6 +2239,10 @@ fn read_node(conn: &mut SqliteConnection, node: model::PaneNode) -> Result<PaneN
                         .active_conversation_id
                         .and_then(|id_str| AIConversationId::try_from(id_str).ok());
 
+                    let external_cli_resume_target = terminal_pane
+                        .external_cli_resume_target
+                        .and_then(|target| serde_json::from_str(&target).ok());
+
                     LeafContents::Terminal(TerminalPaneSnapshot {
                         uuid: terminal_pane.uuid,
                         cwd: terminal_pane.cwd,
@@ -2245,6 +2253,7 @@ fn read_node(conn: &mut SqliteConnection, node: model::PaneNode) -> Result<PaneN
                         llm_model_override: terminal_pane.llm_model_override,
                         active_profile_id,
                         conversation_ids_to_restore,
+                        external_cli_resume_target,
                         active_conversation_id,
                     })
                 }

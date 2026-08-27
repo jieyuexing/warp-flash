@@ -13,6 +13,7 @@ use crate::ai::ambient_agents::AmbientAgentTaskId;
 use crate::ai::blocklist::{InputConfig, SerializedBlockListItem};
 use crate::code::editor_management::CodeSource;
 use crate::drive::OpenWarpDriveObjectSettings;
+use crate::external_cli_resume::ExternalCliResumeTarget;
 use crate::root_view::quake_mode_window_id;
 use crate::server::ids::{ServerId, SyncId};
 use crate::settings_view::SettingsSection;
@@ -213,6 +214,8 @@ pub struct TerminalPaneSnapshot {
     pub llm_model_override: Option<String>,
     pub active_profile_id: Option<SyncId>,
     pub conversation_ids_to_restore: Vec<AIConversationId>,
+    /// A local external CLI session explicitly associated with this terminal pane.
+    pub(crate) external_cli_resume_target: Option<ExternalCliResumeTarget>,
     /// The active conversation ID if the agent view was open in fullscreen mode.
     /// When `Some`, the agent view should be restored to fullscreen for this conversation.
     pub active_conversation_id: Option<AIConversationId>,

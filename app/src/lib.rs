@@ -34,6 +34,7 @@ mod drive;
 mod dynamic_libraries;
 mod env_vars;
 mod experiments;
+mod external_cli_resume;
 mod external_secrets;
 #[cfg(target_family = "wasm")]
 mod font_fallback;
@@ -3187,3 +3188,7 @@ fn init_logging_for_unit_tests_glue() {
 #[cfg(test)]
 #[path = "lib_tests.rs"]
 mod tests;
+
+#[cfg(test)]
+#[path = "external_cli_resume_tests.rs"]
+mod external_cli_resume_tests;

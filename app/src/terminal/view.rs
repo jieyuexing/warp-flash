@@ -21616,6 +21616,15 @@ impl TerminalView {
             .is_active_and_long_running()
     }
 
+    pub(crate) fn active_long_running_command(&self) -> Option<String> {
+        let model = self.model.lock();
+        let active_block = model.block_list().active_block();
+        active_block
+            .is_active_and_long_running()
+            .then(|| active_block.command_to_string())
+            .filter(|command| !command.trim().is_empty())
+    }
+
     /// If password notification settings enabled, send a notification.
     /// Otherwise, set the banner trigger so that we show the banner the next
     /// time a block completes.

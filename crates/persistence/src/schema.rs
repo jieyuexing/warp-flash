@@ -417,6 +417,7 @@ diesel::table! {
         llm_model_override -> Nullable<Text>,
         active_profile_id -> Nullable<Text>,
         conversation_ids -> Nullable<Text>,
+        external_cli_resume_target -> Nullable<Text>,
         active_conversation_id -> Nullable<Text>,
     }
 }
