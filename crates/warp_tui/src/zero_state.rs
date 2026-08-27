@@ -647,7 +647,7 @@ fn render_standard_top_section(
 
     let mut column = TuiFlex::column()
         .child(
-            TuiText::new("Warp Agent CLI")
+            TuiText::new(warp_i18n::localize_ui("Warp Agent CLI").into_owned())
                 .with_style(title_style)
                 .truncate()
                 .finish(),
@@ -664,7 +664,7 @@ fn render_standard_top_section(
     };
     if !bullets.is_empty() {
         column = column.child(blank_row()).child(
-            TuiText::new("What's new")
+            TuiText::new(warp_i18n::localize_ui("What's new").into_owned())
                 .with_style(header_style)
                 .truncate()
                 .finish(),
@@ -747,7 +747,7 @@ fn render_mcp_section(mut column: TuiFlex, builder: &TuiUiBuilder, app: &AppCont
     let header_style = builder.primary_text_style().add_modifier(Modifier::BOLD);
     let muted = builder.muted_text_style();
     column = column.child(blank_row()).child(
-        TuiText::new("MCP")
+        TuiText::new(warp_i18n::localize_ui("MCP").into_owned())
             .with_style(header_style)
             .truncate()
             .finish(),
@@ -891,7 +891,7 @@ fn autoupdate_status_label(status: TuiAutoupdateStatus) -> Option<&'static str> 
 fn render_version_line(builder: &TuiUiBuilder, app: &AppContext) -> Box<dyn TuiElement> {
     let muted = builder.muted_text_style();
     let Some(version) = ChannelState::app_version() else {
-        return TuiText::new("dev build")
+        return TuiText::new(warp_i18n::localize_ui("dev build").into_owned())
             .with_style(muted)
             .truncate()
             .finish();
@@ -919,9 +919,12 @@ fn render_version_line(builder: &TuiUiBuilder, app: &AppContext) -> Box<dyn TuiE
                 .finish(),
         )
         .child(
-            TuiText::new(format!("({label})"))
-                .with_style(style)
-                .finish(),
+            TuiText::new(warp_i18n::localize_format!(
+                "({label})",
+                label = warp_i18n::localize_ui(label)
+            ))
+            .with_style(style)
+            .finish(),
         )
         .finish()
 }
@@ -970,7 +973,7 @@ fn render_project_context_body(
         // nothing may be known yet; this also covers projects with no
         // context at all.
         return column.child(
-            TuiText::new("Discovering project context…")
+            TuiText::new(warp_i18n::localize_ui("Discovering project context…").into_owned())
                 .with_style(builder.dim_text_style())
                 .truncate()
                 .finish(),

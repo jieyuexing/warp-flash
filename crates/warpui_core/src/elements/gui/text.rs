@@ -270,7 +270,7 @@ impl Text {
     #[cfg_attr(debug_assertions, track_caller)]
     pub fn new(text: impl Into<Cow<'static, str>>, family_id: FamilyId, font_size: f32) -> Self {
         Self {
-            text: text.into(),
+            text: warp_i18n::localize_static(text),
             soft_wrap: true,
             family_id,
             font_properties: Properties::default(),

@@ -17,8 +17,8 @@ use super::{
     VisualMarkdownLightboxCollection, collect_visual_markdown_lightbox_collection,
     compute_visual_section_width, image_tooltip_handles_for_group, inline_image_source_label,
     is_supported_blocklist_image_source, lightbox_trigger_for_section, query_prefix_highlight_len,
-    render_scrollable_collapsible_content, status_message_naming_model, text_sections_with_indices,
-    warping_footer_height,
+    render_scrollable_collapsible_content, status_message_naming_model_for_locale,
+    text_sections_with_indices, warping_footer_height,
 };
 #[cfg(feature = "local_fs")]
 use super::{ResolvedBlocklistImageSources, blocklist_image_asset_source};
@@ -374,15 +374,27 @@ fn is_supported_blocklist_image_source_covers_common_local_formats() {
 #[test]
 fn names_the_model_before_a_status_message_ellipsis() {
     assert_eq!(
-        status_message_naming_model(LOAD_OUTPUT_MESSAGE_FOR_GENERATING_PLAN, "Claude Sonnet 4.5"),
+        status_message_naming_model_for_locale(
+            LOAD_OUTPUT_MESSAGE_FOR_GENERATING_PLAN,
+            "Claude Sonnet 4.5",
+            warp_i18n::Locale::EnUs,
+        ),
         "Generating plan with Claude Sonnet 4.5..."
     );
     assert_eq!(
-        status_message_naming_model(LOAD_OUTPUT_MESSAGE, "Claude Sonnet 4.5"),
+        status_message_naming_model_for_locale(
+            LOAD_OUTPUT_MESSAGE,
+            "Claude Sonnet 4.5",
+            warp_i18n::Locale::EnUs,
+        ),
         "Warping with Claude Sonnet 4.5..."
     );
     assert_eq!(
-        status_message_naming_model(LOAD_OUTPUT_MESSAGE_FOR_CREATING_DIFF, "GPT-5.2"),
+        status_message_naming_model_for_locale(
+            LOAD_OUTPUT_MESSAGE_FOR_CREATING_DIFF,
+            "GPT-5.2",
+            warp_i18n::Locale::EnUs,
+        ),
         "Creating diff with GPT-5.2..."
     );
 }
@@ -391,7 +403,23 @@ fn names_the_model_before_a_status_message_ellipsis() {
 #[test]
 fn names_the_model_after_a_status_message_without_an_ellipsis() {
     assert_eq!(
-        status_message_naming_model("Generating plan", "Claude Sonnet 4.5"),
+        status_message_naming_model_for_locale(
+            "Generating plan",
+            "Claude Sonnet 4.5",
+            warp_i18n::Locale::EnUs,
+        ),
         "Generating plan with Claude Sonnet 4.5"
+    );
+}
+
+#[test]
+fn localizes_a_named_status_message_in_chinese() {
+    assert_eq!(
+        status_message_naming_model_for_locale(
+            LOAD_OUTPUT_MESSAGE_FOR_GENERATING_PLAN,
+            "Claude Sonnet 4.5",
+            warp_i18n::Locale::ZhCn,
+        ),
+        "正在生成计划（使用 Claude Sonnet 4.5）..."
     );
 }

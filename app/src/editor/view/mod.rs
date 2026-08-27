@@ -3600,7 +3600,8 @@ impl EditorView {
         text: impl Into<String>,
         ctx: &mut ViewContext<Self>,
     ) {
-        Arc::make_mut(&mut self.placeholder_texts).insert(prefix.into(), text.into());
+        let text = warp_i18n::localize_ui(text.into()).into_owned();
+        Arc::make_mut(&mut self.placeholder_texts).insert(prefix.into(), text);
         ctx.notify();
     }
 

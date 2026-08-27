@@ -164,7 +164,7 @@ unsafe extern "C" {
 
 struct StandardMenuItemProperties {
     /// The menu item title.
-    title: &'static NSString,
+    title: &'static str,
     /// The selector to invoke.
     action: Sel,
     /// The key equivalent string, or empty for none.
@@ -194,7 +194,7 @@ fn resolve_standard_action(action: StandardAction) -> StandardMenuItemProperties
     let none = NSEventModifierFlags::empty();
 
     fn make(
-        title: &'static NSString,
+        title: &'static str,
         action: Sel,
         modifiers: NSEventModifierFlags,
         shortcut: &'static NSString,
@@ -208,51 +208,38 @@ fn resolve_standard_action(action: StandardAction) -> StandardMenuItemProperties
     }
 
     match action {
-        StandardAction::Close => make(
-            ns_string!("Close Window"),
-            sel!(performClose:),
-            none,
-            ns_string!(""),
-        ),
-        StandardAction::Quit => make(
-            ns_string!("Quit Warp"),
-            sel!(terminate:),
-            cmd,
-            ns_string!("q"),
-        ),
-        StandardAction::Hide => make(ns_string!("Hide Warp"), sel!(hide:), cmd, ns_string!("h")),
+        StandardAction::Close => make("Close Window", sel!(performClose:), none, ns_string!("")),
+        StandardAction::Quit => make("Quit Warp", sel!(terminate:), cmd, ns_string!("q")),
+        StandardAction::Hide => make("Hide Warp", sel!(hide:), cmd, ns_string!("h")),
         StandardAction::HideOtherApps => make(
-            ns_string!("Hide Others"),
+            "Hide Others",
             sel!(hideOtherApplications:),
             cmd | option,
             ns_string!("h"),
         ),
         StandardAction::ShowAllApps => make(
-            ns_string!("Show All"),
+            "Show All",
             sel!(unhideAllApplications:),
             none,
             ns_string!(""),
         ),
-        StandardAction::Minimize => make(
-            ns_string!("Minimize"),
-            sel!(performMiniaturize:),
-            cmd,
-            ns_string!("m"),
-        ),
-        StandardAction::Zoom => make(ns_string!("Zoom"), sel!(performZoom:), none, ns_string!("")),
+        StandardAction::Minimize => {
+            make("Minimize", sel!(performMiniaturize:), cmd, ns_string!("m"))
+        }
+        StandardAction::Zoom => make("Zoom", sel!(performZoom:), none, ns_string!("")),
         StandardAction::BringAllToFront => make(
-            ns_string!("Bring All to Front"),
+            "Bring All to Front",
             sel!(arrangeInFront:),
             none,
             ns_string!(""),
         ),
         StandardAction::ToggleFullScreen => make(
-            ns_string!("ToggleFullScreen"),
+            "ToggleFullScreen",
             sel!(toggleFullScreen:),
             cmd | ctrl,
             ns_string!("f"),
         ),
-        StandardAction::Paste => make(ns_string!("Paste"), sel!(paste:), none, ns_string!("")),
+        StandardAction::Paste => make("Paste", sel!(paste:), none, ns_string!("")),
     }
 }
 
@@ -294,7 +281,8 @@ unsafe fn apply_changes(changes: MenuItemPropertyChanges, item: id) {
     autoreleasepool(|_| unsafe {
         let menu_item = &*item.cast::<NSMenuItem>();
         if let Some(name) = changes.name {
-            menu_item.setTitle(&NSString::from_str(&name));
+            let name = warp_i18n::localize_ui(name);
+            menu_item.setTitle(&NSString::from_str(name.as_ref()));
         }
         if let Some(keystroke) = changes.keystroke {
             let (key_equivalent, modifiers) = resolve_key_equivalent(keystroke.as_ref());
@@ -354,9 +342,11 @@ unsafe fn make_menu_item(menu_item: MenuItem) -> id {
             MenuItem::Standard(standard_action) => {
                 let mtm = MainThreadMarker::new_unchecked();
                 let properties = resolve_standard_action(standard_action);
+                let title = warp_i18n::localize_ui(properties.title);
+                let title = NSString::from_str(title.as_ref());
                 let nsmenu_item = NSMenuItem::initWithTitle_action_keyEquivalent(
                     mtm.alloc(),
-                    properties.title,
+                    &title,
                     Some(properties.action),
                     properties.shortcut,
                 );
@@ -377,10 +367,13 @@ unsafe fn make_menu_item(menu_item: MenuItem) -> id {
 unsafe fn make_top_level_menu_item(menu: Menu) -> id {
     unsafe {
         let mtm = MainThreadMarker::new_unchecked();
-        let nsmenu = make_delegated_menu(Retained::as_ptr(&NSString::from_str(&menu.title)) as id);
+        let is_window_menu = menu.is_window_menu();
+        let title = warp_i18n::localize_ui(menu.title);
+        let title = NSString::from_str(title.as_ref());
+        let nsmenu = make_delegated_menu(Retained::as_ptr(&title) as id);
         let nsmenu = &*nsmenu.cast::<NSMenu>();
 
-        if menu.is_window_menu() {
+        if is_window_menu {
             // `setWindowsMenu` gives us all the default window menu items like
             // 'Enter Full Screen' and 'Tile Window to Left of Screen'.
             NSApplication::sharedApplication(mtm).setWindowsMenu(Some(nsmenu));

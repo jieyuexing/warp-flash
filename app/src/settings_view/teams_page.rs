@@ -2905,13 +2905,15 @@ impl TeamsWidget {
                 )
             } else {
                 let mut fragments = vec![FormattedTextFragment::plain_text(
-                    INVITE_LINK_UNAVAILABLE_INSTRUCTIONS,
+                    warp_i18n::localize_ui(INVITE_LINK_UNAVAILABLE_INSTRUCTIONS).into_owned(),
                 )];
                 if permissions.is_workspace_admin {
                     fragments.extend([
-                        FormattedTextFragment::plain_text(" Update team visibility in the "),
+                        FormattedTextFragment::plain_text(
+                            warp_i18n::localize_ui(" Update team visibility in the ").into_owned(),
+                        ),
                         FormattedTextFragment::hyperlink(
-                            "workspace admin panel",
+                            warp_i18n::localize_ui("workspace admin panel").into_owned(),
                             AdminActions::workspace_teams_admin_panel_link(),
                         ),
                         FormattedTextFragment::plain_text("."),

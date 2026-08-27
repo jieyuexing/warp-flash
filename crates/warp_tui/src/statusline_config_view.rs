@@ -253,11 +253,24 @@ impl TuiStatuslineConfigView {
         let builder = TuiUiBuilder::from_app(app);
         TuiText::from_spans([
             ("Enter ".to_owned(), builder.primary_text_style()),
-            ("to toggle  ".to_owned(), builder.muted_text_style()),
+            (
+                warp_i18n::localize_ui("to toggle  ")
+                    .into_owned()
+                    .to_owned(),
+                builder.muted_text_style(),
+            ),
             ("Esc ".to_owned(), builder.primary_text_style()),
-            ("to save and close  ".to_owned(), builder.muted_text_style()),
+            (
+                warp_i18n::localize_ui("to save and close  ")
+                    .into_owned()
+                    .to_owned(),
+                builder.muted_text_style(),
+            ),
             ("← → ".to_owned(), builder.primary_text_style()),
-            ("to reorder".to_owned(), builder.muted_text_style()),
+            (
+                warp_i18n::localize_ui("to reorder").into_owned().to_owned(),
+                builder.muted_text_style(),
+            ),
         ])
         .truncate()
         .finish()
@@ -308,7 +321,7 @@ impl TuiView for TuiStatuslineConfigView {
 
     fn render(&self, app: &AppContext) -> Box<dyn TuiElement> {
         let builder = TuiUiBuilder::from_app(app);
-        let title = TuiText::new("Configure statusline")
+        let title = TuiText::new(warp_i18n::localize_ui("Configure statusline").into_owned())
             .with_style(builder.primary_text_style().add_modifier(Modifier::BOLD))
             .finish();
         let body = TuiFlex::column()

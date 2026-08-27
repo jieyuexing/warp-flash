@@ -1861,10 +1861,10 @@ impl SharingDialog {
         let text = appearance
             .ui_builder()
             .wrappable_text(
-                format!(
-                    "Live session started at {} on {}",
-                    started_at.format("%l:%M%P"),
-                    started_at.format("%m/%d"),
+                warp_i18n::localize_format!(
+                    "Live session started at {time} on {date}",
+                    time = started_at.format("%l:%M%P"),
+                    date = started_at.format("%m/%d")
                 ),
                 true,
             )
@@ -1896,14 +1896,20 @@ impl SharingDialog {
             return None;
         }
 
-        const PREFIX: &str = "You must have full access to manage permissions. You have ";
-        const SUFFIX: &str = " access.";
-        let access_level_start = PREFIX.chars().count();
-        let access_level_end = access_level_start + access_level.name().chars().count();
+        let access_level_name = warp_i18n::localize_ui(access_level.name()).into_owned();
+        let localized_text = warp_i18n::localize_format!(
+            "You must have full access to manage permissions. You have {access_level} access.",
+            access_level = access_level_name
+        );
+        let access_level_start = localized_text
+            .find(&access_level_name)
+            .map(|byte_offset| localized_text[..byte_offset].chars().count())
+            .unwrap_or_default();
+        let access_level_end = access_level_start + access_level_name.chars().count();
 
         let text = appearance
             .ui_builder()
-            .wrappable_text(format!("{PREFIX}{}{SUFFIX}", access_level.name()), true)
+            .wrappable_text(localized_text, true)
             .with_style(UiComponentStyles {
                 font_color: Some(style::label_text(appearance)),
                 ..Default::default()

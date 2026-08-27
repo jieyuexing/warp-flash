@@ -101,7 +101,7 @@ fn render_first_credit_gate(
     let click_url = upgrade_url.clone();
     let action = TuiHoverable::new(
         out_of_credits_hover_state.clone(),
-        TuiText::new(FIRST_CREDIT_GATE_ACTION_LABEL)
+        TuiText::new(warp_i18n::localize_ui(FIRST_CREDIT_GATE_ACTION_LABEL).into_owned())
             .with_style(primary_style.add_modifier(Modifier::UNDERLINED))
             .finish(),
     )
@@ -109,7 +109,7 @@ fn render_first_credit_gate(
     .finish();
     TuiFlex::column()
         .child(
-            TuiText::new(FIRST_CREDIT_GATE_TITLE)
+            TuiText::new(warp_i18n::localize_ui(FIRST_CREDIT_GATE_TITLE).into_owned())
                 .with_style(builder.attention_glyph_style())
                 .finish(),
         )
@@ -118,9 +118,11 @@ fn render_first_credit_gate(
                 .child(action)
                 .child(TuiText::new(" ").with_style(primary_style).finish())
                 .child(
-                    TuiText::new(FIRST_CREDIT_GATE_ACTION_HINT)
-                        .with_style(builder.accent_text_style())
-                        .finish(),
+                    TuiText::new(
+                        warp_i18n::localize_ui(FIRST_CREDIT_GATE_ACTION_HINT).into_owned(),
+                    )
+                    .with_style(builder.accent_text_style())
+                    .finish(),
                 )
                 .finish(),
         )
@@ -247,12 +249,18 @@ fn render_failure_section(
         | FailedOutputPresentation::GeminiEnterpriseCredentialsExpiredOrInvalid {
             fallback_message: message,
         } => TuiText::from_spans([
-            (FAILURE_WARNING_PREFIX.to_owned(), error_style),
+            (
+                warp_i18n::localize_ui(FAILURE_WARNING_PREFIX).into_owned(),
+                error_style,
+            ),
             (message.clone(), body_style),
         ])
         .finish(),
         FailedOutputPresentation::InvalidApiKey { title, detail } => TuiText::from_spans([
-            (FAILURE_WARNING_PREFIX.to_owned(), error_style),
+            (
+                warp_i18n::localize_ui(FAILURE_WARNING_PREFIX).into_owned(),
+                error_style,
+            ),
             (
                 (*title).to_owned(),
                 error_style.add_modifier(Modifier::BOLD),
@@ -268,7 +276,7 @@ fn render_failure_section(
             let click_url = upgrade_url.clone();
             let action = TuiHoverable::new(
                 out_of_credits_hover_state.clone(),
-                TuiText::new(OUT_OF_CREDITS_ACTION_LABEL)
+                TuiText::new(warp_i18n::localize_ui(OUT_OF_CREDITS_ACTION_LABEL).into_owned())
                     .with_style(link_style)
                     .finish(),
             )
@@ -279,7 +287,7 @@ fn render_failure_section(
                 .child(action)
                 .child(TuiText::new(" ").with_style(primary_style).finish())
                 .child(
-                    TuiText::new(OUT_OF_CREDITS_ACTION_HINT)
+                    TuiText::new(warp_i18n::localize_ui(OUT_OF_CREDITS_ACTION_HINT).into_owned())
                         .with_style(builder.accent_text_style())
                         .finish(),
                 )
@@ -287,14 +295,20 @@ fn render_failure_section(
             TuiFlex::column()
                 .child(
                     TuiText::from_spans([
-                        (FAILURE_WARNING_PREFIX.to_owned(), error_style),
-                        (OUT_OF_CREDITS_TITLE.to_owned(), primary_style),
+                        (
+                            warp_i18n::localize_ui(FAILURE_WARNING_PREFIX).into_owned(),
+                            error_style,
+                        ),
+                        (
+                            warp_i18n::localize_ui(OUT_OF_CREDITS_TITLE).into_owned(),
+                            primary_style,
+                        ),
                     ])
                     .finish(),
                 )
                 .child(
                     TuiContainer::new(
-                        TuiText::new(OUT_OF_CREDITS_DETAIL)
+                        TuiText::new(warp_i18n::localize_ui(OUT_OF_CREDITS_DETAIL).into_owned())
                             .with_style(primary_style)
                             .finish(),
                     )
@@ -320,7 +334,7 @@ fn render_failure_section(
 }
 
 fn render_usage_notice(app: &AppContext) -> Box<dyn TuiElement> {
-    TuiText::new(FAILED_OUTPUT_USAGE_NOTICE_TEXT)
+    TuiText::new(warp_i18n::localize_ui(FAILED_OUTPUT_USAGE_NOTICE_TEXT).into_owned())
         .with_style(TuiUiBuilder::from_app(app).muted_text_style())
         .finish()
 }
@@ -1716,7 +1730,7 @@ impl TuiAIBlock {
                 .get(key)
                 .map(|view| TuiChildView::new(view).finish())
                 .unwrap_or_else(|| {
-                    TuiText::new("[Code block unavailable]")
+                    TuiText::new(warp_i18n::localize_ui("[Code block unavailable]").into_owned())
                         .with_style(palette.fallback)
                         .finish()
                 }),

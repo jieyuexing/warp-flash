@@ -770,8 +770,13 @@ impl ReferralsWidget {
                     FormattedTextElement::new(
                         FormattedText::new([FormattedTextLine::Line(vec![
                             FormattedTextFragment::plain_text("*"),
-                            FormattedTextFragment::hyperlink(TERMS_LINK_TEXT, TERMS_URL),
-                            FormattedTextFragment::plain_text(TERMS_CONTACT_TEXT),
+                            FormattedTextFragment::hyperlink(
+                                warp_i18n::localize_ui(TERMS_LINK_TEXT).into_owned(),
+                                TERMS_URL,
+                            ),
+                            FormattedTextFragment::plain_text(
+                                warp_i18n::localize_ui(TERMS_CONTACT_TEXT).into_owned(),
+                            ),
                         ])]),
                         12.,
                         appearance.ui_font_family(),

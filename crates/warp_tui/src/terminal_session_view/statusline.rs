@@ -261,7 +261,12 @@ pub(super) fn render_status_footer_row(
                             format!("{} {}% ", usage.bar, usage.percentage_remaining),
                             value_style,
                         ),
-                        ("context remaining".to_owned(), muted),
+                        (
+                            warp_i18n::localize_ui("context remaining")
+                                .into_owned()
+                                .to_owned(),
+                            muted,
+                        ),
                     ])
                     .truncate()
                     .finish(),
@@ -744,7 +749,7 @@ impl TuiTerminalSessionView {
             ),
             TuiVoiceInputState::Listening => ("◉ Voice", builder.success_glyph_style()),
             TuiVoiceInputState::Transcribing => {
-                return TuiText::new("… Transcribing")
+                return TuiText::new(warp_i18n::localize_ui("… Transcribing").into_owned())
                     .with_style(builder.voice_input_status_style())
                     .truncate()
                     .finish();

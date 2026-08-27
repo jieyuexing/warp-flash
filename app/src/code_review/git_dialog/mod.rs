@@ -279,11 +279,13 @@ fn render_file_changes_box(
     let total_additions: usize = file_changes.iter().map(|f| f.additions).sum();
     let total_deletions: usize = file_changes.iter().map(|f| f.deletions).sum();
 
+    let files_label = if total_files == 1 {
+        warp_i18n::localize_format!("{count} file", count = total_files)
+    } else {
+        warp_i18n::localize_format!("{count} files", count = total_files)
+    };
     let files_text = Text::new(
-        format!(
-            "{total_files} {}",
-            if total_files == 1 { "file" } else { "files" }
-        ),
+        files_label,
         appearance.ui_font_family(),
         appearance.ui_font_size(),
     )

@@ -67,11 +67,15 @@ impl crate::Component for Button {
                     let font_properties = size.font_properties();
 
                     row.add_child(
-                        Text::new_inline(label, appearance.ui_font_family(), font_size)
-                            .with_color(text_color)
-                            .with_style(font_properties)
-                            .with_selectable(false)
-                            .finish(),
+                        Text::new_inline(
+                            warp_i18n::localize_ui(label),
+                            appearance.ui_font_family(),
+                            font_size,
+                        )
+                        .with_color(text_color)
+                        .with_style(font_properties)
+                        .with_selectable(false)
+                        .finish(),
                     );
                 }
                 Content::Icon(_) => {}

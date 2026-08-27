@@ -200,15 +200,16 @@ mod package_manager {
                 FormattedTextLine::Heading(FormattedTextHeader {
                     // Make this an <h3>
                     heading_size: 3,
-                    text: vec![FormattedTextFragment::bold(format!(
-                        "Run {package_manager_name} to update"
+                    text: vec![FormattedTextFragment::bold(warp_i18n::localize_format!(
+                        "Run {package_manager_name} to update",
+                        package_manager_name = package_manager_name
                     ))],
                 }),
                 FormattedTextLine::Line(vec![
-                    FormattedTextFragment::plain_text("If you installed Warp using "),
+                    FormattedTextFragment::plain_text(warp_i18n::localize_ui("If you installed Warp using ").into_owned()),
                     FormattedTextFragment::bold(package_manager_name),
                     FormattedTextFragment::plain_text(
-                        " or a compatible tool, the pre-filled command will update Warp for you.",
+                        warp_i18n::localize_ui(" or a compatible tool, the pre-filled command will update Warp for you.").into_owned(),
                     ),
                 ]),
             ];
@@ -216,7 +217,7 @@ mod package_manager {
             if self.package_manager.needs_repository_configuration() {
                 lines.push(FormattedTextLine::Line(vec![
                     FormattedTextFragment::plain_text(
-                        "\nThe command below includes a one-time configuration of the Warp package repository and PGP signing key.",
+                        warp_i18n::localize_ui("\nThe command below includes a one-time configuration of the Warp package repository and PGP signing key.").into_owned(),
                     ),
                 ]));
             }
@@ -227,21 +228,26 @@ mod package_manager {
             {
                 lines.push(FormattedTextLine::Line(vec![
                     FormattedTextFragment::plain_text(
-                        "\nThe ",
+                        warp_i18n::localize_ui("\nThe ").into_owned(),
                     ),
                     FormattedTextFragment::inline_code("warp_handle_dist_upgrade"),
                     FormattedTextFragment::plain_text(
-                        " function ensures the Warp package repository is enabled, as we've detected you recently upgraded your distribution.",
+                        warp_i18n::localize_ui(" function ensures the Warp package repository is enabled, as we've detected you recently upgraded your distribution.").into_owned(),
                     ),
                 ]));
             }
 
             lines.push(FormattedTextLine::Line(vec![
-                FormattedTextFragment::plain_text("\nReview the command below, then "),
-                FormattedTextFragment::bold("press enter"),
-                FormattedTextFragment::plain_text(" to install the update and re-launch Warp.  "),
+                FormattedTextFragment::plain_text(
+                    warp_i18n::localize_ui("\nReview the command below, then ").into_owned(),
+                ),
+                FormattedTextFragment::bold(warp_i18n::localize_ui("press enter").into_owned()),
+                FormattedTextFragment::plain_text(
+                    warp_i18n::localize_ui(" to install the update and re-launch Warp.  ")
+                        .into_owned(),
+                ),
                 FormattedTextFragment::hyperlink(
-                    "Please report any issues",
+                    warp_i18n::localize_ui("Please report any issues").into_owned(),
                     "https://github.com/warpdotdev/Warp/issues/new/choose",
                 ),
             ]));

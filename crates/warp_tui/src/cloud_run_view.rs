@@ -47,7 +47,7 @@ struct CloudRunDisplayState {
     status: ConversationStatus,
     status_label: String,
     detail: Option<String>,
-    link_instruction: Option<&'static str>,
+    link_instruction: Option<String>,
     link_url: Option<String>,
 }
 
@@ -232,7 +232,7 @@ impl TuiCloudRunView {
         match state.startup() {
             TuiCloudRunStartup::Dispatching => CloudRunDisplayState {
                 status: ConversationStatus::InProgress,
-                status_label: "Starting cloud run…".to_string(),
+                status_label: warp_i18n::localize_ui("Starting cloud run…").into_owned(),
                 detail: None,
                 link_instruction: None,
                 link_url: None,
@@ -246,9 +246,12 @@ impl TuiCloudRunView {
                     status: ConversationStatus::Blocked {
                         blocked_action: presentation.detail.clone(),
                     },
-                    status_label: presentation.title.to_string(),
-                    detail: Some(presentation.detail),
-                    link_instruction: Some("to authenticate or click the link below"),
+                    status_label: warp_i18n::localize_ui(presentation.title).into_owned(),
+                    detail: Some(warp_i18n::localize_ui(presentation.detail).into_owned()),
+                    link_instruction: Some(
+                        warp_i18n::localize_ui("to authenticate or click the link below")
+                            .into_owned(),
+                    ),
                     link_url: presentation.primary_url,
                 }
             }
@@ -256,7 +259,7 @@ impl TuiCloudRunView {
                 let presentation = CloudAgentStartupPresentation::failure(failure.message());
                 CloudRunDisplayState {
                     status: ConversationStatus::Error,
-                    status_label: presentation.title.to_string(),
+                    status_label: warp_i18n::localize_ui(presentation.title).into_owned(),
                     detail: Some(presentation.detail),
                     link_instruction: None,
                     link_url: None,
@@ -282,9 +285,11 @@ impl TuiCloudRunView {
                 };
                 CloudRunDisplayState {
                     status: status.clone(),
-                    status_label: status_label.to_string(),
+                    status_label: warp_i18n::localize_ui(status_label).into_owned(),
                     detail: None,
-                    link_instruction: Some("to view or click the link below"),
+                    link_instruction: Some(
+                        warp_i18n::localize_ui("to view or click the link below").into_owned(),
+                    ),
                     link_url: state.run_url().map(str::to_string),
                 }
             }
@@ -557,12 +562,21 @@ impl TuiView for TuiCloudRunView {
             content = content
                 .child(
                     TuiText::from_spans([
-                        ("Press ".to_string(), builder.muted_text_style()),
                         (
-                            "enter".to_string(),
+                            warp_i18n::localize_ui("Press ").into_owned().to_string(),
+                            builder.muted_text_style(),
+                        ),
+                        (
+                            warp_i18n::localize_ui("enter").into_owned().to_string(),
                             builder.primary_text_style().add_modifier(Modifier::BOLD),
                         ),
-                        (format!(" {instruction}"), builder.muted_text_style()),
+                        (
+                            warp_i18n::localize_format!(
+                                " {instruction}",
+                                instruction = instruction
+                            ),
+                            builder.muted_text_style(),
+                        ),
                     ])
                     .truncate()
                     .finish(),
@@ -599,12 +613,12 @@ impl TuiView for TuiCloudRunView {
                     .unwrap_or_default();
                 render_cloud_orchestration_tab_footer(&builder, nested_descendants)
             } else if self.child_kill_armed && self.exit_confirmation.is_armed() {
-                TuiText::new(CTRL_C_KILL_CHILD_HINT)
+                TuiText::new(warp_i18n::localize_ui(CTRL_C_KILL_CHILD_HINT).into_owned())
                     .with_style(builder.muted_text_style())
                     .truncate()
                     .finish()
             } else {
-                TuiText::new("Shift + ↑ sub-agents")
+                TuiText::new(warp_i18n::localize_ui("Shift + ↑ sub-agents").into_owned())
                     .with_style(builder.muted_text_style())
                     .truncate()
                     .finish()
@@ -621,7 +635,7 @@ impl TuiView for TuiCloudRunView {
             // Even when this run has no sub-agents, show the kill-child hint
             // so the user can see the confirmation before the second ctrl-c.
             let hint = TuiContainer::new(
-                TuiText::new(CTRL_C_KILL_CHILD_HINT)
+                TuiText::new(warp_i18n::localize_ui(CTRL_C_KILL_CHILD_HINT).into_owned())
                     .with_style(builder.muted_text_style())
                     .truncate()
                     .finish(),

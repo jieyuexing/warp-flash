@@ -2083,7 +2083,10 @@ impl SettingsWidget for UsageWidget {
                 .with_child(
                     appearance
                         .ui_builder()
-                        .paragraph(format!("Resets {formatted_next_refresh_time}"))
+                        .paragraph(warp_i18n::localize_format!(
+                            "Resets {time}",
+                            time = formatted_next_refresh_time
+                        ))
                         .with_style(UiComponentStyles {
                             font_color: Some(blended_colors::text_sub(
                                 appearance.theme(),
@@ -2124,28 +2127,48 @@ impl SettingsWidget for UsageWidget {
                 let upgrade_url = UserWorkspaces::upgrade_link_for_team(team.uid);
                 if has_admin_permissions {
                     vec![
-                        FormattedTextFragment::hyperlink("Upgrade", upgrade_url),
-                        FormattedTextFragment::plain_text(" to get more AI usage."),
+                        FormattedTextFragment::hyperlink(
+                            warp_i18n::localize_ui("Upgrade").into_owned(),
+                            upgrade_url,
+                        ),
+                        FormattedTextFragment::plain_text(
+                            warp_i18n::localize_ui(" to get more AI usage.").into_owned(),
+                        ),
                     ]
                 } else {
                     // The /upgrade page says to contact their administrator.
                     vec![
-                        FormattedTextFragment::hyperlink("Compare plans", upgrade_url),
-                        FormattedTextFragment::plain_text(" for more AI usage."),
+                        FormattedTextFragment::hyperlink(
+                            warp_i18n::localize_ui("Compare plans").into_owned(),
+                            upgrade_url,
+                        ),
+                        FormattedTextFragment::plain_text(
+                            warp_i18n::localize_ui(" for more AI usage.").into_owned(),
+                        ),
                     ]
                 }
             } else {
                 vec![
-                    FormattedTextFragment::hyperlink("Contact support", "mailto:support@warp.dev"),
-                    FormattedTextFragment::plain_text(" for more AI usage."),
+                    FormattedTextFragment::hyperlink(
+                        warp_i18n::localize_ui("Contact support").into_owned(),
+                        "mailto:support@warp.dev",
+                    ),
+                    FormattedTextFragment::plain_text(
+                        warp_i18n::localize_ui(" for more AI usage.").into_owned(),
+                    ),
                 ]
             }
         } else {
             let user_id = auth_state.user_id().unwrap_or_default();
             let upgrade_url = UserWorkspaces::upgrade_link(user_id);
             vec![
-                FormattedTextFragment::hyperlink("Upgrade", upgrade_url),
-                FormattedTextFragment::plain_text(" to get more AI usage."),
+                FormattedTextFragment::hyperlink(
+                    warp_i18n::localize_ui("Upgrade").into_owned(),
+                    upgrade_url,
+                ),
+                FormattedTextFragment::plain_text(
+                    warp_i18n::localize_ui(" to get more AI usage.").into_owned(),
+                ),
             ]
         };
 
@@ -2921,10 +2944,10 @@ impl AgentsWidget {
 
         let codebase_context_description = vec![
             FormattedTextFragment::plain_text(
-                "Allow the Warp Agent to generate an outline of your codebase that can be used for context. No code is ever stored on our servers. ",
+                warp_i18n::localize_ui("Allow the Warp Agent to generate an outline of your codebase that can be used for context. No code is ever stored on our servers. ").into_owned(),
             ),
             FormattedTextFragment::hyperlink(
-                "Learn more",
+                warp_i18n::localize_ui("Learn more").into_owned(),
                 "https://docs.warp.dev/agents/capabilities/codebase-context",
             ),
         ];
@@ -2994,15 +3017,15 @@ impl AgentsWidget {
         let subtext = {
             let subtext_fragments = vec![
                 FormattedTextFragment::plain_text(
-                    "You haven't added any MCP servers yet. Once you do, you'll be able to control how much autonomy the Warp Agent has when interacting with them. ",
+                    warp_i18n::localize_ui("You haven't added any MCP servers yet. Once you do, you'll be able to control how much autonomy the Warp Agent has when interacting with them. ").into_owned(),
                 ),
                 FormattedTextFragment::hyperlink_action(
-                    "Add a server",
+                    warp_i18n::localize_ui("Add a server").into_owned(),
                     AgentProfilesPageAction::OpenMCPServerCollection,
                 ),
-                FormattedTextFragment::plain_text(" or "),
+                FormattedTextFragment::plain_text(warp_i18n::localize_ui(" or ").into_owned()),
                 FormattedTextFragment::hyperlink(
-                    "learn more about MCPs.",
+                    warp_i18n::localize_ui("learn more about MCPs.").into_owned(),
                     "https://docs.warp.dev/agents/capabilities/mcp",
                 ),
             ];

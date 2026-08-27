@@ -22,7 +22,7 @@ pub struct WrappableText {
 impl WrappableText {
     pub fn new(text: Cow<'static, str>, soft_wrap: bool, styles: UiComponentStyles) -> Self {
         WrappableText {
-            text,
+            text: warp_i18n::localize_ui(text),
             styles,
             wrap: soft_wrap,
             line_height_ratio: DEFAULT_UI_LINE_HEIGHT_RATIO,

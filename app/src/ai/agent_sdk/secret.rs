@@ -327,7 +327,7 @@ fn delete_secret(ctx: &mut AppContext, args: DeleteSecretArgs) -> Result<()> {
 
                 let should_delete = match Confirm::new(&format!("Delete {scope} secret '{name}'?"))
                     .with_default(false)
-                    .with_help_message("This action cannot be undone")
+                    .with_help_message(warp_i18n::localize_ref("This action cannot be undone"))
                     .prompt()
                 {
                     Ok(should_delete) => should_delete,
@@ -641,7 +641,9 @@ fn read_openai_api_key_secret_value(
                 None
             } else {
                 match inquire::Text::new("OpenAI base URL (optional, press Enter to skip):")
-                    .with_help_message("e.g. https://us.api.openai.com/v1 for a regional endpoint")
+                    .with_help_message(warp_i18n::localize_ref(
+                        "e.g. https://us.api.openai.com/v1 for a regional endpoint",
+                    ))
                     .prompt()
                 {
                     Ok(value) => {

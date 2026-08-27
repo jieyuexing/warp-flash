@@ -9469,6 +9469,7 @@ dependencies = [
  "uuid",
  "warp_core",
  "warp_errors",
+ "warp_i18n",
  "warp_logging",
  "warpui",
  "warpui_core",
@@ -14609,6 +14610,7 @@ dependencies = [
  "rust-embed 8.7.2",
  "rustls",
  "warp_core",
+ "warp_i18n",
  "warpui",
  "warpui_core",
 ]
@@ -15396,6 +15398,7 @@ dependencies = [
  "warp_errors",
  "warp_files",
  "warp_graphql",
+ "warp_i18n",
  "warp_isolation_platform",
  "warp_js",
  "warp_logging",
@@ -15665,6 +15668,7 @@ dependencies = [
  "vim",
  "warp_core",
  "warp_errors",
+ "warp_i18n",
  "warp_util",
  "warpui",
  "warpui_core",
@@ -15746,6 +15750,10 @@ dependencies = [
  "cynic",
  "cynic-codegen",
 ]
+
+[[package]]
+name = "warp_i18n"
+version = "0.1.0"
 
 [[package]]
 name = "warp_isolation_platform"
@@ -16117,6 +16125,7 @@ dependencies = [
  "warp_editor",
  "warp_errors",
  "warp_files",
+ "warp_i18n",
  "warp_logging",
  "warp_search_core",
  "warp_terminal",
@@ -16258,6 +16267,7 @@ dependencies = [
  "version-compare",
  "virtual-fs",
  "warp_errors",
+ "warp_i18n",
  "warpui",
  "warpui_core",
  "wasm-bindgen",
@@ -16351,6 +16361,7 @@ dependencies = [
  "unicode-segmentation",
  "vec1",
  "warp_errors",
+ "warp_i18n",
  "warp_util",
  "warpui_core",
  "wasm-bindgen-futures",

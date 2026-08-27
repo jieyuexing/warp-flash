@@ -913,7 +913,10 @@ impl FileNotebookView {
             .with_child(
                 appearance
                     .ui_builder()
-                    .paragraph(format!("Could not read {}", source.display_name()))
+                    .paragraph(warp_i18n::localize_format!(
+                        "Could not read {source}",
+                        source = source.display_name()
+                    ))
                     .with_style(self.state_style(appearance))
                     .build()
                     .finish(),
@@ -951,7 +954,10 @@ impl FileNotebookView {
         Align::new(
             appearance
                 .ui_builder()
-                .paragraph(format!("Loading {}...", source.display_name()))
+                .paragraph(warp_i18n::localize_format!(
+                    "Loading {source}...",
+                    source = source.display_name()
+                ))
                 .with_style(self.state_style(appearance))
                 .build()
                 .finish(),

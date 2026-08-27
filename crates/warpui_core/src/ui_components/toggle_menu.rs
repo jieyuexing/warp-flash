@@ -102,7 +102,7 @@ impl ToggleMenuRenderer {
             ..Default::default()
         };
 
-        Span::new(label, font_styles)
+        Span::new(warp_i18n::localize_ui(label), font_styles)
             .with_soft_wrap()
             .build()
             .finish()

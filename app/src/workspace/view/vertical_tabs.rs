@@ -4959,7 +4959,7 @@ fn render_summary_overflow_line(
     appearance: &Appearance,
 ) -> Box<dyn Element> {
     Text::new_inline(
-        format!("+ {hidden_count} more"),
+        warp_i18n::localize_format!("+ {count} more", count = hidden_count),
         appearance.ui_font_family(),
         10.,
     )

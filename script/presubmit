@@ -17,6 +17,9 @@ if [[ $EXIT_CODE -ne 0 ]]; then
 fi
 
 echo "Rust formatting succeeded..."
+echo "Checking Simplified Chinese localization coverage..."
+python3 script/i18n/audit_zh_cn.py --check
+echo "Simplified Chinese localization coverage succeeded..."
 echo "Checking for inline Rust test modules..."
 ./script/check_no_inline_test_modules
 echo "Inline Rust test module check succeeded..."

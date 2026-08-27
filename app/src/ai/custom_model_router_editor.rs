@@ -690,10 +690,10 @@ impl CustomRouterEditorView {
             );
             let rules_copy = FormattedText::new([
                 FormattedTextLine::Line(vec![FormattedTextFragment::plain_text(
-                    "Rules are custom prompts that describe when to use a specific model. Warp intelligently matches your tasks against these rules.",
+                    warp_i18n::localize_ui("Rules are custom prompts that describe when to use a specific model. Warp intelligently matches your tasks against these rules.").into_owned(),
                 )]),
                 FormattedTextLine::Line(vec![FormattedTextFragment::plain_text(
-                    "Rules are matched top to bottom — rules higher in the list take precedence over those below.",
+                    warp_i18n::localize_ui("Rules are matched top to bottom — rules higher in the list take precedence over those below.").into_owned(),
                 )]),
             ]);
             column.add_child(
@@ -751,15 +751,15 @@ impl CustomRouterEditorView {
         // above the segmented control.
         let routing_type_copy = FormattedText::new([
             FormattedTextLine::Line(vec![
-                FormattedTextFragment::bold("Complexity-based"),
+                FormattedTextFragment::bold(warp_i18n::localize_ui("Complexity-based").into_owned()),
                 FormattedTextFragment::plain_text(
-                    " routing chooses a model based on Warp's classification of the task's difficulty.",
+                    warp_i18n::localize_ui(" routing chooses a model based on Warp's classification of the task's difficulty.").into_owned(),
                 ),
             ]),
             FormattedTextLine::Line(vec![
-                FormattedTextFragment::bold("Rule-based"),
+                FormattedTextFragment::bold(warp_i18n::localize_ui("Rule-based").into_owned()),
                 FormattedTextFragment::plain_text(
-                    " routing chooses a model based on custom prompts.",
+                    warp_i18n::localize_ui(" routing chooses a model based on custom prompts.").into_owned(),
                 ),
             ]),
         ]);

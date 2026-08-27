@@ -547,7 +547,7 @@ impl LaunchConfigSaveModal {
             SaveState::Success => header
                 .with_child(
                     self.render_formatted_text_line(appearance, vec![
-                        FormattedTextFragment::plain_text("Saved successfully to "),
+                        FormattedTextFragment::plain_text(warp_i18n::localize_ui("Saved successfully to ").into_owned()),
                         FormattedTextFragment::inline_code(self.file_name.clone().unwrap_or_default()),
                         FormattedTextFragment::plain_text(".")
                     ])
@@ -584,7 +584,7 @@ impl LaunchConfigSaveModal {
                     )
                     .with_child(
                         self.render_formatted_text_line(appearance, vec![
-                            FormattedTextFragment::plain_text("\nThe YAML file is saved to "),
+                            FormattedTextFragment::plain_text(warp_i18n::localize_ui("\nThe YAML file is saved to ").into_owned()),
                             FormattedTextFragment::inline_code(home_relative_path(&launch_configs_dir())),
                             FormattedTextFragment::plain_text("."),
                         ])

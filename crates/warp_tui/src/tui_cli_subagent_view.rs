@@ -34,12 +34,12 @@ fn terminal_use_status_text(
     output_streaming: bool,
 ) -> String {
     if command_finished {
-        return "Command finished".to_owned();
+        return warp_i18n::localize_ui("Command finished").into_owned();
     }
     let (status, key_binding, action) = match control_state {
         LongRunningCommandControlState::Agent {
             is_blocked: true, ..
-        } => return "Agent needs your input".to_owned(),
+        } => return warp_i18n::localize_ui("Agent needs your input").into_owned(),
         LongRunningCommandControlState::Agent { .. } if output_streaming => (
             "Agent is monitoring command",
             TAKE_CONTROL_KEY_BINDING,
@@ -66,7 +66,12 @@ fn terminal_use_status_text(
             ),
         },
     };
-    format!("{status} · {key_binding} {action}")
+    warp_i18n::localize_format!(
+        "{status} · {key_binding} {action}",
+        status = warp_i18n::localize_ui(status),
+        key_binding = key_binding,
+        action = warp_i18n::localize_ui(action)
+    )
 }
 
 #[derive(Debug, PartialEq, Eq)]
@@ -202,9 +207,9 @@ fn remaining_for_fixed_delay(delay: Duration, elapsed: Duration) -> Option<Durat
 fn format_next_check_remaining(remaining: Duration) -> String {
     let seconds = remaining.as_secs();
     if seconds < 60 {
-        format!(" · Check in {seconds}s")
+        warp_i18n::localize_format!(" · Check in {seconds}s", seconds = seconds)
     } else {
-        format!(" · Check in {}m", seconds / 60)
+        warp_i18n::localize_format!(" · Check in {minutes}m", minutes = seconds / 60)
     }
 }
 
@@ -428,10 +433,13 @@ impl TuiCLISubagentView {
         };
         TuiHoverable::new(
             mouse_state.clone(),
-            TuiText::new(format!("[{label}]"))
-                .with_style(style)
-                .truncate()
-                .finish(),
+            TuiText::new(warp_i18n::localize_format!(
+                "[{label}]",
+                label = warp_i18n::localize_ui(label.to_owned())
+            ))
+            .with_style(style)
+            .truncate()
+            .finish(),
         )
         .on_click(move |event_ctx, _| {
             event_ctx.dispatch_typed_action(action.clone());
@@ -447,17 +455,24 @@ impl TuiCLISubagentView {
             .map(format_next_check_remaining)
             .unwrap_or_default();
         let mut content = TuiFlex::column().child(
-            TuiText::new(format!("{status}{countdown}"))
-                .with_style(builder.muted_text_style())
-                .truncate()
-                .finish(),
+            TuiText::new(warp_i18n::localize_format!(
+                "{status}{countdown}",
+                status = status,
+                countdown = countdown
+            ))
+            .with_style(builder.muted_text_style())
+            .truncate()
+            .finish(),
         );
         if let Some(instruction) = self.latest_instruction(target, app) {
             content.add_child(
-                TuiText::new(format!("Last instruction: {instruction}"))
-                    .with_style(builder.muted_text_style())
-                    .truncate()
-                    .finish(),
+                TuiText::new(warp_i18n::localize_format!(
+                    "Last instruction: {instruction}",
+                    instruction = instruction
+                ))
+                .with_style(builder.muted_text_style())
+                .truncate()
+                .finish(),
             );
         }
         if target.control_state.is_agent_blocked() {

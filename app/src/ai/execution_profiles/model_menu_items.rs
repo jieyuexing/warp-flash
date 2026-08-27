@@ -186,8 +186,10 @@ fn make_item_fields<A: Action + Clone>(
             .with_tooltip_position(MenuTooltipPosition::Above);
 
         if matches!(reason, DisableReason::RequiresUpgrade) {
-            item =
-                item.with_right_side_label("disabled", Properties::default().style(Style::Italic));
+            item = item.with_right_side_label(
+                warp_i18n::localize_ui("disabled").into_owned(),
+                Properties::default().style(Style::Italic),
+            );
         }
     }
 

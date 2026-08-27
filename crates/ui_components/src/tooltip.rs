@@ -49,7 +49,7 @@ impl Component for Tooltip {
             .with_cross_axis_alignment(CrossAxisAlignment::Center)
             .with_spacing(10.)
             .with_child(
-                Text::new(params.label, font_family, font_size)
+                Text::new(warp_i18n::localize_ui(params.label), font_family, font_size)
                     .soft_wrap(false)
                     .with_color(appearance.theme().background().into_solid())
                     .finish(),

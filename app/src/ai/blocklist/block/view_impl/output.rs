@@ -390,9 +390,12 @@ pub(super) fn render(props: Props, app: &AppContext) -> Box<dyn Element> {
                             && props.thinking_display_mode.should_render() =>
                         {
                             let header_text = if let Some(dur) = finished_duration {
-                                format!("Thought for {}", format_elapsed_seconds(*dur))
+                                warp_i18n::localize_format!(
+                                    "Thought for {duration}",
+                                    duration = format_elapsed_seconds(*dur)
+                                )
                             } else {
-                                "Thinking".to_string()
+                                warp_i18n::localize_ui("Thinking").into_owned()
                             };
                             if let Some(element) = render_collapsible_block(
                                 output_message,
@@ -1022,7 +1025,7 @@ pub(super) fn render(props: Props, app: &AppContext) -> Box<dyn Element> {
                                         .and_then(|c| c.title())
                                         .map(|q| truncate_from_end(&q, 40));
                                     Some((
-                                        "conversation",
+                                        warp_i18n::localize_ui("conversation").into_owned(),
                                         title.unwrap_or_else(|| target_id.clone()),
                                     ))
                                 })
@@ -1037,21 +1040,27 @@ pub(super) fn render(props: Props, app: &AppContext) -> Box<dyn Element> {
                                         })
                                         .map(|task| truncate_from_end(&task.title, 40));
                                     Some((
-                                        "agent run",
+                                        warp_i18n::localize_ui("agent run").into_owned(),
                                         title.unwrap_or_else(|| truncate_from_end(target_id, 40)),
                                     ))
                                 });
 
                             let done = is_finished || is_cancelled;
-                            let verb = if done { "Searched" } else { "Searching" };
+                            let verb =
+                                warp_i18n::localize_ui(if done { "Searched" } else { "Searching" });
 
                             let mut fragments: Vec<FormattedTextFragment> =
-                                vec![FormattedTextFragment::plain_text(format!("{verb} "))];
+                                vec![FormattedTextFragment::plain_text(
+                                    warp_i18n::localize_format!("{verb} ", verb = verb),
+                                )];
                             match &target_label {
                                 Some((target_kind, name)) => {
-                                    fragments.push(FormattedTextFragment::plain_text(format!(
-                                        "{target_kind} "
-                                    )));
+                                    fragments.push(FormattedTextFragment::plain_text(
+                                        warp_i18n::localize_format!(
+                                            "{target_kind} ",
+                                            target_kind = target_kind
+                                        ),
+                                    ));
                                     fragments.push(FormattedTextFragment::weighted(
                                         name.as_str(),
                                         Some(markdown_parser::weight::CustomWeight::Bold),
@@ -1059,7 +1068,7 @@ pub(super) fn render(props: Props, app: &AppContext) -> Box<dyn Element> {
                                 }
                                 None => {
                                     fragments.push(FormattedTextFragment::plain_text(
-                                        "this conversation",
+                                        warp_i18n::localize_ui("this conversation").into_owned(),
                                     ));
                                 }
                             };
@@ -2554,19 +2563,27 @@ fn create_formatted_text_for_grep(
             .expect("Queries slice should have an element");
         let mut fragments = if is_cancelled || is_queued {
             vec![
-                FormattedTextFragment::plain_text("Grep for "),
+                FormattedTextFragment::plain_text(warp_i18n::localize_ui("Grep for ").into_owned()),
                 FormattedTextFragment::inline_code(query),
             ]
         } else {
             vec![
-                FormattedTextFragment::plain_text("Grepping for "),
+                FormattedTextFragment::plain_text(
+                    warp_i18n::localize_ui("Grepping for ").into_owned(),
+                ),
                 FormattedTextFragment::inline_code(query),
             ]
         };
         fragments.push(if is_cancelled {
-            FormattedTextFragment::plain_text(format!(" in {display_path} cancelled"))
+            FormattedTextFragment::plain_text(warp_i18n::localize_format!(
+                " in {display_path} cancelled",
+                display_path = display_path
+            ))
         } else {
-            FormattedTextFragment::plain_text(format!(" in {display_path}"))
+            FormattedTextFragment::plain_text(warp_i18n::localize_format!(
+                " in {display_path}",
+                display_path = display_path
+            ))
         });
         FormattedText::new([FormattedTextLine::Line(fragments)])
     } else {
@@ -2574,18 +2591,21 @@ fn create_formatted_text_for_grep(
 
         if is_cancelled {
             lines.push(FormattedTextLine::Line(vec![
-                FormattedTextFragment::plain_text(format!(
-                    "Cancelled grep for the following patterns in {display_path}"
+                FormattedTextFragment::plain_text(warp_i18n::localize_format!(
+                    "Cancelled grep for the following patterns in {display_path}",
+                    display_path = display_path
                 )),
             ]));
         } else {
             lines.push(FormattedTextLine::Line(vec![if is_queued {
-                FormattedTextFragment::plain_text(format!(
-                    "Grep for the following patterns in {display_path}"
+                FormattedTextFragment::plain_text(warp_i18n::localize_format!(
+                    "Grep for the following patterns in {display_path}",
+                    display_path = display_path
                 ))
             } else {
-                FormattedTextFragment::plain_text(format!(
-                    "Grepping for the following patterns in {display_path}"
+                FormattedTextFragment::plain_text(warp_i18n::localize_format!(
+                    "Grepping for the following patterns in {display_path}",
+                    display_path = display_path
                 ))
             }]));
         }
@@ -2659,19 +2679,29 @@ fn create_formatted_text_for_file_glob(
 
         let mut fragments = if is_cancelled || is_queued {
             vec![
-                FormattedTextFragment::plain_text("Search for files that match "),
+                FormattedTextFragment::plain_text(
+                    warp_i18n::localize_ui("Search for files that match ").into_owned(),
+                ),
                 FormattedTextFragment::inline_code(pattern),
             ]
         } else {
             vec![
-                FormattedTextFragment::plain_text("Finding files that match "),
+                FormattedTextFragment::plain_text(
+                    warp_i18n::localize_ui("Finding files that match ").into_owned(),
+                ),
                 FormattedTextFragment::inline_code(pattern),
             ]
         };
         fragments.push(if is_cancelled {
-            FormattedTextFragment::plain_text(format!(" in {path} cancelled"))
+            FormattedTextFragment::plain_text(warp_i18n::localize_format!(
+                " in {path} cancelled",
+                path = path
+            ))
         } else {
-            FormattedTextFragment::plain_text(format!(" in {path}"))
+            FormattedTextFragment::plain_text(warp_i18n::localize_format!(
+                " in {path}",
+                path = path
+            ))
         });
         FormattedText::new([FormattedTextLine::Line(fragments)])
     } else {
@@ -2679,18 +2709,21 @@ fn create_formatted_text_for_file_glob(
 
         if is_cancelled {
             lines.push(FormattedTextLine::Line(vec![
-                FormattedTextFragment::plain_text(format!(
-                    "Cancelled search for files that match the following patterns in {path}"
+                FormattedTextFragment::plain_text(warp_i18n::localize_format!(
+                    "Cancelled search for files that match the following patterns in {path}",
+                    path = path
                 )),
             ]));
         } else {
             lines.push(FormattedTextLine::Line(vec![if is_queued {
-                FormattedTextFragment::plain_text(format!(
-                    "Find files that match the following patterns in {path}"
+                FormattedTextFragment::plain_text(warp_i18n::localize_format!(
+                    "Find files that match the following patterns in {path}",
+                    path = path
                 ))
             } else {
-                FormattedTextFragment::plain_text(format!(
-                    "Finding files that match the following patterns in {path}"
+                FormattedTextFragment::plain_text(warp_i18n::localize_format!(
+                    "Finding files that match the following patterns in {path}",
+                    path = path
                 ))
             }]));
         }
@@ -2819,7 +2852,7 @@ fn render_comment_addressed_header(comment: &ReviewComment, app: &AppContext) ->
         Shrinkable::new(
             1.,
             Text::new_inline(
-                format!("Comment addressed: \"{content}\""),
+                warp_i18n::localize_format!("Comment addressed: \"{content}\"", content = content),
                 appearance.ui_font_family(),
                 appearance.monospace_font_size(),
             )

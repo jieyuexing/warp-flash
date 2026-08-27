@@ -77,9 +77,9 @@ pub fn render_rich_history(entry: &HistoryEntry, ctx: &AppContext) -> Box<dyn El
         flex_column.add_child(
             Container::new(
                 ui_builder
-                    .paragraph(format!(
-                        "Finished in {}",
-                        human_readable_precise_duration((completed_ts).sub(start_ts))
+                    .paragraph(warp_i18n::localize_format!(
+                        "Finished in {duration}",
+                        duration = human_readable_precise_duration((completed_ts).sub(start_ts))
                     ))
                     .build()
                     .finish(),
@@ -93,9 +93,9 @@ pub fn render_rich_history(entry: &HistoryEntry, ctx: &AppContext) -> Box<dyn El
         flex_column.add_child(
             Container::new(
                 ui_builder
-                    .paragraph(format!(
-                        "Last ran {}",
-                        format_approx_duration_from_now(start_ts)
+                    .paragraph(warp_i18n::localize_format!(
+                        "Last ran {time}",
+                        time = format_approx_duration_from_now(start_ts)
                     ))
                     .build()
                     .finish(),
@@ -138,9 +138,9 @@ pub(crate) fn render_ai_query_rich_history(
         Container::new(
             appearance
                 .ui_builder()
-                .paragraph(format!(
-                    "Ran {}",
-                    format_approx_duration_from_now(entry.start_time)
+                .paragraph(warp_i18n::localize_format!(
+                    "Ran {time}",
+                    time = format_approx_duration_from_now(entry.start_time)
                 ))
                 .build()
                 .finish(),

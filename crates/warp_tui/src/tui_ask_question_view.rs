@@ -428,7 +428,10 @@ impl TuiAskQuestionView {
         let position = TuiText::from_spans([
             ("← ".to_owned(), builder.muted_text_style()),
             (format!("{index} "), builder.primary_text_style()),
-            (format!("of {total} "), builder.muted_text_style()),
+            (
+                warp_i18n::localize_format!("of {total} ", total = total),
+                builder.muted_text_style(),
+            ),
             ("→".to_owned(), builder.muted_text_style()),
         ])
         .finish();
@@ -437,7 +440,9 @@ impl TuiAskQuestionView {
                 TuiText::from_spans([
                     ("■ ".to_owned(), builder.attention_glyph_style()),
                     (
-                        "Agent questions".to_owned(),
+                        warp_i18n::localize_ui("Agent questions")
+                            .into_owned()
+                            .to_owned(),
                         builder.primary_text_style().add_modifier(Modifier::BOLD),
                     ),
                 ])
@@ -453,22 +458,48 @@ impl TuiAskQuestionView {
         let footer = if current.question.is_multiselect() {
             TuiText::from_spans([
                 ("Shift + Enter ".to_owned(), builder.primary_text_style()),
-                ("to advance ".to_owned(), builder.muted_text_style()),
+                (
+                    warp_i18n::localize_ui("to advance ")
+                        .into_owned()
+                        .to_owned(),
+                    builder.muted_text_style(),
+                ),
                 ("Enter or number ".to_owned(), builder.primary_text_style()),
-                ("to select ".to_owned(), builder.muted_text_style()),
+                (
+                    warp_i18n::localize_ui("to select ").into_owned().to_owned(),
+                    builder.muted_text_style(),
+                ),
                 ("Ctrl + C ".to_owned(), builder.primary_text_style()),
-                ("to cancel question".to_owned(), builder.muted_text_style()),
+                (
+                    warp_i18n::localize_ui("to cancel question")
+                        .into_owned()
+                        .to_owned(),
+                    builder.muted_text_style(),
+                ),
             ])
             .truncate()
             .finish()
         } else {
             TuiText::from_spans([
                 ("Enter or number ".to_owned(), builder.primary_text_style()),
-                ("to select ".to_owned(), builder.muted_text_style()),
+                (
+                    warp_i18n::localize_ui("to select ").into_owned().to_owned(),
+                    builder.muted_text_style(),
+                ),
                 ("Tab or ← → ".to_owned(), builder.primary_text_style()),
-                ("to navigate ".to_owned(), builder.muted_text_style()),
+                (
+                    warp_i18n::localize_ui("to navigate ")
+                        .into_owned()
+                        .to_owned(),
+                    builder.muted_text_style(),
+                ),
                 ("Ctrl + C ".to_owned(), builder.primary_text_style()),
-                ("to cancel question".to_owned(), builder.muted_text_style()),
+                (
+                    warp_i18n::localize_ui("to cancel question")
+                        .into_owned()
+                        .to_owned(),
+                    builder.muted_text_style(),
+                ),
             ])
             .truncate()
             .finish()
@@ -497,7 +528,9 @@ impl TuiAskQuestionView {
         TuiText::from_spans([
             ("■ ".to_owned(), builder.muted_text_style()),
             (
-                "Questions unavailable".to_owned(),
+                warp_i18n::localize_ui("Questions unavailable")
+                    .into_owned()
+                    .to_owned(),
                 builder.muted_text_style(),
             ),
         ])
@@ -554,14 +587,20 @@ impl TuiAskQuestionView {
                 TuiContainer::new(
                     TuiFlex::column()
                         .child(
-                            TuiText::new(format!("Q: {}", question.question))
-                                .with_style(builder.primary_text_style())
-                                .finish(),
+                            TuiText::new(warp_i18n::localize_format!(
+                                "Q: {question}",
+                                question = question.question
+                            ))
+                            .with_style(builder.primary_text_style())
+                            .finish(),
                         )
                         .child(
-                            TuiText::new(format!("A: {answer}"))
-                                .with_style(builder.muted_text_style())
-                                .finish(),
+                            TuiText::new(warp_i18n::localize_format!(
+                                "A: {answer}",
+                                answer = answer
+                            ))
+                            .with_style(builder.muted_text_style())
+                            .finish(),
                         )
                         .finish(),
                 )
@@ -656,7 +695,12 @@ impl TuiView for TuiAskQuestionView {
                 let builder = TuiUiBuilder::from_app(app);
                 TuiText::from_spans([
                     ("○ ".to_owned(), builder.muted_text_style()),
-                    ("Agent questions".to_owned(), builder.muted_text_style()),
+                    (
+                        warp_i18n::localize_ui("Agent questions")
+                            .into_owned()
+                            .to_owned(),
+                        builder.muted_text_style(),
+                    ),
                 ])
                 .finish()
             }

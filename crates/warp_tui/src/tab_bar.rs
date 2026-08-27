@@ -726,10 +726,15 @@ fn render_overflow(
 
 /// Renders the fixed divider with layout padding rather than embedded spaces.
 fn render_divider(style: TuiStyle) -> Box<dyn TuiElement> {
-    TuiContainer::new(TuiText::new(DIVIDER).with_style(style).truncate().finish())
-        .with_padding_left(DIVIDER_PADDING_LEFT)
-        .with_padding_right(DIVIDER_PADDING_RIGHT)
-        .finish()
+    TuiContainer::new(
+        TuiText::new(warp_i18n::localize_ui(DIVIDER).into_owned())
+            .with_style(style)
+            .truncate()
+            .finish(),
+    )
+    .with_padding_left(DIVIDER_PADDING_LEFT)
+    .with_padding_right(DIVIDER_PADDING_RIGHT)
+    .finish()
 }
 
 /// One width-specific secondary-page structure.

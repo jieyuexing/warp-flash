@@ -151,9 +151,9 @@ impl SearchItem for AIQuerySearchResultItem {
         details_column.add_child(
             Container::new(
                 ui_builder
-                    .paragraph(format!(
-                        "Ran {}",
-                        format_approx_duration_from_now(self.start_time)
+                    .paragraph(warp_i18n::localize_format!(
+                        "Ran {time}",
+                        time = format_approx_duration_from_now(self.start_time)
                     ))
                     .build()
                     .finish(),

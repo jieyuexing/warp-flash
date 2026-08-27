@@ -100,7 +100,9 @@ pub fn init(app: &mut AppContext) {
             CodeReviewAction::SubmitReviewComments,
             id!("CodeReviewView_NotEditing"),
         )
-        .with_command_description("Send code review comments to agent"),
+        .with_command_description(
+            warp_i18n::localize_ui("Send code review comments to agent").into_owned(),
+        ),
     ]);
 
     diff_menu::init(app);

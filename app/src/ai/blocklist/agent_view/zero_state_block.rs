@@ -665,9 +665,9 @@ fn render_title_and_description(props: HeaderProps, app: &AppContext) -> Vec<Box
             // Second line: text with "Visit docs" hyperlink.
             let description_with_link = FormattedText::new([FormattedTextLine::Line(vec![
                 FormattedTextFragment::plain_text(
-                    "Use cloud agents to run parallel agents, build agents that run autonomously, and check in on your agents from anywhere. ",
+                    warp_i18n::localize_ui("Use cloud agents to run parallel agents, build agents that run autonomously, and check in on your agents from anywhere. ").into_owned(),
                 ),
-                FormattedTextFragment::hyperlink("Visit docs", CLOUD_AGENT_DOCS_URL),
+                FormattedTextFragment::hyperlink(warp_i18n::localize_ui("Visit docs").into_owned(), CLOUD_AGENT_DOCS_URL),
             ])]);
 
             items.push(

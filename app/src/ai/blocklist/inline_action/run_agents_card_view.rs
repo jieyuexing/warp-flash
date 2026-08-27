@@ -1569,7 +1569,7 @@ fn render_agents_section(card: &RunAgentsCardFields, app: &AppContext) -> Box<dy
     let appearance = Appearance::as_ref(app);
     let theme = appearance.theme();
     let label = Text::new(
-        format!("Agents ({})", card.agent_run_configs.len()),
+        warp_i18n::localize_format!("Agents ({count})", count = card.agent_run_configs.len()),
         appearance.ui_font_family(),
         appearance.monospace_font_size() - 1.,
     )

@@ -240,9 +240,10 @@ impl UserOwnedBlock {
         let timestamp_row = Container::new(
             appearance
                 .ui_builder()
-                .label(format!(
-                    "Executed on: {}",
-                    self.time_started
+                .label(warp_i18n::localize_format!(
+                    "Executed on: {time}",
+                    time = self
+                        .time_started
                         .with_timezone(&Local)
                         .format("%a, %b %-d %Y at %-I:%M %p")
                 ))

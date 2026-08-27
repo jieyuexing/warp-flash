@@ -394,11 +394,26 @@ pub(crate) fn render_orchestration_tab_footer(builder: &TuiUiBuilder) -> Box<dyn
     let muted = builder.muted_text_style();
     TuiText::from_spans([
         ("Tab or ← →".to_string(), primary),
-        (" to navigate  ".to_string(), muted),
+        (
+            warp_i18n::localize_ui(" to navigate  ")
+                .into_owned()
+                .to_string(),
+            muted,
+        ),
         ("Shift + ← →".to_string(), primary),
-        (" to go to start/end  ".to_string(), muted),
+        (
+            warp_i18n::localize_ui(" to go to start/end  ")
+                .into_owned()
+                .to_string(),
+            muted,
+        ),
         ("↓".to_string(), primary),
-        (" to send a message".to_string(), muted),
+        (
+            warp_i18n::localize_ui(" to send a message")
+                .into_owned()
+                .to_string(),
+            muted,
+        ),
     ])
     .truncate()
     .finish()
@@ -415,11 +430,26 @@ pub(crate) fn render_orchestration_child_selected_tab_footer(
     let muted = builder.muted_text_style();
     TuiText::from_spans([
         ("Tab or ← →".to_string(), primary),
-        (" to navigate  ".to_string(), muted),
+        (
+            warp_i18n::localize_ui(" to navigate  ")
+                .into_owned()
+                .to_string(),
+            muted,
+        ),
         ("Shift + ← →".to_string(), primary),
-        (" to go to start/end  ".to_string(), muted),
+        (
+            warp_i18n::localize_ui(" to go to start/end  ")
+                .into_owned()
+                .to_string(),
+            muted,
+        ),
         ("↓".to_string(), primary),
-        (" to send a message  ".to_string(), muted),
+        (
+            warp_i18n::localize_ui(" to send a message  ")
+                .into_owned()
+                .to_string(),
+            muted,
+        ),
         ("Ctrl+C ".to_string(), primary),
         (kill_hint_text(nested_descendants), muted),
     ])
@@ -435,11 +465,26 @@ pub(crate) fn render_cloud_orchestration_tab_footer(
     let muted = builder.muted_text_style();
     TuiText::from_spans([
         ("Tab or ← →".to_string(), primary),
-        (" to navigate | ".to_string(), muted),
+        (
+            warp_i18n::localize_ui(" to navigate | ")
+                .into_owned()
+                .to_string(),
+            muted,
+        ),
         ("Shift + ← →".to_string(), primary),
-        (" to go to start/end | ".to_string(), muted),
+        (
+            warp_i18n::localize_ui(" to go to start/end | ")
+                .into_owned()
+                .to_string(),
+            muted,
+        ),
         ("↓".to_string(), primary),
-        (" to send a message  ".to_string(), muted),
+        (
+            warp_i18n::localize_ui(" to send a message  ")
+                .into_owned()
+                .to_string(),
+            muted,
+        ),
         ("Ctrl+C ".to_string(), primary),
         (kill_hint_text(nested_descendants), muted),
     ])

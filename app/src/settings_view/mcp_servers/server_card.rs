@@ -496,7 +496,7 @@ impl ServerCardView {
                 .with_cross_axis_alignment(CrossAxisAlignment::Center)
                 .with_child(
                     Text::new(
-                        format!("{} tools available", tools.len()),
+                        warp_i18n::localize_format!("{count} tools available", count = tools.len()),
                         appearance.ui_font_family(),
                         appearance.ui_font_size(),
                     )

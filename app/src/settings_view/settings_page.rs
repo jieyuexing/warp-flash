@@ -412,8 +412,14 @@ pub fn render_cta_line<A: Action + Clone>(
     let sub_text = theme.sub_text_color(theme.background());
     FormattedTextElement::new(
         FormattedText::new([FormattedTextLine::Line(vec![
-            FormattedTextFragment::hyperlink_action(link_text, action),
-            FormattedTextFragment::plain_text(format!(" {trailing_copy}")),
+            FormattedTextFragment::hyperlink_action(
+                warp_i18n::localize_ui(link_text.to_owned()).into_owned(),
+                action,
+            ),
+            FormattedTextFragment::plain_text(warp_i18n::localize_format!(
+                " {copy}",
+                copy = warp_i18n::localize_ui(trailing_copy.to_owned())
+            )),
         ])]),
         font_size,
         appearance.ui_font_family(),
@@ -753,6 +759,7 @@ pub fn render_body_item_label_internal<T: Clone + Action>(
     toggle_state: ToggleState,
     appearance: &Appearance,
 ) -> Box<dyn Element> {
+    let label_text = warp_i18n::localize_ui(label_text);
     let mut label = Flex::row();
     let label_color = match label_color_override {
         Some(color) => color,
@@ -783,6 +790,7 @@ pub fn render_body_item_label_internal<T: Clone + Action>(
         // `additional_info` gets moved into `render_info_icon()`.
         let secondary_text_child =
             if let Some(secondary_text) = additional_info.secondary_text.clone() {
+                let secondary_text = warp_i18n::localize_ui(secondary_text);
                 let warp_theme = appearance.theme();
                 Some(
                     appearance
@@ -846,8 +854,9 @@ pub fn render_body_item_label_internal<T: Clone + Action>(
 }
 
 fn render_title_text(text: &str, size: f32, appearance: &Appearance) -> Box<dyn Element> {
+    let text = warp_i18n::localize_ui(text.to_owned());
     Align::new(
-        Text::new_inline(text.to_string(), appearance.ui_font_family(), size)
+        Text::new_inline(text, appearance.ui_font_family(), size)
             .with_style(Properties::default().weight(Weight::Bold))
             .with_color(appearance.theme().active_ui_text_color().into())
             .finish(),
@@ -917,6 +926,7 @@ pub fn build_toggle_element(
     }
     column.add_child(header_row.finish());
     if let Some(description_text) = description_text {
+        let description_text = warp_i18n::localize_ui(description_text);
         let description = appearance
             .ui_builder()
             .paragraph(description_text)
@@ -953,6 +963,7 @@ pub fn render_dropdown_item_label(
     color_override: Option<Fill>,
     appearance: &Appearance,
 ) -> Box<dyn Element> {
+    let label_text = warp_i18n::localize_ui(label_text);
     let label = Text::new(label_text, appearance.ui_font_family(), CONTENT_FONT_SIZE)
         .with_color(
             color_override
@@ -961,6 +972,7 @@ pub fn render_dropdown_item_label(
         )
         .finish();
     let label = if let Some(secondary_text) = secondary_text {
+        let secondary_text = warp_i18n::localize_ui(secondary_text);
         let warp_theme = appearance.theme();
         let secondary_text_child = appearance
             .ui_builder()

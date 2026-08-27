@@ -81,8 +81,13 @@ impl OnboardingPromptBlock {
                 Container::new(
                     FormattedTextElement::new(
                         FormattedText::new([FormattedTextLine::Line(vec![
-                            FormattedTextFragment::plain_text(LINE_TWO),
-                            FormattedTextFragment::hyperlink(LINK_TEXT, LINK_DESTINATION),
+                            FormattedTextFragment::plain_text(
+                                warp_i18n::localize_ui(LINE_TWO).into_owned(),
+                            ),
+                            FormattedTextFragment::hyperlink(
+                                warp_i18n::localize_ui(LINK_TEXT).into_owned(),
+                                LINK_DESTINATION,
+                            ),
                         ])]),
                         font_size,
                         font_family,

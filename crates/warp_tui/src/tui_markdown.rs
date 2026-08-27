@@ -133,9 +133,11 @@ pub(crate) fn render_formatted_text(
             }
             FormattedTextLine::Table(table) => render_formatted_table(table, palette),
             FormattedTextLine::Image(image) => image_fallback(image, palette),
-            FormattedTextLine::Embedded(_) => TuiText::new("[Unsupported embedded content]")
-                .with_style(palette.fallback)
-                .finish(),
+            FormattedTextLine::Embedded(_) => {
+                TuiText::new(warp_i18n::localize_ui("[Unsupported embedded content]").into_owned())
+                    .with_style(palette.fallback)
+                    .finish()
+            }
             FormattedTextLine::LineBreak => blank_row(),
             FormattedTextLine::HorizontalRule => TuiMarkdownRule::new(palette.rule).finish(),
         };

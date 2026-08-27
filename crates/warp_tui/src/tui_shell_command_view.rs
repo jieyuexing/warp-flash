@@ -280,7 +280,12 @@ impl TuiShellCommandView {
         let builder = TuiUiBuilder::from_app(app);
         let edit_hint = TuiText::from_spans([
             ("e".to_owned(), builder.primary_text_style()),
-            (" to edit command".to_owned(), builder.muted_text_style()),
+            (
+                warp_i18n::localize_ui(" to edit command")
+                    .into_owned()
+                    .to_owned(),
+                builder.muted_text_style(),
+            ),
         ])
         .truncate()
         .finish();

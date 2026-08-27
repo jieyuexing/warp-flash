@@ -2,6 +2,7 @@ use pathfinder_geometry::vector::Vector2F;
 use warp_core::ui::appearance::Appearance;
 use warp_core::ui::theme::Fill;
 use warp_core::ui::theme::color::internal_colors;
+use warp_i18n::localize_ui;
 use warpui_core::elements::{
     Border, ConstrainedBox, Container, CornerRadius, CrossAxisAlignment, Flex,
     FormattedTextElement, Hoverable, MainAxisAlignment, MainAxisSize, MouseStateHandle,
@@ -54,23 +55,23 @@ pub(super) fn render_toggle_card(
 
 fn collapsed_subtitle(
     is_enabled: bool,
-    left_label: &str,
-    right_label: &str,
+    left_label: &'static str,
+    right_label: &'static str,
     chips: &[ChipSpec],
 ) -> String {
     if !is_enabled {
-        return right_label.to_string();
+        return localize_ui(right_label).into_owned();
     }
     if chips.is_empty() {
-        return left_label.to_string();
+        return localize_ui(left_label).into_owned();
     }
-    let enabled_labels: Vec<&str> = chips
+    let enabled_labels: Vec<String> = chips
         .iter()
         .filter(|c| c.is_enabled)
-        .map(|c| c.label)
+        .map(|c| localize_ui(c.label).into_owned())
         .collect();
     if enabled_labels.is_empty() {
-        return left_label.to_string();
+        return localize_ui(left_label).into_owned();
     }
     let joined = enabled_labels.join(", ");
     let mut chars = joined.chars();
@@ -94,7 +95,7 @@ fn render_collapsed(appearance: &Appearance, spec: ToggleCardSpec) -> Box<dyn El
     let mut on_expand = spec.on_expand;
 
     Hoverable::new(spec.card_mouse_state, move |_| {
-        let title_el = FormattedTextElement::from_str(spec.title, ui_font_family, 16.)
+        let title_el = FormattedTextElement::from_str(localize_ui(spec.title), ui_font_family, 16.)
             .with_color(text_color)
             .with_weight(Weight::Normal)
             .with_alignment(TextAlignment::Left)
@@ -133,7 +134,7 @@ fn render_expanded(appearance: &Appearance, spec: ToggleCardSpec) -> Box<dyn Ele
     let border_color = theme.accent();
     let background = internal_colors::accent_overlay_1(theme);
 
-    let title_el = FormattedTextElement::from_str(spec.title, ui_font_family, 16.)
+    let title_el = FormattedTextElement::from_str(localize_ui(spec.title), ui_font_family, 16.)
         .with_color(text_color)
         .with_weight(Weight::Normal)
         .with_alignment(TextAlignment::Left)
@@ -192,7 +193,7 @@ pub(super) fn render_inline_segmented_control(
                              mouse: MouseStateHandle,
                              mut callback: ClickCallback| {
         let option = Hoverable::new(mouse, move |_| {
-            let label_el = FormattedTextElement::from_str(label, ui_font_family, 14.)
+            let label_el = FormattedTextElement::from_str(localize_ui(label), ui_font_family, 14.)
                 .with_color(if is_selected { text_main } else { text_sub })
                 .with_weight(Weight::Normal)
                 .with_alignment(TextAlignment::Center)
@@ -270,7 +271,7 @@ fn render_chip(appearance: &Appearance, mut chip: ChipSpec) -> Box<dyn Element> 
     let label = chip.label;
 
     let mut hoverable = Hoverable::new(chip.mouse_state, move |_| {
-        let label_el = FormattedTextElement::from_str(label, ui_font_family, 14.)
+        let label_el = FormattedTextElement::from_str(localize_ui(label), ui_font_family, 14.)
             .with_color(text_color)
             .with_weight(Weight::Normal)
             .with_alignment(TextAlignment::Center)

@@ -226,9 +226,9 @@ impl SettingsWidget for RulesWidget {
 
         let rules_description = vec![
             FormattedTextFragment::plain_text(
-                "Rules help the Warp Agent follow your conventions, whether for codebases or specific workflows. ",
+                warp_i18n::localize_ui("Rules help the Warp Agent follow your conventions, whether for codebases or specific workflows. ").into_owned(),
             ),
-            FormattedTextFragment::hyperlink("Learn more", RULES_DOCS_URL),
+            FormattedTextFragment::hyperlink(warp_i18n::localize_ui("Learn more").into_owned(), RULES_DOCS_URL),
         ];
         let description = Container::new(
             FormattedTextElement::new(

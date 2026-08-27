@@ -601,14 +601,21 @@ impl RuleView {
     }
 
     fn render_disabled_banner(&self, appearance: &Appearance) -> Box<dyn Element> {
-        let mut link = FormattedTextFragment::hyperlink(DISABLED_BANNER_LINK_TEXT, "Settings > AI");
+        let mut link = FormattedTextFragment::hyperlink(
+            warp_i18n::localize_ui(DISABLED_BANNER_LINK_TEXT).into_owned(),
+            "Settings > AI",
+        );
         link.styles.weight = Some(CustomWeight::Bold);
 
         let formatted_text = FormattedTextElement::new(
             FormattedText::new([FormattedTextLine::Line(vec![
-                FormattedTextFragment::bold(DISABLED_BANNER_TEXT),
+                FormattedTextFragment::bold(
+                    warp_i18n::localize_ui(DISABLED_BANNER_TEXT).into_owned(),
+                ),
                 link,
-                FormattedTextFragment::bold(DISABLED_BANNER_TEXT_2),
+                FormattedTextFragment::bold(
+                    warp_i18n::localize_ui(DISABLED_BANNER_TEXT_2).into_owned(),
+                ),
             ])]),
             style::SUBTEXT_FONT_SIZE,
             appearance.ui_font_family(),

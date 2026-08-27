@@ -279,7 +279,7 @@ impl CommentEditor {
         self.is_imported_comment = origin.is_imported_from_github();
 
         self.save_button.update(ctx, |button, ctx| {
-            button.set_label("Update", ctx);
+            button.set_label(warp_i18n::localize_ui("Update").into_owned(), ctx);
         });
         ctx.notify();
 
@@ -298,7 +298,7 @@ impl CommentEditor {
         self.is_imported_comment = false;
 
         self.save_button.update(ctx, |button, ctx| {
-            button.set_label("Comment", ctx);
+            button.set_label(warp_i18n::localize_ui("Comment").into_owned(), ctx);
         });
         ctx.notify();
 

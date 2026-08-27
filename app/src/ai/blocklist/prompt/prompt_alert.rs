@@ -249,7 +249,7 @@ impl PromptAlertView {
         match state {
             PromptAlertState::NoConnection => {
                 text_fragments.push(FormattedTextFragment::plain_text(
-                    NO_CONNECTION_PRIMARY_TEXT,
+                    warp_i18n::localize_ui(NO_CONNECTION_PRIMARY_TEXT).into_owned(),
                 ));
             }
             PromptAlertState::AnonymousUserRequestLimitSoftGate => {
@@ -259,19 +259,21 @@ impl PromptAlertView {
             }
             PromptAlertState::AnonymousUserRequestLimitHardGate => {
                 text_fragments.push(FormattedTextFragment::plain_text(
-                    ANONYMOUS_USER_REQUEST_LIMIT_HARD_GATE_PRIMARY_TEXT,
+                    warp_i18n::localize_ui(ANONYMOUS_USER_REQUEST_LIMIT_HARD_GATE_PRIMARY_TEXT)
+                        .into_owned(),
                 ));
             }
             PromptAlertState::DelinquentDueToPaymentIssue => {
                 text_fragments.push(FormattedTextFragment::plain_text(
-                    DELINQUENT_DUE_TO_PAYMENT_ISSUE_PRIMARY_TEXT,
+                    warp_i18n::localize_ui(DELINQUENT_DUE_TO_PAYMENT_ISSUE_PRIMARY_TEXT)
+                        .into_owned(),
                 ));
             }
             PromptAlertState::OveragesToggleableButNotEnabled
             | PromptAlertState::MonthlyOveragesSpendLimitReached
             | PromptAlertState::RequestLimitReached => {
                 text_fragments.push(FormattedTextFragment::plain_text(
-                    OUT_OF_REQUESTS_PRIMARY_TEXT,
+                    warp_i18n::localize_ui(OUT_OF_REQUESTS_PRIMARY_TEXT).into_owned(),
                 ));
             }
             PromptAlertState::NoAlert => {}
@@ -296,7 +298,7 @@ impl PromptAlertView {
             | PromptAlertState::AnonymousUserRequestLimitHardGate => {
                 text_fragments.push(FormattedTextFragment::plain_text("  "));
                 text_fragments.push(FormattedTextFragment::hyperlink_action(
-                    ANONYMOUS_USER_REQUEST_LIMIT_ACTION_TEXT,
+                    warp_i18n::localize_ui(ANONYMOUS_USER_REQUEST_LIMIT_ACTION_TEXT).into_owned(),
                     PromptAlertAction::SignUpClickedForAnonymousUser,
                 ));
             }
@@ -308,14 +310,15 @@ impl PromptAlertView {
                 if has_admin_permissions && has_billing_history {
                     text_fragments.push(FormattedTextFragment::plain_text("  "));
                     text_fragments.push(FormattedTextFragment::hyperlink_action(
-                        DELINQUENT_DUE_TO_PAYMENT_ISSUE_ACTION_TEXT,
+                        warp_i18n::localize_ui(DELINQUENT_DUE_TO_PAYMENT_ISSUE_ACTION_TEXT)
+                            .into_owned(),
                         PromptAlertAction::ManageBillingClicked {
                             team_uid: current_team.map(|team| team.uid).unwrap_or_default(),
                         },
                     ));
                 } else {
                     text_fragments.push(FormattedTextFragment::plain_text(
-                        NON_ADMIN_CONTACT_ADMIN_TEXT,
+                        warp_i18n::localize_ui(NON_ADMIN_CONTACT_ADMIN_TEXT).into_owned(),
                     ));
                 }
             }
@@ -323,12 +326,14 @@ impl PromptAlertView {
                 if has_admin_permissions {
                     text_fragments.push(FormattedTextFragment::plain_text("  "));
                     text_fragments.push(FormattedTextFragment::hyperlink_action(
-                        OVERAGES_TOGGLEABLE_BUT_NOT_ENABLED_ACTION_TEXT,
+                        warp_i18n::localize_ui(OVERAGES_TOGGLEABLE_BUT_NOT_ENABLED_ACTION_TEXT)
+                            .into_owned(),
                         PromptAlertAction::OpenSettingsClicked,
                     ));
                 } else {
                     text_fragments.push(FormattedTextFragment::plain_text(
-                        NON_ADMIN_ASK_ADMIN_TO_ENABLE_OVERAGES_TEXT,
+                        warp_i18n::localize_ui(NON_ADMIN_ASK_ADMIN_TO_ENABLE_OVERAGES_TEXT)
+                            .into_owned(),
                     ));
                 }
             }
@@ -336,12 +341,14 @@ impl PromptAlertView {
                 if has_admin_permissions {
                     text_fragments.push(FormattedTextFragment::plain_text("  "));
                     text_fragments.push(FormattedTextFragment::hyperlink_action(
-                        MONTHLY_OVERAGES_SPEND_LIMIT_REACHED_ACTION_TEXT,
+                        warp_i18n::localize_ui(MONTHLY_OVERAGES_SPEND_LIMIT_REACHED_ACTION_TEXT)
+                            .into_owned(),
                         PromptAlertAction::OpenSettingsClicked,
                     ));
                 } else {
                     text_fragments.push(FormattedTextFragment::plain_text(
-                        NON_ADMIN_ASK_ADMIN_TO_INCREASE_OVERAGES_TEXT,
+                        warp_i18n::localize_ui(NON_ADMIN_ASK_ADMIN_TO_INCREASE_OVERAGES_TEXT)
+                            .into_owned(),
                     ));
                 }
             }
@@ -362,7 +369,7 @@ impl PromptAlertView {
                             .push(FormattedTextFragment::hyperlink(upgrade_text, upgrade_url));
                     } else {
                         text_fragments.push(FormattedTextFragment::hyperlink(
-                            CONTACT_SUPPORT_TEXT,
+                            warp_i18n::localize_ui(CONTACT_SUPPORT_TEXT).into_owned(),
                             "mailto:support@warp.dev".to_owned(),
                         ));
                     }
@@ -382,9 +389,11 @@ impl PromptAlertView {
                     text_fragments.push(FormattedTextFragment::hyperlink(label, upgrade_url));
                 }
                 if UserWorkspaces::as_ref(app).is_byo_api_key_enabled(app) {
-                    text_fragments.push(FormattedTextFragment::plain_text(" or "));
+                    text_fragments.push(FormattedTextFragment::plain_text(
+                        warp_i18n::localize_ui(" or ").into_owned(),
+                    ));
                     text_fragments.push(FormattedTextFragment::hyperlink_action(
-                        "use your own API keys",
+                        warp_i18n::localize_ui("use your own API keys").into_owned(),
                         WorkspaceAction::ShowSettingsPageWithSearch {
                             search_query: "api".to_string(),
                             section: Some(SettingsSection::WarpAgent),
@@ -451,7 +460,7 @@ impl View for PromptAlertView {
         if suggest_buy_credits {
             text_fragments.push(FormattedTextFragment::plain_text("  "));
             text_fragments.push(FormattedTextFragment::hyperlink_action(
-                "Add credits",
+                warp_i18n::localize_ui("Add credits").into_owned(),
                 WorkspaceAction::ShowSettingsPage(SettingsSection::BillingAndUsage),
             ));
         } else {

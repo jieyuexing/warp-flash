@@ -153,7 +153,7 @@ impl UpdateModalBody {
 
         // Renders MCP title text
         let title = Text::new(
-            format!("Update {name}"),
+            warp_i18n::localize_format!("Update {name}", name = name),
             appearance.ui_font_family(),
             appearance.header_font_size(),
         )
@@ -257,9 +257,9 @@ impl UpdateModalBody {
                 ..
             } => {
                 let publisher_string = match publisher {
-                    Author::CurrentUser => "another device",
-                    Author::OtherUser { name } => name,
-                    Author::Unknown => "a team member",
+                    Author::CurrentUser => warp_i18n::localize_ui("another device").into_owned(),
+                    Author::OtherUser { name } => name.clone(),
+                    Author::Unknown => warp_i18n::localize_ui("a team member").into_owned(),
                 };
                 let datetime = Local
                     .timestamp_opt(*new_version_ts, 0)
@@ -267,15 +267,18 @@ impl UpdateModalBody {
                     .unwrap_or_else(Local::now);
                 let formatted_time = format_approx_duration_from_now(datetime);
                 (
-                    format!("Update from {publisher_string}"),
+                    warp_i18n::localize_format!(
+                        "Update from {publisher}",
+                        publisher = publisher_string
+                    ),
                     formatted_time.to_string(),
                 )
             }
             MCPServerUpdate::Gallery {
                 name, new_version, ..
             } => (
-                format!("Update from {name}"),
-                format!("Version {new_version}"),
+                warp_i18n::localize_format!("Update from {publisher}", publisher = name),
+                warp_i18n::localize_format!("Version {version}", version = new_version),
             ),
         };
 

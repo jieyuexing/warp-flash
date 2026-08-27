@@ -122,8 +122,11 @@ pub(crate) fn render_thinking_section(
     app: &AppContext,
 ) -> Box<dyn TuiElement> {
     let header = match finished_duration {
-        Some(duration) => format!("Thought for {}", format_elapsed_seconds(duration)),
-        None => "Thinking...".to_owned(),
+        Some(duration) => warp_i18n::localize_format!(
+            "Thought for {duration}",
+            duration = format_elapsed_seconds(duration)
+        ),
+        None => warp_i18n::localize_ui("Thinking...").into_owned(),
     };
     render_collapsible_message_section(
         states,

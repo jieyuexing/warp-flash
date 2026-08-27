@@ -596,7 +596,10 @@ impl View for TabConfigParamsModal {
                 form.add_child(
                     Container::new(
                         Text::new_inline(
-                            format!("Default: {default_value}"),
+                            warp_i18n::localize_format!(
+                                "Default: {default_value}",
+                                default_value = default_value
+                            ),
                             appearance.ui_font_family(),
                             appearance.ui_font_size() - 1.,
                         )

@@ -257,7 +257,7 @@ impl InstallationModalBody {
 
         // Renders MCP title text
         let title = Text::new(
-            format!("Install {name}"),
+            warp_i18n::localize_format!("Install {name}", name = name),
             appearance.ui_font_family(),
             appearance.header_font_size(),
         )

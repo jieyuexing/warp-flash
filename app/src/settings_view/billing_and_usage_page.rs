@@ -110,9 +110,13 @@ pub fn create_discount_badge(discount: u32, appearance: &Appearance) -> Box<dyn 
     let bg_color: Fill = theme.terminal_colors().normal.green.into();
 
     Container::new(
-        Text::new_inline(format!("{discount}% off"), appearance.ui_font_family(), 10.)
-            .with_color(theme.main_text_color(bg_color).into())
-            .finish(),
+        Text::new_inline(
+            warp_i18n::localize_format!("{discount}% off", discount = discount),
+            appearance.ui_font_family(),
+            10.,
+        )
+        .with_color(theme.main_text_color(bg_color).into())
+        .finish(),
     )
     .with_corner_radius(CornerRadius::with_all(Radius::Pixels(4.)))
     .with_background(bg_color)
@@ -143,8 +147,14 @@ pub(crate) fn render_premium_upgrade_savings_note(
     let theme = appearance.theme();
     let percent = format_addon_premium_percent(premium_bps);
     let fragments = vec![
-        FormattedTextFragment::plain_text(format!("Save {percent} on add-on credits by ")),
-        FormattedTextFragment::hyperlink("upgrading to a Build plan", upgrade_url),
+        FormattedTextFragment::plain_text(warp_i18n::localize_format!(
+            "Save {percent} on add-on credits by ",
+            percent = percent
+        )),
+        FormattedTextFragment::hyperlink(
+            warp_i18n::localize_ui("upgrading to a Build plan").into_owned(),
+            upgrade_url,
+        ),
         FormattedTextFragment::plain_text("."),
     ];
 
@@ -2185,13 +2195,16 @@ impl BillingAndUsagePageView {
             } else if would_exceed_limit {
                 let warning_fragments = vec![
                     FormattedTextFragment::plain_text(
-                        "Reloading would exceed your monthly limit. ",
+                        warp_i18n::localize_ui("Reloading would exceed your monthly limit. ")
+                            .into_owned(),
                     ),
                     FormattedTextFragment::hyperlink_action(
-                        "Increase your limit",
+                        warp_i18n::localize_ui("Increase your limit").into_owned(),
                         BillingAndUsagePageAction::ShowAddOnCreditModal,
                     ),
-                    FormattedTextFragment::plain_text(" to continue."),
+                    FormattedTextFragment::plain_text(
+                        warp_i18n::localize_ui(" to continue.").into_owned(),
+                    ),
                 ];
                 card_content_lower_children
                     .push(self.render_warning_row_with_link(appearance, warning_fragments));
@@ -2787,9 +2800,11 @@ impl BillingAndUsagePageView {
         let body = if let Some(team_uid) = team_uid.filter(|_| has_admin_permissions) {
             let admin_panel_url = AdminActions::admin_panel_link_for_team(team_uid);
             let text_fragments = vec![
-                FormattedTextFragment::plain_text(ENTERPRISE_USAGE_CALLOUT_BODY_ADMIN_PREFIX),
+                FormattedTextFragment::plain_text(
+                    warp_i18n::localize_ui(ENTERPRISE_USAGE_CALLOUT_BODY_ADMIN_PREFIX).into_owned(),
+                ),
                 FormattedTextFragment::hyperlink(
-                    ENTERPRISE_USAGE_CALLOUT_BODY_ADMIN_LINK,
+                    warp_i18n::localize_ui(ENTERPRISE_USAGE_CALLOUT_BODY_ADMIN_LINK).into_owned(),
                     admin_panel_url,
                 ),
                 FormattedTextFragment::plain_text(ENTERPRISE_USAGE_CALLOUT_BODY_ADMIN_SUFFIX),
@@ -2869,7 +2884,10 @@ impl BillingAndUsagePageView {
             .with_child(
                 appearance
                     .ui_builder()
-                    .paragraph(format!("Resets {formatted_next_refresh_time}"))
+                    .paragraph(warp_i18n::localize_format!(
+                        "Resets {time}",
+                        time = formatted_next_refresh_time
+                    ))
                     .with_style(UiComponentStyles {
                         font_color: Some(blended_colors::text_sub(
                             appearance.theme(),
@@ -3174,17 +3192,23 @@ impl BillingAndUsagePageView {
                 if has_admin_permissions {
                     vec![
                         FormattedTextFragment::hyperlink_action(
-                            "Manage billing",
+                            warp_i18n::localize_ui("Manage billing").into_owned(),
                             BillingAndUsagePageAction::GenerateStripeBillingPortalLink {
                                 team_uid: team.uid,
                             },
                         ),
-                        FormattedTextFragment::plain_text(" to regain access to AI features."),
+                        FormattedTextFragment::plain_text(
+                            warp_i18n::localize_ui(" to regain access to AI features.")
+                                .into_owned(),
+                        ),
                     ]
                 } else {
                     // Non-admin team member - show message to contact admin
                     vec![FormattedTextFragment::plain_text(
-                        "Contact your team admin to resolve billing issues.",
+                        warp_i18n::localize_ui(
+                            "Contact your team admin to resolve billing issues.",
+                        )
+                        .into_owned(),
                     )]
                 }
             } else if billing_metadata.can_upgrade_to_higher_tier_plan() {
@@ -3194,27 +3218,31 @@ impl BillingAndUsagePageView {
                         if billing_metadata.is_on_legacy_paid_plan() {
                             vec![
                                 FormattedTextFragment::hyperlink(
-                                    "Switch to the Build plan",
+                                    warp_i18n::localize_ui("Switch to the Build plan").into_owned(),
                                     upgrade_url,
                                 ),
                                 FormattedTextFragment::plain_text(
-                                    " for a more flexible pricing model.",
+                                    warp_i18n::localize_ui(" for a more flexible pricing model.")
+                                        .into_owned(),
                                 ),
                             ]
                         } else {
                             let mut fragments = vec![FormattedTextFragment::hyperlink(
-                                "Upgrade to the Build plan",
+                                warp_i18n::localize_ui("Upgrade to the Build plan").into_owned(),
                                 upgrade_url,
                             )];
                             if billing_metadata.is_byo_api_key_enabled() {
-                                fragments.push(FormattedTextFragment::plain_text(" or "));
+                                fragments.push(FormattedTextFragment::plain_text(
+                                    warp_i18n::localize_ui(" or ").into_owned(),
+                                ));
                                 fragments.push(FormattedTextFragment::hyperlink_action(
-                                    "bring your own key",
+                                    warp_i18n::localize_ui("bring your own key").into_owned(),
                                     BillingAndUsagePageAction::NavigateToByokSettings,
                                 ));
                             }
                             fragments.push(FormattedTextFragment::plain_text(
-                                " for increased access to AI features.",
+                                warp_i18n::localize_ui(" for increased access to AI features.")
+                                    .into_owned(),
                             ));
                             fragments
                         }
@@ -3226,7 +3254,9 @@ impl BillingAndUsagePageView {
                         };
                         vec![
                             FormattedTextFragment::hyperlink(upgrade_text, upgrade_url),
-                            FormattedTextFragment::plain_text(" to get more AI usage."),
+                            FormattedTextFragment::plain_text(
+                                warp_i18n::localize_ui(" to get more AI usage.").into_owned(),
+                            ),
                         ]
                     }
                 } else {
@@ -3235,19 +3265,21 @@ impl BillingAndUsagePageView {
             } else if billing_metadata.is_on_build_plan() {
                 vec![
                     FormattedTextFragment::hyperlink(
-                        "Upgrade to Max",
+                        warp_i18n::localize_ui("Upgrade to Max").into_owned(),
                         UserWorkspaces::upgrade_link_for_team(team.uid),
                     ),
-                    FormattedTextFragment::plain_text(" for more AI credits."),
+                    FormattedTextFragment::plain_text(
+                        warp_i18n::localize_ui(" for more AI credits.").into_owned(),
+                    ),
                 ]
             } else if billing_metadata.is_on_build_max_plan() {
                 vec![
                     FormattedTextFragment::hyperlink(
-                        "Switch to Business",
+                        warp_i18n::localize_ui("Switch to Business").into_owned(),
                         UserWorkspaces::upgrade_link_for_team(team.uid),
                     ),
                     FormattedTextFragment::plain_text(
-                        " for security features like SSO and automatically applied zero data retention.",
+                        warp_i18n::localize_ui(" for security features like SSO and automatically applied zero data retention.").into_owned(),
                     ),
                 ]
             } else if billing_metadata.is_on_build_business_plan()
@@ -3255,15 +3287,23 @@ impl BillingAndUsagePageView {
             {
                 vec![
                     FormattedTextFragment::hyperlink(
-                        "Upgrade to Enterprise",
+                        warp_i18n::localize_ui("Upgrade to Enterprise").into_owned(),
                         "mailto:sales@warp.dev",
                     ),
-                    FormattedTextFragment::plain_text(" for custom limits and dedicated support."),
+                    FormattedTextFragment::plain_text(
+                        warp_i18n::localize_ui(" for custom limits and dedicated support.")
+                            .into_owned(),
+                    ),
                 ]
             } else if !billing_metadata.is_usage_based_pricing_toggleable() {
                 vec![
-                    FormattedTextFragment::hyperlink("Contact support", "mailto:support@warp.dev"),
-                    FormattedTextFragment::plain_text(" for more AI usage."),
+                    FormattedTextFragment::hyperlink(
+                        warp_i18n::localize_ui("Contact support").into_owned(),
+                        "mailto:support@warp.dev",
+                    ),
+                    FormattedTextFragment::plain_text(
+                        warp_i18n::localize_ui(" for more AI usage.").into_owned(),
+                    ),
                 ]
             } else {
                 vec![]
@@ -3272,18 +3312,20 @@ impl BillingAndUsagePageView {
             let user_id = auth_state.user_id().unwrap_or_default();
             let upgrade_url = UserWorkspaces::upgrade_link(user_id);
             let mut fragments = vec![FormattedTextFragment::hyperlink(
-                "Upgrade to the Build plan",
+                warp_i18n::localize_ui("Upgrade to the Build plan").into_owned(),
                 upgrade_url,
             )];
             if UserWorkspaces::as_ref(app).is_byo_api_key_enabled(app) {
-                fragments.push(FormattedTextFragment::plain_text(" or "));
+                fragments.push(FormattedTextFragment::plain_text(
+                    warp_i18n::localize_ui(" or ").into_owned(),
+                ));
                 fragments.push(FormattedTextFragment::hyperlink_action(
-                    "bring your own key",
+                    warp_i18n::localize_ui("bring your own key").into_owned(),
                     BillingAndUsagePageAction::NavigateToByokSettings,
                 ));
             }
             fragments.push(FormattedTextFragment::plain_text(
-                " for more credits and access to more models.",
+                warp_i18n::localize_ui(" for more credits and access to more models.").into_owned(),
             ));
             fragments
         } else {

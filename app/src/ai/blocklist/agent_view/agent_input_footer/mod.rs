@@ -630,7 +630,8 @@ impl AgentInputFooter {
                 let is_open = matches!(new_input_state, CLIAgentInputState::Open { .. });
                 me.rich_input_button.update(ctx, |button, ctx| {
                     if is_open {
-                        button.set_label("Hide Rich Input", ctx);
+                        button
+                            .set_label(warp_i18n::localize_ui("Hide Rich Input").into_owned(), ctx);
                         button.set_tooltip(Some("Hide Rich Input"), ctx);
                         button.set_keybinding(
                             Some(KeystrokeSource::Binding(
@@ -639,7 +640,7 @@ impl AgentInputFooter {
                             ctx,
                         );
                     } else {
-                        button.set_label("Rich Input", ctx);
+                        button.set_label(warp_i18n::localize_ui("Rich Input").into_owned(), ctx);
                         button.set_tooltip(Some("Open Rich Input"), ctx);
                         button.set_keybinding(
                             Some(KeystrokeSource::Binding(

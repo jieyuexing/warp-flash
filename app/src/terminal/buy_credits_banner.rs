@@ -729,10 +729,10 @@ impl BuyCreditsBanner {
                 // Create formatted text with clickable hyperlink
                 let warning_text_fragments = vec![
                     FormattedTextFragment::plain_text(
-                        "Purchasing these credits would take you over your monthly spend limit. ",
+                        warp_i18n::localize_ui("Purchasing these credits would take you over your monthly spend limit. ").into_owned(),
                     ),
-                    FormattedTextFragment::hyperlink_action("Increase it", Action::ManageBilling),
-                    FormattedTextFragment::plain_text(" to continue."),
+                    FormattedTextFragment::hyperlink_action(warp_i18n::localize_ui("Increase it").into_owned(), Action::ManageBilling),
+                    FormattedTextFragment::plain_text(warp_i18n::localize_ui(" to continue.").into_owned()),
                 ];
 
                 let formatted_warning = FormattedTextElement::new(

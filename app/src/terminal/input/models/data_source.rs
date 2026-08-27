@@ -549,7 +549,10 @@ impl SearchItem for ModelSearchItem {
             let discount_percentage = self.discount_percentage.unwrap_or(0.);
             let chip = Container::new(
                 Text::new_inline(
-                    format!("{}% off", discount_percentage.round() as u32),
+                    warp_i18n::localize_format!(
+                        "{discount}% off",
+                        discount = discount_percentage.round() as u32
+                    ),
                     appearance.ui_font_family(),
                     font_size,
                 )
@@ -702,16 +705,22 @@ impl SearchItem for ModelSearchItem {
                 );
 
             let mut text_fragments = vec![
-                FormattedTextFragment::plain_text(format!(
-                    "{display_name} is not available for free users. "
+                FormattedTextFragment::plain_text(warp_i18n::localize_format!(
+                    "{display_name} is not available for free users. ",
+                    display_name = display_name
                 )),
-                FormattedTextFragment::hyperlink("Upgrade", self.upgrade_url.clone()),
+                FormattedTextFragment::hyperlink(
+                    warp_i18n::localize_ui("Upgrade").into_owned(),
+                    self.upgrade_url.clone(),
+                ),
             ];
 
             if byok_available {
-                text_fragments.push(FormattedTextFragment::plain_text(" or ".to_string()));
+                text_fragments.push(FormattedTextFragment::plain_text(
+                    warp_i18n::localize_ui(" or ").into_owned().to_string(),
+                ));
                 text_fragments.push(FormattedTextFragment::hyperlink_action(
-                    "bring your own key",
+                    warp_i18n::localize_ui("bring your own key").into_owned(),
                     WorkspaceAction::ShowSettingsPageWithSearch {
                         search_query: "api".to_string(),
                         section: Some(SettingsSection::WarpAgent),

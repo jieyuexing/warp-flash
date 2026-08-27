@@ -1094,7 +1094,10 @@ impl TuiOptionSelector {
         let position = TuiText::from_spans([
             ("←".to_string(), previous_style),
             (format!(" {current} "), builder.primary_text_style()),
-            (format!("of {total} "), builder.muted_text_style()),
+            (
+                warp_i18n::localize_format!("of {total} ", total = total),
+                builder.muted_text_style(),
+            ),
             ("→".to_string(), next_style),
         ])
         .truncate()
@@ -1287,7 +1290,7 @@ impl TuiOptionSelector {
                 .any(|item| matches!(item, SelectorItem::Row(_)))
         {
             column.add_child(
-                TuiText::new("No matches")
+                TuiText::new(warp_i18n::localize_ui("No matches").into_owned())
                     .with_style(builder.dim_text_style())
                     .truncate()
                     .finish(),
@@ -1387,7 +1390,7 @@ impl TuiOptionSelector {
             OptionSourceStatus::Ready => {}
             OptionSourceStatus::Loading => {
                 column.add_child(
-                    TuiText::new("Loading…")
+                    TuiText::new(warp_i18n::localize_ui("Loading…").into_owned())
                         .with_style(builder.dim_text_style())
                         .truncate()
                         .finish(),

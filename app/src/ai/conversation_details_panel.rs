@@ -1185,10 +1185,10 @@ impl ConversationDetailsPanel {
         .finish();
 
         let created_text = Text::new(
-            format!(
-                "Created by {} • {}",
-                creator.display_name,
-                format_approx_duration_from_now(created_at)
+            warp_i18n::localize_format!(
+                "Created by {creator} • {time}",
+                creator = creator.display_name,
+                time = format_approx_duration_from_now(created_at)
             ),
             appearance.ui_font_family(),
             ui_font_size,
@@ -1852,7 +1852,10 @@ impl ConversationDetailsPanel {
             };
 
         let name_text = Text::new(
-            format!("Name: {environment_name}"),
+            warp_i18n::localize_format!(
+                "Name: {environment_name}",
+                environment_name = environment_name
+            ),
             appearance.ui_font_family(),
             ui_font_size,
         )

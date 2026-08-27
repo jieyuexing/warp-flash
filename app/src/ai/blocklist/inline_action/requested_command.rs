@@ -804,7 +804,7 @@ impl RequestedCommandView {
                 citations_padding,
                 app,
             )
-            .map(|citation| ("Copied from", citation))
+            .map(|citation| (warp_i18n::localize_ui("Copied from").into_owned(), citation))
         } else {
             // Otherwise, we render all the citations (if any) and mention that the command was derived from them.
             render_citation_chips(
@@ -814,7 +814,12 @@ impl RequestedCommandView {
                 citations_padding,
                 app,
             )
-            .map(|citations| ("Derived from", citations))
+            .map(|citations| {
+                (
+                    warp_i18n::localize_ui("Derived from").into_owned(),
+                    citations,
+                )
+            })
         };
 
         let citations_footer = citations_footer_props.map(|(prefix, suffix)| {
@@ -824,7 +829,7 @@ impl RequestedCommandView {
                     .with_main_axis_size(MainAxisSize::Max)
                     .with_child(
                         Text::new(
-                            format!("{prefix} "),
+                            warp_i18n::localize_format!("{prefix} ", prefix = prefix),
                             appearance.ui_font_family(),
                             appearance.monospace_font_size() - 1.,
                         )
@@ -1792,10 +1797,14 @@ impl View for RequestedCommandView {
                                 .finish(),
                             );
                             col.add_child(
-                                Text::new(format!("Error: {e}"), font_family, TREE_FONT_SIZE)
-                                    .with_color(theme.ui_error_color())
-                                    .with_selectable(true)
-                                    .finish(),
+                                Text::new(
+                                    warp_i18n::localize_format!("Error: {error}", error = e),
+                                    font_family,
+                                    TREE_FONT_SIZE,
+                                )
+                                .with_color(theme.ui_error_color())
+                                .with_selectable(true)
+                                .finish(),
                             );
                             col.finish()
                         }

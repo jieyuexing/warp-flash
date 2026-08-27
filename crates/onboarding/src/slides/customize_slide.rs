@@ -1,6 +1,7 @@
 use ui_components::{Component as _, Options as _, button};
 use warp_core::ui::appearance::Appearance;
 use warp_core::ui::theme::color::internal_colors;
+use warp_i18n::localize_ui;
 use warpui_core::elements::{
     ClippedScrollStateHandle, Container, CrossAxisAlignment, Flex, FormattedTextElement,
     MainAxisSize, MouseStateHandle, ParentElement,
@@ -145,7 +146,7 @@ impl CustomizeUISlide {
     fn render_header(&self, appearance: &Appearance) -> Box<dyn Element> {
         let title = appearance
             .ui_builder()
-            .paragraph("Customize your Warp")
+            .paragraph(localize_ui("Customize your Warp"))
             .with_style(UiComponentStyles {
                 font_size: Some(36.),
                 font_weight: Some(Weight::Medium),
@@ -155,7 +156,7 @@ impl CustomizeUISlide {
             .finish();
 
         let subtitle = FormattedTextElement::from_str(
-            "Tailor your features and UI to your working style.",
+            localize_ui("Tailor your features and UI to your working style."),
             appearance.ui_font_family(),
             16.,
         )

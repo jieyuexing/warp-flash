@@ -564,13 +564,16 @@ impl InputSuggestions {
         self.get_selected_item()
             .and_then(|item| item.details.as_ref())
             .and_then(|details| match details {
-                DetailContent::RichHistory(entry) => entry
-                    .start_ts
-                    .map(|ts| format!("Last ran {}", format_approx_duration_from_now(ts))),
+                DetailContent::RichHistory(entry) => entry.start_ts.map(|ts| {
+                    warp_i18n::localize_format!(
+                        "Last ran {time}",
+                        time = format_approx_duration_from_now(ts)
+                    )
+                }),
                 DetailContent::Description(desc) => Some(desc.clone()),
-                DetailContent::AIQueryHistory(entry) => Some(format!(
-                    "Last ran {}",
-                    format_approx_duration_from_now(entry.start_time)
+                DetailContent::AIQueryHistory(entry) => Some(warp_i18n::localize_format!(
+                    "Last ran {time}",
+                    time = format_approx_duration_from_now(entry.start_time)
                 )),
             })
     }

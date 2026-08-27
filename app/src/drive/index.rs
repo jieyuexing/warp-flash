@@ -4211,15 +4211,23 @@ impl DriveIndex {
         let highlight =
             Highlight::new().with_properties(Properties::default().weight(Weight::Bold));
 
-        let banner_line_1 = format!("You've run out of {object_type}s on your plan.");
+        let banner_line_1 = warp_i18n::localize_format!(
+            "You've run out of {object_type}s on your plan.",
+            object_type = warp_i18n::localize_ui(object_type.to_string())
+        );
+        let banner_text = warp_i18n::localize_format!(
+            "{headline} {detail}",
+            headline = banner_line_1,
+            detail = warp_i18n::localize_ui(SHARED_OBJECT_LIMIT_HIT_BANNER_LINE)
+        );
         let body = Container::new(
             appearance
                 .ui_builder()
-                .wrappable_text(
-                    format!("{banner_line_1} {SHARED_OBJECT_LIMIT_HIT_BANNER_LINE}"),
-                    true,
+                .wrappable_text(banner_text, true)
+                .with_highlights(
+                    (0..banner_line_1.chars().count()).collect::<Vec<_>>(),
+                    highlight,
                 )
-                .with_highlights((0..banner_line_1.len()).collect::<Vec<_>>(), highlight)
                 .with_style(UiComponentStyles {
                     font_size: Some(12.),
                     font_color: Some(appearance.theme().main_text_color(background_color).into()),
@@ -4351,16 +4359,19 @@ impl DriveIndex {
             PAYMENT_ISSUE_BANNER_LINE_2_NONADMIN
         };
 
+        let localized_payment_issue = warp_i18n::localize_ui(PAYMENT_ISSUE_BANNER_LINE_1);
+        let banner_text = warp_i18n::localize_format!(
+            "{headline} {detail}",
+            headline = localized_payment_issue,
+            detail = warp_i18n::localize_ui(banner_line_2)
+        );
         body.add_child(
             Container::new(
                 appearance
                     .ui_builder()
-                    .wrappable_text(
-                        format!("{PAYMENT_ISSUE_BANNER_LINE_1} {banner_line_2}").to_string(),
-                        true,
-                    )
+                    .wrappable_text(banner_text, true)
                     .with_highlights(
-                        (0..PAYMENT_ISSUE_BANNER_LINE_1.len()).collect::<Vec<_>>(),
+                        (0..localized_payment_issue.chars().count()).collect::<Vec<_>>(),
                         highlight,
                     )
                     .with_style(UiComponentStyles {

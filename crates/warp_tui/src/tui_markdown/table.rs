@@ -45,7 +45,7 @@ impl TuiMarkdownTable {
         let (headers, rows, alignments) = normalized_table(&self.table);
         if headers.is_empty() {
             return TuiFlex::column().child(
-                TuiText::new("[Empty table]")
+                TuiText::new(warp_i18n::localize_ui("[Empty table]").into_owned())
                     .with_style(self.palette.fallback)
                     .finish(),
             );
@@ -94,7 +94,7 @@ impl TuiMarkdownTable {
         let mut table = TuiFlex::column();
         if rows.is_empty() {
             table.add_child(
-                TuiText::new("[Table has no rows]")
+                TuiText::new(warp_i18n::localize_ui("[Table has no rows]").into_owned())
                     .with_style(self.palette.fallback)
                     .finish(),
             );

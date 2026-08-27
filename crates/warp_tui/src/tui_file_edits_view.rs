@@ -783,7 +783,12 @@ impl TuiView for TuiFileEditsView {
         let builder = TuiUiBuilder::from_app(app);
         let expand_collapse_hint = TuiText::from_spans([
             ("e".to_owned(), builder.primary_text_style()),
-            (" to expand/collapse".to_owned(), builder.muted_text_style()),
+            (
+                warp_i18n::localize_ui(" to expand/collapse")
+                    .into_owned()
+                    .to_owned(),
+                builder.muted_text_style(),
+            ),
         ])
         .truncate()
         .finish();

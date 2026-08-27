@@ -2983,10 +2983,10 @@ impl SettingsWidget for ThemeSelectWidget {
             .with_child(
                 appearance
                     .ui_builder()
-                    .span(
+                    .span(warp_i18n::localize_ui(
                         "Automatically switch between light and dark themes when your system does."
                             .to_string(),
-                    )
+                    ))
                     .with_style(
                         UiComponentStyles::default().set_margin(Coords::default().bottom(10.)),
                     )

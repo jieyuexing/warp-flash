@@ -1884,7 +1884,10 @@ fn render_permissions_speedbump(
 
     let formatted_text = FormattedTextElement::new(
         FormattedText::new([FormattedTextLine::Line(vec![
-            FormattedTextFragment::hyperlink("Manage Agent permissions", "Settings > AI"),
+            FormattedTextFragment::hyperlink(
+                warp_i18n::localize_ui("Manage Agent permissions").into_owned(),
+                "Settings > AI",
+            ),
         ])]),
         font_size,
         font_family,

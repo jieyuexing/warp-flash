@@ -104,7 +104,7 @@ impl Link {
         styles: LinkStyles,
     ) -> Self {
         Link {
-            text,
+            text: warp_i18n::localize_ui(text).into_owned(),
             url,
             callback,
             styles,

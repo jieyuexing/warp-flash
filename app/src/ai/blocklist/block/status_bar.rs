@@ -955,7 +955,10 @@ impl BlocklistAIStatusBar {
                 error_color,
                 vec![
                     FormattedTextFragment::plain_text(format!("{error_message} ")),
-                    FormattedTextFragment::hyperlink("Authenticate GitHub", auth_url.to_owned()),
+                    FormattedTextFragment::hyperlink(
+                        warp_i18n::localize_ui("Authenticate GitHub").into_owned(),
+                        auth_url.to_owned(),
+                    ),
                 ],
                 app,
             ));
@@ -968,7 +971,7 @@ impl BlocklistAIStatusBar {
                 color,
                 color,
                 vec![FormattedTextFragment::plain_text(
-                    "Cloud agent run cancelled",
+                    warp_i18n::localize_ui("Cloud agent run cancelled").into_owned(),
                 )],
                 app,
             ));
@@ -1047,7 +1050,10 @@ fn render_agent_tip(tip: &AgentTip, app: &AppContext) -> Box<dyn Element> {
         _ => {
             if let Some(link_target) = tip.link.clone() {
                 fragments.push(FormattedTextFragment::plain_text(" "));
-                fragments.push(FormattedTextFragment::hyperlink("Learn more", link_target));
+                fragments.push(FormattedTextFragment::hyperlink(
+                    warp_i18n::localize_ui("Learn more").into_owned(),
+                    link_target,
+                ));
             }
         }
     }
@@ -1157,10 +1163,15 @@ const UNNAMED_FALLBACK_MODEL_WARPING_TEXT: &str = "Warping with another model.";
 /// live. Cleaning the flag up in the "treat as false" direction would silently
 /// flip every fallback message to the ellipsis copy and drop its explanation line.
 fn fallback_warping_text(display_name: &str) -> String {
-    let stem = LOAD_OUTPUT_MESSAGE
+    let message = warp_i18n::localize_ui(LOAD_OUTPUT_MESSAGE).into_owned();
+    let stem = message
         .strip_suffix(STATUS_MESSAGE_ELLIPSIS)
-        .unwrap_or(LOAD_OUTPUT_MESSAGE);
-    format!("{stem} with {display_name}.")
+        .unwrap_or(&message);
+    warp_i18n::localize_format!(
+        "{message} with {model}.",
+        message = stem,
+        model = display_name
+    )
 }
 
 /// Warping text for the model a response is running on, e.g. "Warping with Claude
@@ -1203,7 +1214,7 @@ fn warping_model_message(inputs: WarpingModelInputs) -> Option<WarpingModelMessa
     let text = match (model_in_use.display_name.as_deref(), is_fallback_message) {
         (Some(display_name), true) => fallback_warping_text(display_name),
         // An unnamed fallback still has something to say.
-        (None, true) => UNNAMED_FALLBACK_MODEL_WARPING_TEXT.to_owned(),
+        (None, true) => warp_i18n::localize_ui(UNNAMED_FALLBACK_MODEL_WARPING_TEXT).into_owned(),
         (Some(display_name), false) => {
             status_message_naming_model(LOAD_OUTPUT_MESSAGE, display_name)
         }

@@ -26,9 +26,11 @@ impl LoginFailureReason {
             mut fragments: Vec<FormattedTextFragment>,
         ) -> Vec<FormattedTextFragment> {
             fragments.extend([
-                FormattedTextFragment::plain_text(" Not the first time? See our "),
+                FormattedTextFragment::plain_text(
+                    warp_i18n::localize_ui(" Not the first time? See our ").into_owned(),
+                ),
                 FormattedTextFragment::hyperlink(
-                    "troubleshooting docs",
+                    warp_i18n::localize_ui("troubleshooting docs").into_owned(),
                     LOGIN_TROUBLESHOOTING_DOCS_URL,
                 ),
                 FormattedTextFragment::plain_text("."),
@@ -47,18 +49,18 @@ impl LoginFailureReason {
             }
             LoginFailureReason::FailedUserAuthentication => {
                 with_troubleshooting_text(vec![FormattedTextFragment::plain_text(
-                    "Request to log in failed.",
+                    warp_i18n::localize_ui("Request to log in failed.").into_owned(),
                 )])
             }
             LoginFailureReason::FailedMintCustomToken => {
                 with_troubleshooting_text(vec![FormattedTextFragment::plain_text(
-                    "Request to sign up failed.",
+                    warp_i18n::localize_ui("Request to sign up failed.").into_owned(),
                 )])
             }
             LoginFailureReason::InvalidStateParameter
             | LoginFailureReason::MissingStateParameter => {
                 with_troubleshooting_text(vec![FormattedTextFragment::plain_text(
-                    "The redirect URL pasted did not originate from this app. Please click the button below to try again.",
+                    warp_i18n::localize_ui("The redirect URL pasted did not originate from this app. Please click the button below to try again.").into_owned(),
                 )])
             }
         };

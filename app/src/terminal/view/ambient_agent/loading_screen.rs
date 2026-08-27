@@ -51,7 +51,10 @@ pub fn render_cloud_mode_loading_screen<T: Entity>(
         // Add link at the end if it exists
         if let Some(link_target) = tip.link() {
             fragments.push(FormattedTextFragment::plain_text(" "));
-            fragments.push(FormattedTextFragment::hyperlink("Learn more", link_target));
+            fragments.push(FormattedTextFragment::hyperlink(
+                warp_i18n::localize_ui("Learn more").into_owned(),
+                link_target,
+            ));
         }
 
         let formatted_text = FormattedText::new(vec![FormattedTextLine::Line(fragments)]);
@@ -154,16 +157,21 @@ fn render_tier_limits_footer<T: Entity>(
         return None;
     }
 
-    let mut fragments = vec![FormattedTextFragment::plain_text(format!(
-        "Your agent is currently running on a {} machine. ",
-        specs
-    ))];
+    let mut fragments = vec![FormattedTextFragment::plain_text(
+        warp_i18n::localize_format!(
+            "Your agent is currently running on a {specs} machine. ",
+            specs = specs
+        ),
+    )];
 
     let upgrade_url = UserWorkspaces::upgrade_link_for_team(team.uid);
 
-    fragments.push(FormattedTextFragment::hyperlink("Upgrade", upgrade_url));
+    fragments.push(FormattedTextFragment::hyperlink(
+        warp_i18n::localize_ui("Upgrade").into_owned(),
+        upgrade_url,
+    ));
     fragments.push(FormattedTextFragment::plain_text(
-        " for more powerful cloud agents.",
+        warp_i18n::localize_ui(" for more powerful cloud agents.").into_owned(),
     ));
 
     let formatted_text = FormattedText::new(vec![FormattedTextLine::Line(fragments)]);

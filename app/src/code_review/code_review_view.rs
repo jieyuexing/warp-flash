@@ -4138,7 +4138,10 @@ impl CodeReviewView {
                 zero_state_column.add_child(
                     Container::new(
                         Text::new(
-                            format!("Repo is initialized with a {file_name} file."),
+                            warp_i18n::localize_format!(
+                                "Repo is initialized with a {file_name} file.",
+                                file_name = file_name
+                            ),
                             appearance.ui_font_family(),
                             12.,
                         )
@@ -6587,7 +6590,7 @@ impl CodeReviewView {
             PrimaryGitActionMode::Commit => {
                 let disabled = !self.has_uncommitted_changes(ctx);
                 self.git_primary_action_button.update(ctx, |button, ctx| {
-                    button.set_label("Commit", ctx);
+                    button.set_label(warp_i18n::localize_ui("Commit").into_owned(), ctx);
                     button.set_icon(Some(Icon::GitCommit), ctx);
                     button.set_disabled(disabled, ctx);
                     button.set_tooltip(
@@ -6611,7 +6614,7 @@ impl CodeReviewView {
             }
             PrimaryGitActionMode::Push => {
                 self.git_primary_action_button.update(ctx, |button, ctx| {
-                    button.set_label("Push", ctx);
+                    button.set_label(warp_i18n::localize_ui("Push").into_owned(), ctx);
                     button.set_icon(Some(Icon::ArrowUp), ctx);
                     button.set_disabled(false, ctx);
                     button.set_tooltip(Some("Push commits to remote"), ctx);
@@ -6627,7 +6630,7 @@ impl CodeReviewView {
             }
             PrimaryGitActionMode::CreatePr => {
                 self.git_primary_action_button.update(ctx, |button, ctx| {
-                    button.set_label("Create PR", ctx);
+                    button.set_label(warp_i18n::localize_ui("Create PR").into_owned(), ctx);
                     button.set_icon(Some(Icon::Github), ctx);
                     button.set_disabled(false, ctx);
                     button.set_tooltip(Some("Create a pull request"), ctx);
@@ -6669,7 +6672,7 @@ impl CodeReviewView {
             }
             PrimaryGitActionMode::Publish => {
                 self.git_primary_action_button.update(ctx, |button, ctx| {
-                    button.set_label("Publish", ctx);
+                    button.set_label(warp_i18n::localize_ui("Publish").into_owned(), ctx);
                     button.set_icon(Some(Icon::UploadCloud), ctx);
                     button.set_disabled(false, ctx);
                     button.set_tooltip(Some("Publish branch to remote"), ctx);

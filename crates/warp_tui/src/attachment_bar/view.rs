@@ -201,14 +201,14 @@ fn render_attachment_snapshot(
     let Some(selected) = snapshot.selected else {
         return TuiFlex::row().finish();
     };
-    let kind = match selected.attachment_type {
+    let kind = warp_i18n::localize_ui(match selected.attachment_type {
         AttachmentType::Image => "[image]",
         AttachmentType::File => "[file]",
-    };
+    });
     if snapshot.selected_is_processing {
         return TuiFlex::row()
             .child(
-                TuiText::new(format!("{kind} "))
+                TuiText::new(warp_i18n::localize_format!("{kind} ", kind = kind))
                     .with_style(builder.accent_text_style())
                     .truncate()
                     .finish(),
@@ -220,7 +220,7 @@ fn render_attachment_snapshot(
                     .finish(),
             )
             .child(
-                TuiText::new(" · loading…")
+                TuiText::new(warp_i18n::localize_ui(" · loading…").into_owned())
                     .with_style(builder.dim_text_style())
                     .truncate()
                     .finish(),
@@ -244,7 +244,7 @@ fn render_attachment_snapshot(
     }
     row = row
         .child(
-            TuiText::new(format!("{kind} "))
+            TuiText::new(warp_i18n::localize_format!("{kind} ", kind = kind))
                 .with_style(builder.accent_text_style())
                 .truncate()
                 .finish(),
@@ -291,7 +291,7 @@ fn render_attachment_snapshot(
     }
     if snapshot.is_processing {
         row = row.child(
-            TuiText::new(" · loading…")
+            TuiText::new(warp_i18n::localize_ui(" · loading…").into_owned())
                 .with_style(builder.dim_text_style())
                 .truncate()
                 .finish(),

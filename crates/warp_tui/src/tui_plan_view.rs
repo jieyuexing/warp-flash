@@ -339,9 +339,12 @@ impl TuiView for TuiPlanView {
         let mut content = TuiFlex::column().child(collapsible);
         if let Some(binding) = plan_toggle_hint(app) {
             content = content.child(
-                TuiText::new(format!("{binding} to collapse plan"))
-                    .with_style(builder.muted_text_style())
-                    .finish(),
+                TuiText::new(warp_i18n::localize_format!(
+                    "{binding} to collapse plan",
+                    binding = binding
+                ))
+                .with_style(builder.muted_text_style())
+                .finish(),
             );
         }
         content.finish()

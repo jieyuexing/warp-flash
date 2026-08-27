@@ -6898,6 +6898,15 @@ impl Workspace {
                     tab_config.name.clone()
                 };
 
+                let display_name = if is_worktree {
+                    display_name
+                        .strip_prefix("Worktree: ")
+                        .map(|name| format!("工作树：{name}"))
+                        .unwrap_or(display_name)
+                } else {
+                    display_name
+                };
+
                 let mut item = MenuItemFields::new(display_name)
                     .with_on_select_action(WorkspaceAction::SelectTabConfig(tab_config))
                     .with_icon(icon);

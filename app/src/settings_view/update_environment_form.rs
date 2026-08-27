@@ -877,7 +877,7 @@ impl UpdateEnvironmentForm {
                 self.remove_setup_command_mouse_states.clear();
                 // Update button text for Create mode
                 self.submit_button.update(ctx, |button, ctx| {
-                    button.set_label("Create", ctx);
+                    button.set_label(warp_i18n::localize_ui("Create").into_owned(), ctx);
                 });
             }
             EnvironmentFormInitArgs::Edit {
@@ -918,7 +918,7 @@ impl UpdateEnvironmentForm {
                     .collect();
                 // Update button text for Edit mode
                 self.submit_button.update(ctx, |button, ctx| {
-                    button.set_label("Save", ctx);
+                    button.set_label(warp_i18n::localize_ui("Save").into_owned(), ctx);
                 });
             }
         }
@@ -2979,7 +2979,10 @@ impl UpdateEnvironmentForm {
                 let ui_builder = appearance.ui_builder().clone();
                 move || {
                     ui_builder
-                        .tool_tip(format!("Open image at {docker_hub_url}"))
+                        .tool_tip(warp_i18n::localize_format!(
+                            "Open image at {url}",
+                            url = docker_hub_url
+                        ))
                         .build()
                         .finish()
                 }

@@ -209,9 +209,32 @@ pub struct ForceRefreshButtonProps<'a> {
 /// Names the model in a status message, keeping the trailing ellipsis at the end:
 /// `"Generating plan..."` becomes `"Generating plan with Claude Sonnet 4.5..."`.
 pub fn status_message_naming_model(message: &str, model_display_name: &str) -> String {
+    status_message_naming_model_for_locale(message, model_display_name, warp_i18n::active_locale())
+}
+
+fn status_message_naming_model_for_locale(
+    message: &str,
+    model_display_name: &str,
+    locale: warp_i18n::Locale,
+) -> String {
+    let message = warp_i18n::localize_ui_for_locale(locale, message.to_owned().into()).into_owned();
     match message.strip_suffix(STATUS_MESSAGE_ELLIPSIS) {
-        Some(stem) => format!("{stem} with {model_display_name}{STATUS_MESSAGE_ELLIPSIS}"),
-        None => format!("{message} with {model_display_name}"),
+        Some(stem) => warp_i18n::format_ui_for_locale(
+            locale,
+            "{message} with {model}...",
+            &[
+                ("message", stem.to_owned()),
+                ("model", model_display_name.to_owned()),
+            ],
+        ),
+        None => warp_i18n::format_ui_for_locale(
+            locale,
+            "{message} with {model}",
+            &[
+                ("message", message),
+                ("model", model_display_name.to_owned()),
+            ],
+        ),
     }
 }
 
@@ -304,7 +327,7 @@ pub fn render_warping_indicator<V: View>(
     let model_in_use_name = props.model_in_use_name.clone();
     let naming_model = |message: &str| match model_in_use_name.as_deref() {
         Some(model_display_name) => status_message_naming_model(message, model_display_name),
-        None => message.to_owned(),
+        None => warp_i18n::localize_ui(message.to_owned()).into_owned(),
     };
     let message = if let Some(summarization_type) = summarization_type {
         // Choose the appropriate message based on summarization type
@@ -329,9 +352,9 @@ pub fn render_warping_indicator<V: View>(
             // Move the timer / token text outside of the base message, we don't want it to shimmer
             // since that would cause the animation to reset every time the tokens or time changes.
             non_shimmering_text = Some(timer_text.to_string());
-            base_message.into()
+            warp_i18n::localize_ui(base_message.to_owned()).into_owned()
         } else {
-            base_message.to_string()
+            warp_i18n::localize_ui(base_message.to_owned()).into_owned()
         }
     } else if props.model.contains_update_document_action(app) {
         naming_model(LOAD_OUTPUT_MESSAGE_FOR_UPDATING_PLAN)
@@ -3477,7 +3500,7 @@ pub(crate) fn render_debug_footer<V: View>(
 
     // render the conversation's debug id so screenshots automatically show the debug id
     let debug_text = Text::new(
-        format!("Debug information: {debug_info}"),
+        warp_i18n::localize_format!("Debug information: {debug_info}", debug_info = debug_info),
         appearance.ui_font_family(),
         appearance.monospace_font_size(),
     )

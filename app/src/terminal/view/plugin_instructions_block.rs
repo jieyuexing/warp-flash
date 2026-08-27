@@ -100,8 +100,14 @@ impl PluginInstructionsBlock {
 
         let desc_element: Box<dyn Element> = if let Some(url) = link {
             let fragments = vec![
-                FormattedTextFragment::plain_text(format!("{description} ")),
-                FormattedTextFragment::hyperlink("Learn more", url),
+                FormattedTextFragment::plain_text(warp_i18n::localize_format!(
+                    "{description} ",
+                    description = warp_i18n::localize_ui(description.to_owned())
+                )),
+                FormattedTextFragment::hyperlink(
+                    warp_i18n::localize_ui("Learn more").into_owned(),
+                    url,
+                ),
             ];
             let formatted = FormattedText::new(vec![FormattedTextLine::Line(fragments)]);
             FormattedTextElement::new(

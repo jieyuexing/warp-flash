@@ -3595,9 +3595,12 @@ impl NaturalLanguageDetectionWidget {
             static AUTODETECTION_DESCRIPTION_FRAGMENTS: LazyLock<Vec<FormattedTextFragment>> =
                 LazyLock::new(|| {
                     vec![
-                        FormattedTextFragment::plain_text("Encountered an incorrect detection? "),
+                        FormattedTextFragment::plain_text(
+                            warp_i18n::localize_ui("Encountered an incorrect detection? ")
+                                .into_owned(),
+                        ),
                         FormattedTextFragment::hyperlink(
-                            "Let us know",
+                            warp_i18n::localize_ui("Let us know").into_owned(),
                             "https://warpdotdev.typeform.com/to/offrTIpq",
                         ),
                     ]
@@ -3650,13 +3653,13 @@ impl NaturalLanguageDetectionWidget {
             > = LazyLock::new(|| {
                 vec![
                     FormattedTextFragment::plain_text(
-                        "Enabling natural language detection will detect when natural language is written in the terminal input, and then automatically switch to Agent Mode for AI queries.",
+                        warp_i18n::localize_ui("Enabling natural language detection will detect when natural language is written in the terminal input, and then automatically switch to Agent Mode for AI queries.").into_owned(),
                     ),
                     FormattedTextFragment::plain_text(
-                        " Encountered an incorrect input detection? ",
+                        warp_i18n::localize_ui(" Encountered an incorrect input detection? ").into_owned(),
                     ),
                     FormattedTextFragment::hyperlink(
-                        "Let us know",
+                        warp_i18n::localize_ui("Let us know").into_owned(),
                         "https://warpdotdev.typeform.com/to/offrTIpq",
                     ),
                 ]
@@ -3744,9 +3747,9 @@ impl VoiceWidget {
 
         let voice_input_description_text_fragments = vec![
             FormattedTextFragment::plain_text(
-                "Voice input allows you to control Warp by speaking directly to your terminal (powered by ",
+                warp_i18n::localize_ui("Voice input allows you to control Warp by speaking directly to your terminal (powered by ").into_owned(),
             ),
-            FormattedTextFragment::hyperlink("Wispr Flow", WISPR_FLOW_URL),
+            FormattedTextFragment::hyperlink(warp_i18n::localize_ui("Wispr Flow").into_owned(), WISPR_FLOW_URL),
             FormattedTextFragment::plain_text(")."),
         ];
 
@@ -4846,8 +4849,9 @@ impl ApiKeysWidget {
     ) -> Box<dyn Element> {
         let provider_name = provider.display_name();
         let tooltip_text = FormattedText::new([FormattedTextLine::Line(vec![
-            FormattedTextFragment::plain_text(format!(
-                "Your organization has provided an API key for {provider_name}. A key entered here takes precedence for {provider_name} requests."
+            FormattedTextFragment::plain_text(warp_i18n::localize_format!(
+                "Your organization has provided an API key for {provider_name}. A key entered here takes precedence for {provider_name} requests.",
+                provider_name = provider_name
             )),
         ])]);
         let tooltip_background = appearance.theme().tooltip_background();
@@ -4989,22 +4993,25 @@ impl ApiKeysWidget {
 
         if show_provider_keys {
             add_paragraph(vec![FormattedTextFragment::plain_text(
-                "Use your own API keys from model providers for Warp Agent. API keys are used to make requests to your chosen model provider. Using auto models or models you do not have available API keys for will consume Warp credits.",
+                warp_i18n::localize_ui("Use your own API keys from model providers for Warp Agent. API keys are used to make requests to your chosen model provider. Using auto models or models you do not have available API keys for will consume Warp credits.").into_owned(),
             )]);
         }
 
         if show_custom_endpoints {
             add_paragraph(vec![FormattedTextFragment::plain_text(
-                "Add custom endpoints to use third-party models. Custom endpoints must support OpenAI Chat Completions, OpenAI Responses, or Anthropic Messages.",
+                warp_i18n::localize_ui("Add custom endpoints to use third-party models. Custom endpoints must support OpenAI Chat Completions, OpenAI Responses, or Anthropic Messages.").into_owned(),
             )]);
         }
 
         if show_provider_keys || show_custom_endpoints {
             add_paragraph(vec![FormattedTextFragment::plain_text(
-                "API keys added here are stored only on this device, not on Warp's servers.",
+                warp_i18n::localize_ui(
+                    "API keys added here are stored only on this device, not on Warp's servers.",
+                )
+                .into_owned(),
             )]);
             add_paragraph(vec![FormattedTextFragment::hyperlink(
-                "Learn more",
+                warp_i18n::localize_ui("Learn more").into_owned(),
                 CUSTOM_INFERENCE_LEARN_MORE_URL,
             )]);
         }
@@ -5460,9 +5467,15 @@ impl SettingsWidget for ApiKeysWidget {
             {
                 if team.billing_metadata.customer_type == CustomerType::Enterprise {
                     vec![
-                        FormattedTextFragment::hyperlink("Contact sales", "mailto:sales@warp.dev"),
+                        FormattedTextFragment::hyperlink(
+                            warp_i18n::localize_ui("Contact sales").into_owned(),
+                            "mailto:sales@warp.dev",
+                        ),
                         FormattedTextFragment::plain_text(
-                            " to enable bringing your own API keys on your Enterprise plan.",
+                            warp_i18n::localize_ui(
+                                " to enable bringing your own API keys on your Enterprise plan.",
+                            )
+                            .into_owned(),
                         ),
                     ]
                 } else {
@@ -5472,14 +5485,16 @@ impl SettingsWidget for ApiKeysWidget {
                     if has_admin_permissions {
                         vec![
                             FormattedTextFragment::hyperlink(
-                                "Upgrade to the Build plan",
+                                warp_i18n::localize_ui("Upgrade to the Build plan").into_owned(),
                                 upgrade_url,
                             ),
-                            FormattedTextFragment::plain_text(" to use your own API keys."),
+                            FormattedTextFragment::plain_text(
+                                warp_i18n::localize_ui(" to use your own API keys.").into_owned(),
+                            ),
                         ]
                     } else {
                         vec![FormattedTextFragment::plain_text(
-                            "Ask your team's admin to upgrade to the Build plan to use your own API keys.",
+                            warp_i18n::localize_ui("Ask your team's admin to upgrade to the Build plan to use your own API keys.").into_owned(),
                         )]
                     }
                 }
@@ -5488,17 +5503,24 @@ impl SettingsWidget for ApiKeysWidget {
             {
                 vec![
                     FormattedTextFragment::hyperlink_action(
-                        "Create an account",
+                        warp_i18n::localize_ui("Create an account").into_owned(),
                         WarpAgentPageAction::SignupAnonymousUser,
                     ),
-                    FormattedTextFragment::plain_text(" to use your own API keys."),
+                    FormattedTextFragment::plain_text(
+                        warp_i18n::localize_ui(" to use your own API keys.").into_owned(),
+                    ),
                 ]
             } else {
                 let user_id = auth_state.user_id().unwrap_or_default();
                 let upgrade_url = UserWorkspaces::upgrade_link(user_id);
                 vec![
-                    FormattedTextFragment::hyperlink("Upgrade to the Build plan", upgrade_url),
-                    FormattedTextFragment::plain_text(" to use your own API keys."),
+                    FormattedTextFragment::hyperlink(
+                        warp_i18n::localize_ui("Upgrade to the Build plan").into_owned(),
+                        upgrade_url,
+                    ),
+                    FormattedTextFragment::plain_text(
+                        warp_i18n::localize_ui(" to use your own API keys.").into_owned(),
+                    ),
                 ]
             };
 

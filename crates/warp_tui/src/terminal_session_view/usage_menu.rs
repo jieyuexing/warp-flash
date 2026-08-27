@@ -180,21 +180,24 @@ impl TuiElement for TuiUsagePayAsYouGoRows {
         let summary = TuiFlex::row()
             .child(
                 TuiText::from_spans([
-                    ("Spend: ".to_owned(), self.muted_style),
                     (
-                        format!(
-                            "{} credits / {}",
-                            format_usage_credits(self.credits_used as i64),
-                            format_usage_cost_cents(self.cost_cents)
+                        warp_i18n::localize_ui("Spend: ").into_owned().to_owned(),
+                        self.muted_style,
+                    ),
+                    (
+                        warp_i18n::localize_format!(
+                            "{credits} credits / {cost}",
+                            credits = format_usage_credits(self.credits_used as i64),
+                            cost = format_usage_cost_cents(self.cost_cents)
                         ),
                         self.primary_style,
                     ),
                     (" • ".to_owned(), self.muted_style),
                     ("●".to_owned(), self.filled_style),
                     (
-                        format!(
-                            " = {} credits",
-                            format_usage_credits(self.credits_per_circle as i64)
+                        warp_i18n::localize_format!(
+                            " = {credits} credits",
+                            credits = format_usage_credits(self.credits_per_circle as i64)
                         ),
                         self.muted_style,
                     ),
@@ -263,7 +266,10 @@ fn credit_section(
             .child(
                 TuiText::from_spans([
                     (remaining.to_string(), primary_bold),
-                    (" remaining".to_owned(), primary),
+                    (
+                        warp_i18n::localize_ui(" remaining").into_owned().to_owned(),
+                        primary,
+                    ),
                 ])
                 .truncate()
                 .finish(),
@@ -273,7 +279,12 @@ fn credit_section(
         TuiFlex::row()
             .child(
                 TuiText::from_spans([
-                    ("Credits used: ".to_owned(), muted),
+                    (
+                        warp_i18n::localize_ui("Credits used: ")
+                            .into_owned()
+                            .to_owned(),
+                        muted,
+                    ),
                     (format!("{}/{}", bar.used, bar.limit), primary),
                 ])
                 .truncate()
@@ -302,14 +313,14 @@ fn pay_as_you_go_section(
     vec![
         TuiFlex::row()
             .child(
-                TuiText::new("Pay-as-you-go")
+                TuiText::new(warp_i18n::localize_ui("Pay-as-you-go").into_owned())
                     .with_style(primary)
                     .truncate()
                     .finish(),
             )
             .flex_child(TuiText::new(String::new()).finish())
             .child(
-                TuiText::new("No limit")
+                TuiText::new(warp_i18n::localize_ui("No limit").into_owned())
                     .with_style(primary)
                     .truncate()
                     .finish(),
@@ -353,7 +364,7 @@ pub(super) fn render(
     let header = TuiContainer::new(
         TuiFlex::row()
             .child(
-                TuiText::new("\u{25D4} Usage")
+                TuiText::new(warp_i18n::localize_ui("\u{25D4} Usage").into_owned())
                     .with_style(primary_bold)
                     .truncate()
                     .finish(),
@@ -433,9 +444,15 @@ pub(super) fn render(
         .child(panel)
         .child(TuiText::new(" ").with_style(muted).truncate().finish())
         .child(
-            TuiText::from_spans([("Esc ".to_owned(), primary), ("to exit".to_owned(), muted)])
-                .truncate()
-                .finish(),
+            TuiText::from_spans([
+                ("Esc ".to_owned(), primary),
+                (
+                    warp_i18n::localize_ui("to exit").into_owned().to_owned(),
+                    muted,
+                ),
+            ])
+            .truncate()
+            .finish(),
         )
         .finish()
 }

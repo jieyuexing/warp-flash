@@ -60,7 +60,8 @@ pub(super) fn render_todos(
     let is_list_outdated = has_cancelled_todo
         || todos.len() != conversation.active_todo_list().map_or(0, |list| list.len());
     if is_list_outdated {
-        header_config = header_config.with_badge("Outdated".to_string());
+        header_config =
+            header_config.with_badge(warp_i18n::localize_ui("Outdated").into_owned().to_string());
     }
 
     let header_element = header_config.render(app);

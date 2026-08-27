@@ -34,7 +34,7 @@ fn replace_oversized_data_uri_images(mut text: FormattedText) -> FormattedText {
             && asset_cache::data_uri_exceeds_limit(&image.source)
         {
             *line = FormattedTextLine::Line(vec![FormattedTextFragment::plain_text(
-                IMAGE_TOO_LARGE_PLACEHOLDER,
+                warp_i18n::localize_ui(IMAGE_TOO_LARGE_PLACEHOLDER).into_owned(),
             )]);
         }
     }

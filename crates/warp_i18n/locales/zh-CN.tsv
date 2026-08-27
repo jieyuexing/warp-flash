@@ -1,0 +1,1542 @@
+# Exact English source<TAB>Simplified Chinese translation.
+# Keep application data, terminal content, model output, and user-authored text out of this catalog.
++ Add rule	+ 添加规则
++ Add router	+ 添加路由
++ Add custom model	+ 添加自定义模型
+1 Comment	1 条评论
+Accept	接受
+Add	添加
+Add Profile	添加配置
+Add repo	添加仓库
+Add rule	添加规则
+Add-on credits	附加额度
+Agent	智能体
+AI	AI
+All	全部
+Allow	允许
+Auto-reload	自动重新加载
+Auto reload	自动重新加载
+AWS Region:	AWS 区域：
+Background color	背景颜色
+Balance	余额
+BETA	测试版
+Beta	测试版
+Binary file - no diff available	二进制文件——无法显示差异
+Blocks	区块
+Branch	分支
+Bring All to Front	全部置于前台
+Buy credits	购买额度
+Call web tools	调用网页工具
+Cancel	取消
+Cancelled	已取消
+Cannot detect diffs for this folder	无法检测此文件夹的差异
+Change default model	更改默认模型
+Change keybinding	更改快捷键
+Changes	更改
+Character limit exceeded.	已超出字符限制。
+Choose how you'd like to set up your environment	选择环境设置方式
+Choose how you’d like to set up your environment:	选择环境设置方式：
+Choose your agent	选择智能体
+Clear all	全部清除
+Clear filters	清除筛选条件
+Close	关闭
+Close Window	关闭窗口
+Cloud Agent Run Cancelled	云端智能体运行已取消
+Code review	代码审查
+Code symbols indexing...	正在索引代码符号...
+Command edited.	命令已编辑。
+Command Search	命令搜索
+Comment	评论
+Comment imported from GitHub	已从 GitHub 导入评论
+Commit	提交
+Commit and create PR	提交并创建 PR
+Commit message	提交信息
+Compact Mode	紧凑模式
+Configure	配置
+Configure access on GitHub	在 GitHub 上配置访问权限
+Connect	连接
+Connecting	正在连接
+Context window	上下文窗口
+Continue	继续
+Continue locally	在本地继续
+Copy on Select within the Terminal	在终端中选中即复制
+Create	创建
+Create anonymous user	创建匿名用户
+Create an environment	创建环境
+Create an integration	创建集成
+Create a key to manage external access to Warp	创建用于管理 Warp 外部访问的密钥
+Create environment	创建环境
+Create your first tab config	创建第一个标签页配置
+Custom endpoints	自定义端点
+Cycle suggestions	循环切换建议
+Debug	调试
+Debug output	调试输出
+Delete	删除
+Delete environment	删除环境
+Delete MCP	删除 MCP
+Delete profile	删除配置
+Delete rule	删除规则
+Density	密度
+Description	描述
+Directory tab colors	目录标签页颜色
+Discard changes	放弃更改
+Disconnect	断开连接
+Dismiss	关闭
+Don't ask me this again	不再询问
+Don't show again	不再显示
+Drive	云盘
+Edit	编辑
+Edit Profile	编辑配置
+Edit rule	编辑规则
+Edit Variables	编辑变量
+Enable	启用
+Enable auto-handoff?	启用自动移交？
+Enable notifications	启用通知
+Environment details	环境详情
+Environment setup commands	环境设置命令
+Error	错误
+Error loading diffs	加载差异时出错
+Example queries	示例查询
+Expiration	到期时间
+Failed to start environment	启动环境失败
+File	文件
+File explorer	文件资源管理器
+File renamed without changes	文件仅重命名，内容未更改
+Finish	完成
+Fork current conversation	派生当前对话
+Free credits	免费额度
+From GitHub	从 GitHub 导入
+Get started	开始使用
+Get Warping	开始使用 Warp
+Getting started with Oz cloud agents	开始使用 Oz 云端智能体
+GitHub Authentication Required	需要 GitHub 身份验证
+Give control back to agent	将控制权交还智能体
+Go to line	转到行
+Grace period (seconds)	宽限期（秒）
+Harness	执行框架
+Height %	高度 %
+Hide Others	隐藏其他应用
+Hide Warp	隐藏 Warp
+Import	导入
+Include unstaged	包含未暂存更改
+Included commits	包含的提交
+Index new folder	索引新文件夹
+Initialize codebase	初始化代码库
+Initialize Project	初始化项目
+Install	安装
+Install nvm	安装 nvm
+Installed	已安装
+Invalid regex	无效的正则表达式
+Keybinding	快捷键
+Last 30 days	最近 30 天
+Launch Configurations	启动配置
+Learn more	了解更多
+Load more	加载更多
+Loading...	正在加载...
+Loading agents...	正在加载智能体...
+Loading prompt...	正在加载提示词...
+Loading results...	正在加载结果...
+Loading session...	正在加载会话...
+Log out	退出登录
+Manage	管理
+Manage defaults	管理默认设置
+Manage rules	管理规则
+Manually Toggle Network Status	手动切换网络状态
+Mark all as read	全部标为已读
+Minimize	最小化
+MODELS	模型
+Monthly overage spending limit	每月超额消费上限
+Name	名称
+Name (optional)	名称（可选）
+NEW	新功能
+New	新建
+New Agent Tab	新建智能体标签页
+New agent	新建智能体
+New conversation	新建对话
+New empty file	新建空文件
+New environment	新建环境
+New terminal session	新建终端会话
+New Terminal Tab	新建终端标签页
+New Window	新建窗口
+New worktree	新建工作树
+Next	下一步
+No agents available. Create one first.	没有可用智能体，请先创建一个。
+No API Keys	没有 API 密钥
+No API keys match your search	没有与搜索匹配的 API 密钥
+No cloud environment was started	未启动云端环境
+No code to be restored	没有可恢复的代码
+No conversations yet	还没有对话
+No environments match your search.	没有与搜索匹配的环境。
+No file selected	未选择文件
+No files to discard	没有可放弃的文件
+No matching conversations	没有匹配的对话
+No matches	没有匹配项
+No MCP server selected	未选择 MCP 服务器
+No node versions installed	未安装 Node.js 版本
+No open changes	没有未处理的更改
+No repositories found	未找到仓库
+No repos selected yet	尚未选择仓库
+No results found	未找到结果
+No results matched your filters	没有结果符合筛选条件
+No secrets found. Save to use this value directly or click the key to add a secret.	未找到密钥。保存后可直接使用此值，或点击密钥图标添加密钥。
+No settings match your search.	没有与搜索匹配的设置。
+No tabs match your search.	没有与搜索匹配的标签页。
+No tabs open	没有打开的标签页
+No tools available	没有可用工具
+No updates available	没有可用更新
+No usage history	没有使用记录
+None	无
+Not now	暂不
+Notifications setup instructions	通知设置说明
+Open all in code review	在代码审查中打开全部
+Open file	打开文件
+Open in code review	在代码审查中打开
+Open in Warp	在 Warp 中打开
+Open Recent	打开最近项目
+Open repository	打开仓库
+Open settings file	打开设置文件
+Open Tab	打开标签页
+Paste	粘贴
+Other team members' usage across add-on, pay-as-you-go, and cloud-only credits.	其他团队成员对附加额度、按量付费额度和仅限云端额度的使用情况。
+Outdated	已过期
+Oz Cloud API Keys	Oz 云端 API 密钥
+Pane title as	窗格标题显示为
+PERMISSIONS	权限
+Personal	个人
+Plan	计划
+Plan auto-sync	计划自动同步
+Please authenticate with GitHub to continue	请通过 GitHub 身份验证以继续
+Preferences	偏好设置
+Press new keyboard shortcut	按下新的快捷键
+Previous	上一步
+Project explorer unavailable	项目资源管理器不可用
+Project Skill	项目技能
+Provided API key is not valid	提供的 API 密钥无效
+Purchased this month	本月已购买
+Queued	已排队
+Quit Warp	退出 Warp
+RECENT ACTIVITY	最近活动
+Recommended	推荐
+References	引用
+Refresh	刷新
+Refresh AWS Credentials	刷新 AWS 凭据
+Refine	优化
+Regex pattern	正则表达式
+Reject	拒绝
+Remove	移除
+Remove endpoint	移除端点
+Remove from team	从团队中移除
+Remove queued prompt	移除排队中的提示词
+Replace all	全部替换
+Repo(s)	仓库
+Reopen closed session	重新打开已关闭的会话
+Request	请求
+Response	响应
+Restore	恢复
+Retry	重试
+Review changes	审查更改
+Rewind	回退
+Rich Input	富文本输入
+Run	运行
+Runs	运行记录
+Save	保存
+Save Current Configuration	保存当前配置
+Save New...	另存为新配置...
+Search	搜索
+Search sessions, agents, files...	搜索会话、智能体、文件...
+See what's new	查看新功能
+Select directory	选择目录
+Send Feedback...	发送反馈...
+Send now	立即发送
+Send to Agent	发送给智能体
+Session type	会话类型
+Set Warp as Default Terminal	将 Warp 设为默认终端
+Settings	设置
+Share with team	与团队共享
+Show	显示
+Show All	全部显示
+Show initialization block	显示初始化区块
+Skip all	全部跳过
+Some settings will take effect when you open a new session.	部分设置将在打开新会话后生效。
+Start a new Oz cloud agent	启动新的 Oz 云端智能体
+Status	状态
+Stop sharing	停止共享
+Suggested	建议
+Suggestions:	建议：
+Switch back to horizontal tabs	切回水平标签页
+Synchronize Inputs	同步输入
+Tab	标签页
+Tab item	标签页项目
+Take control	取得控制权
+Take over	接管
+Tasks	任务
+Theme name	主题名称
+ToggleFullScreen	切换全屏
+Total overages	超额总计
+Type	类型
+Undo	撤销
+Uniform padding (px)	统一内边距（像素）
+Unable to load file content	无法加载文件内容
+Update	更新
+Update Agent	更新智能体
+Update Warp plugin	更新 Warp 插件
+Usage	使用情况
+Use agent	使用智能体
+Use latest codex model	使用最新 Codex 模型
+Use Warp's Prompt	使用 Warp 的提示词
+Version	版本
+View	视图
+View Agents	查看智能体
+View all cloud runs	查看所有云端运行
+View as	查看方式
+View changelog	查看更新日志
+View details	查看详情
+View in Oz	在 Oz 中查看
+Visit Oz	访问 Oz
+Visit the repo	访问仓库
+Warp Agent	Warp 智能体
+Warp Drive	Warp 云盘
+Warp is now open-source	Warp 现已开源
+Warpify subshell	Warp 化子 Shell
+When a command takes longer than	当命令运行时间超过
+Width %	宽度 %
+Window	窗口
+You haven’t set up any environments yet.	你还没有设置任何环境。
+You may want to try using different keywords or checking for any possible typos.	请尝试其他关键词，或检查是否存在拼写错误。
+Zoom	缩放
+
+# Additional production UI coverage. Brand names and protocol tokens are explicitly preserved.
++ Add model	+ 添加模型
++ Add new repo	+ 添加新仓库
++ Create API Key	+ 创建 API 密钥
+AWS Access Key ID:	AWS 访问密钥 ID：
+AWS credentials expired or missing	AWS 凭据已过期或缺失
+Accept and save	接受并保存
+Add as context	添加为上下文
+Add environment variables	添加环境变量
+Add regex	添加正则表达式
+Additional metadata	附加元数据
+Agent location	智能体位置
+All locally indexed repos are already selected.	已选中所有本地索引的仓库。
+Always run automatically	始终自动运行
+Apply link	应用链接
+Are you still there?	你还在吗？
+Artifacts	产物
+As you or the Agent make changes, you'll be able to track them here.	当你或智能体进行更改时，可以在此跟踪这些更改。
+Auth with GitHub	使用 GitHub 认证
+Authenticate with GitHub	通过 GitHub 身份验证
+Auto-generate worktree branch name	自动生成工作树分支名称
+Autogenerate worktree branch name	自动生成工作树分支名称
+Automatically color tabs based on the directory or repo you're working in.	根据当前目录或仓库自动设置标签页颜色。
+Automatically create a worktree when opening a new tab	打开新标签页时自动创建工作树
+Bring your own AI	接入你自己的 AI
+Buy more	购买更多
+Cancel summarization	取消摘要
+Close Welcome Tips	关闭欢迎提示
+Close session	关闭会话
+Cloud agents require an environment that they'll run in to get their task done. Create your first environment below. You'll be able to edit the environment later, or add new environments when you need them.	云端智能体需要一个运行环境来完成任务。请在下方创建第一个环境；之后可以编辑它，也可以按需添加新环境。
+Compare plans	比较套餐
+Confirm	确认
+Connect your SuperGrok subscription to use Grok models in the Warp Agent through your xAI account.	连接你的 SuperGrok 订阅，通过 xAI 账户在 Warp 智能体中使用 Grok 模型。
+Contact Admin to request access	联系管理员申请访问权限
+Continue summarization	继续摘要
+Copy All	全部复制
+Copy error	复制错误信息
+Copy link	复制链接
+Copy to Personal	复制到个人空间
+Create agent	创建智能体
+Create team	创建团队
+Customizable in appearance settings.	可在外观设置中自定义。
+Discard this version	放弃此版本
+Do not show again	不再显示
+Done	完成
+ESC	ESC
+Edit API Keys	编辑 API 密钥
+Edit config	编辑配置
+Empty trash	清空废纸篓
+Enter custom Docker image name:	输入自定义 Docker 镜像名称：
+First, set up an environment to create an integration.	请先设置环境，然后创建集成。
+Help	帮助
+I'm looking for...	我正在查找...
+Includes other request context and temporary instructions added to help the agent better respond.	包括其他请求上下文和为帮助智能体更好响应而添加的临时指令。
+Install nvm to enable version switching	安装 nvm 以启用版本切换
+Introducing universal agent support: level up any coding agent with Warp	推出通用智能体支持：用 Warp 增强任意编码智能体
+Invite	邀请
+Kick off an agent task to view usage history here.	启动智能体任务后，可在此查看使用记录。
+Link SSO	关联 SSO
+Make default	设为默认
+Manage billing	管理账单
+Manage privacy settings	管理隐私设置
+Manage shared blocks	管理共享区块
+Manual setup: Create a Slack or Linear integration with the Oz CLI	手动设置：使用 Oz CLI 创建 Slack 或 Linear 集成
+Meet your new agent inbox	认识全新的智能体收件箱
+Missing a repo?	缺少某个仓库？
+No URLs fetched	未获取任何 URL
+No URLs found	未找到 URL
+No images	没有图片
+Open	打开
+OpenAI base URL (optional, press Enter to skip):	OpenAI 基础 URL（可选，按 Enter 跳过）：
+Or	或者
+Or, supply your own existing docker image.	或者，提供你现有的 Docker 镜像。
+Orchestrate any agent, anywhere	随时随地编排任意智能体
+Overwrite	覆盖
+Preparing...	正在准备...
+Premium or SuperGrok subscription	Premium 或 SuperGrok 订阅
+Provide your endpoint details below. You can add as many models from the endpoint as you'd like and can also provide aliases for the model picker in your input.	请在下方提供端点详情。你可以从该端点添加任意数量的模型，也可以为输入框中的模型选择器设置别名。
+Quick start: Visit oz.warp.dev for a UI-based setup experience.	快速开始：访问 oz.warp.dev，通过图形界面完成设置。
+Re-generate AGENTS.md file	重新生成 AGENTS.md 文件
+Remote host disconnected. You will not be able to see updates and save changes.	远程主机已断开连接。你将无法查看更新或保存更改。
+Request edit access	申请编辑权限
+Reset to Warp defaults	恢复 Warp 默认值
+Reset to default	恢复默认值
+Restart server	重启服务器
+Rewinding does not affect files edited manually or via shell commands.	回退不会影响手动编辑或通过 Shell 命令编辑的文件。
+Run Connection Lost	运行连接已断开
+Run your agent task in an isolated cloud environment.	在隔离的云端环境中运行智能体任务。
+Select a git repository to enable worktree support	选择 Git 仓库以启用工作树支持
+Send Feedback	发送反馈
+Set up	设置
+Set up a reusable starting point for your tabs. Pick a repo, choose a session type, and optionally attach a worktree. Use it whenever you want to open a tab with this setup.	为标签页设置可复用的起点：选择仓库和会话类型，并可按需关联工作树。以后可随时使用此配置打开标签页。
+Sign up	注册
+Skip	跳过
+Skip for now	暂时跳过
+Staging IAP credentials	预发布 IAP 凭据
+Start Oz cloud agents directly in Warp from an integration (Linear, Slack), with an event (GitHub, built-in schedule), or programmatically with the Oz SDK or CLI.	可通过集成（Linear、Slack）、事件（GitHub、内置计划）或 Oz SDK/CLI，以编程方式直接在 Warp 中启动 Oz 云端智能体。
+Switch	切换
+The AWS CLI is required to authenticate with your organization's AWS Bedrock. Install it to continue.	需要 AWS CLI 才能通过你所在组织的 AWS Bedrock 进行身份验证。请安装后继续。
+The agent may use web search when helpful for completing tasks.	智能体可在有助于完成任务时使用网页搜索。
+The base model's working memory — how many tokens of your conversation, code, and documents it can consider at once. Larger windows enable longer conversations and more coherent responses over bigger codebases, at the cost of higher latency and compute usage.	基础模型的工作记忆，即一次可处理的对话、代码和文档 token 数。更大的窗口支持更长对话和更大型代码库中的连贯响应，但会增加延迟和计算用量。
+The output from Warp's initialization script is visible above to assist with debugging.	上方显示了 Warp 初始化脚本的输出，以便进行调试。
+The plans this agent creates will be automatically added and synced to Warp Drive.	此智能体创建的计划将自动添加并同步到 Warp 云盘。
+This file has saved changes that are not reflected here.	此文件包含尚未在此处反映的已保存更改。
+This is an automated agent on your team.	这是团队中的自动化智能体。
+This menu helps you switch between Node.js versions — but it requires nvm to be installed.	此菜单可帮助你切换 Node.js 版本，但需要先安装 nvm。
+This secret key is shown only once. Copy and store it securely.	此密钥只显示一次。请复制并妥善保存。
+This suggestion is being edited in another tab.	此建议正在另一个标签页中编辑。
+To use AI features, please create an account.	请创建账户后使用 AI 功能。
+To use Warp Drive, please create an account.	请创建账户后使用 Warp 云盘。
+Toast notifications stay visible for	浮动通知保持显示
+Toggle Focus Reporting	切换焦点报告
+Toggle Mouse Reporting	切换鼠标报告
+Toggle Scroll Reporting	切换滚动报告
+Transfer	转移
+Try installing versions with nvm	尝试使用 nvm 安装版本
+Type owner/repo and press Enter to add, or select from dropdown.	输入 owner/repo 并按 Enter 添加，或从下拉列表中选择。
+Unshare	取消共享
+Use your	使用你的
+View index status	查看索引状态
+View logs	查看日志
+View pricing	查看价格
+Warp	Warp
+Warp will prevent use of premium models when this dollar limit is reached. Resets on a monthly basis.	达到此美元上限后，Warp 将禁止使用高级模型。该上限每月重置。
+We've made major improvements to Warp's cloud agent orchestration platform, Oz.	我们对 Warp 的云端智能体编排平台 Oz 进行了重大改进。
+Window positions won't be restored on Wayland. 	在 Wayland 上不会恢复窗口位置。 
+You're viewing a snapshot	你正在查看快照
+You, our community, can participate in building Warp using an agent-first workflow.	你和整个社区都可以使用智能体优先的工作流参与构建 Warp。
+Your Warp admin has enabled AWS Bedrock for your team.	你的 Warp 管理员已为团队启用 AWS Bedrock。
+Your credentials are encrypted end-to-end. 	你的凭据已进行端到端加密。 
+Your organization disallows AI when the active pane contains content from a remote session	当活动窗格包含远程会话内容时，你所在的组织禁止使用 AI
+Your profile is set to always ask for permission to execute commands.	你的配置设为在执行命令前始终请求许可。
+ZDR	ZDR
+ + Add new repo	 + 添加新仓库
+(no arguments)	（无参数）
+ · Check now	 · 立即检查
+JSON	JSON
+Note that AI credits made near your chosen limit may exceed it by a few dollars.	请注意，接近所选上限时产生的 AI 额度费用可能会超出几美元。
+Already have an account? 	已有账号？
+Conversation history	对话历史
+Customize your Warp	定制你的 Warp
+Disabled	已禁用
+Enabled	已启用
+Global file search	全局文件搜索
+Horizontal	水平
+Log in	登录
+Tab styling	标签页样式
+Tailor your features and UI to your working style.	根据你的工作方式调整功能与界面。
+Tools panel	工具面板
+Vertical	垂直
+A modern terminal with state of the art agents built in.	内置先进智能体能力的现代终端。
+A modern terminal optimized for speed, context, and control without AI.	一个专注于速度、上下文与操控体验的现代终端，不含 AI 功能。
+Agentic control of long-running commands and TUIs	以智能体方式控制长时间运行的命令和 TUI
+Automatically diagnose and fix terminal errors	自动诊断并修复终端错误
+Back	返回
+Build faster with agents	使用智能体加速构建
+Get AI features to accelerate terminal and agent-driven workflows:	启用 AI 功能，加速终端与智能体驱动的工作流：
+Hand off agent work to cloud agents	将智能体任务交给云端智能体
+How do you want to work?	你希望如何使用？
+Just use the terminal	仅使用终端
+No AI features	不含 AI 功能
+Remote control for Claude Code, Codex, and other agents	远程控制 Claude Code、Codex 及其他智能体
+Review code diffs and send comments directly to agents	审查代码差异并将评论直接发送给智能体
+Use frontier and open-weight models with Warp Agent	通过 Warp Agent 使用前沿模型与开放权重模型
+Welcome to Warp	欢迎使用 Warp
+seconds	秒
+seconds to complete	秒完成
+to cycle parameters	切换参数
+to send	发送
+•	•
+⋮	⋮
+About	关于
+Account	账户
+Agents	智能体
+Appearance	外观
+Billing and usage	账单与用量
+Cloud platform	云平台
+Code	代码
+Features	功能
+Keyboard shortcuts	键盘快捷键
+Privacy	隐私
+Referrals	推荐奖励
+Shared blocks	共享区块
+Scripting	脚本
+Teams	团队
+Warpify	Warp 化
+Copy	复制
+Cut	剪切
+Select all	全选
+Copy URL	复制 URL
+Copy command	复制命令
+Copy commands	复制命令
+Copy filtered output	复制筛选后的输出
+Copy git branch	复制 Git 分支
+Copy output	复制输出
+Copy path	复制路径
+Copy prompt	复制提示符
+Copy right prompt	复制右侧提示符
+Copy working directory	复制工作目录
+Insert into input	插入到输入框
+Open in editor	在编辑器中打开
+Open link	打开链接
+Show containing folder	显示所在文件夹
+Show in Finder	在访达中显示
+Find within block	在区块中查找
+Find within blocks	在多个区块中查找
+Save as workflow	另存为工作流
+Scroll to top of block	滚动到区块顶部
+Scroll to top of blocks	滚动到多个区块顶部
+Scroll to bottom of block	滚动到区块底部
+Scroll to bottom of blocks	滚动到多个区块底部
+Toggle block filter	切换区块筛选
+Toggle bookmark	切换书签
+Clear Blocks	清除区块
+Close pane	关闭窗格
+Split pane down	向下拆分窗格
+Split pane left	向左拆分窗格
+Split pane right	向右拆分窗格
+Split pane up	向上拆分窗格
+Command search	命令搜索
+Share...	共享…
+Share block...	共享区块…
+Settings search	搜索设置
+Search settings	搜索设置
+General	通用
+Terminal	终端
+Text	文本
+Cursor	光标
+Theme	主题
+Font	字体
+Font size	字体大小
+Line height	行高
+Input	输入
+Working directory	工作目录
+Startup	启动
+Notifications	通知
+Updates	更新
+Language	语言
+Advanced	高级
+Reset to defaults	恢复默认设置
+Accept autosuggestions	接受自动建议
+Active Screen	当前屏幕
+Add regex pattern	添加正则表达式
+Add your own custom keybindings to existing actions below.	在下方为现有操作添加自定义快捷键。
+Adjusts the default zoom level across all windows	调整所有窗口的默认缩放级别
+After all tabs	所有标签页之后
+After current tab	当前标签页之后
+Always show tab bar	始终显示标签栏
+Asynchronous find	异步查找
+Automatically switch between light and dark themes when your system does.	跟随系统自动切换浅色和深色主题。
+Blinking cursor	光标闪烁
+Characters considered part of a word	视为单词组成部分的字符
+Clear	清除
+Click to set global hotkey	点击设置全局快捷键
+Clipboard access (OSC 52)	剪贴板访问（OSC 52）
+Columns	列
+Compact mode	紧凑模式
+Completions open as you type.	输入时自动打开补全。
+Configure Global Hotkey	配置全局快捷键
+Configure keyboard shortcuts	配置键盘快捷键
+Copy on select	选中即复制
+Create your own custom theme	创建自定义主题
+Current theme	当前主题
+Cursor type	光标类型
+Custom secret redaction	自定义敏感信息遮盖
+Customize your app icon	自定义应用图标
+Dark	深色
+Default (no color)	默认（无颜色）
+Default mode for new sessions	新会话的默认模式
+Default	默认
+Denylisted commands	禁止的命令
+Dim inactive panes	调暗非活动窗格
+Double-click smart selection	双击智能选择
+Edit code and commands with Vim keybindings	使用 Vim 快捷键编辑代码和命令
+Enable Focus Reporting	启用焦点报告
+Enable Mouse Reporting	启用鼠标报告
+Enable Scroll Reporting	启用滚动报告
+Enable slash commands in terminal mode	在终端模式中启用斜杠命令
+Enforce minimum contrast	强制最低对比度
+Error underlining for commands	为错误命令添加下划线
+Expand aliases as you type	输入时展开别名
+Focus follows mouse	焦点跟随鼠标
+Font size (px)	字体大小（像素）
+Font weight	字体粗细
+Global search	全局搜索
+Header toolbar layout	顶部工具栏布局
+Help improve Warp	帮助改进 Warp
+Hide search bar in vertical tab layout	在垂直标签布局中隐藏搜索栏
+Hide tab bar if fullscreen	全屏时隐藏标签栏
+Honor linux selection clipboard	使用 Linux 选择剪贴板
+Input position	输入框位置
+Install SSH extension	安装 SSH 扩展
+Keys	按键
+Left Option key is Meta	左 Option 键作为 Meta
+Ligatures may reduce performance	连字可能降低性能
+Light	浅色
+Lines scrolled by mouse wheel interval	鼠标滚轮每次滚动的行数
+Make Warp the default terminal	将 Warp 设为默认终端
+Manage your data	管理你的数据
+Match terminal	匹配终端
+Maximum rows in a block	区块最大行数
+Middle-click to paste	中键点击粘贴
+Never	从不
+New tab placement	新标签页位置
+Only on hover	仅悬停时
+Only show tab bar on hover	仅悬停时显示标签栏
+Open completions menu as you type	输入时打开补全菜单
+Open links in desktop app	尽可能在桌面应用中打开链接
+Open new windows with custom size	以自定义大小打开新窗口
+Panes	窗格
+Pin Input to the Bottom	将输入框固定到底部
+Pin Input to the Top	将输入框固定到顶部
+Play notification sounds	播放通知声音
+Preferred graphics backend	首选图形后端
+Preserve active tab color for new tabs	新标签页沿用当前标签页颜色
+Preserve input focus on block selection	选择区块时保留输入焦点
+Privacy policy	隐私政策
+Quit when all windows are closed	关闭所有窗口时退出
+Read Warp's privacy policy	阅读 Warp 隐私政策
+Receive desktop notifications from Warp	接收 Warp 桌面通知
+Restore windows, tabs, and panes on startup	启动时恢复窗口、标签页和窗格
+Right Option key is Meta	右 Option 键作为 Meta
+Rows	行
+Search for a keybinding	搜索快捷键
+Secret redaction	敏感信息遮盖
+Session	会话
+Show block dividers	显示区块分隔线
+Show changelog toast after updates	更新后显示变更日志提示
+Show help block in new sessions	在新会话中显示帮助区块
+Show ligatures in terminal	在终端中显示连字
+Show sticky command header	显示置顶命令标题
+Show tab indicators	显示标签页指示器
+Show the tab bar	显示标签栏
+Show tooltip on click on links	点击链接时显示工具提示
+Start Warp at login	登录系统时启动 Warp
+Suggest corrected commands	建议修正后的命令
+Sync with OS	跟随系统
+Syntax highlighting for commands	命令语法高亮
+System	系统
+Tab close button position	标签页关闭按钮位置
+Tab key behavior	Tab 键行为
+Tabs	标签页
+Terminal Input	终端输入
+Terminal font	终端字体
+Text Editing	文本编辑
+Themes	主题
+Vertical tabs	垂直标签页
+What's new	新增内容
+Documentation	文档
+Feedback	反馈
+View Warp logs	查看 Warp 日志
+Join our Slack community	加入我们的 Slack 社区
+Upgrade	升级
+Invite a friend	邀请好友
+Share session...	共享会话…
+Code review panel	代码审查面板
+When windowed	窗口模式下
+Right	右侧
+Use vertical tab layout	使用垂直标签页布局
+Show vertical tabs panel in restored windows	在恢复的窗口中显示垂直标签页面板
+When enabled, reopening or restoring a window opens the vertical tabs panel even if it was closed when the window was last saved.	启用后，重新打开或恢复窗口时会显示垂直标签页面板，即使上次保存窗口时该面板已关闭。
+When using the vertical tab layout, hide the search bar in the title bar. Search stays available via the command palette and keyboard shortcuts.	使用垂直标签页布局时隐藏标题栏中的搜索栏；仍可通过命令面板和键盘快捷键使用搜索。
+Use latest user prompt as conversation title in tab names	在标签页名称中使用最新用户提示作为对话标题
+Show the latest user prompt instead of the generated conversation title for Oz and third-party agent sessions in vertical tabs.	在垂直标签页中，为 Oz 和第三方智能体会话显示最新用户提示，而不是生成的对话标题。
+Available items	可用项目
+Restore default	恢复默认布局
+Left side	左侧
+Right side	右侧
+Tools Panel	工具面板
+Code Review	代码审查
+Add directory color	添加目录颜色
+Full-screen Apps	全屏应用
+Use custom padding in alt-screen	在替代屏幕中使用自定义内边距
+Icon	图标
+Show Warp in Dock	在程序坞中显示 Warp
+Window Opacity: 100	窗口不透明度：100
+Window Blur Radius: 1	窗口模糊半径：1
+Tools panel visibility is consistent across tabs	在各标签页间保持工具面板显示状态一致
+Project explorer	项目资源管理器
+Show warning before quitting/logging out	退出或注销前显示警告
+Start Warp at login (requires macOS 13+)	登录系统时启动 Warp（需要 macOS 13+）
+Setting the limit above 100k lines may impact performance. Maximum rows supported is 1 million.	将上限设为超过 10 万行可能影响性能；最多支持 100 万行。
+Default shell for new sessions	新会话的默认 Shell
+Working directory for new sessions	新会话的工作目录
+Previous session's directory	上一次会话的目录
+Enable reopening of closed sessions	允许重新打开已关闭的会话
+Use ⌘ / to reference these keybindings in a side pane at anytime.	随时使用 ⌘ / 在侧边窗格中查看这些快捷键。
+Command	命令
+Search by name or by keys (ex. "cmd d")	按名称或按键搜索（例如“cmd d”）
+Accept Autosuggestion	接受自动建议
+Accept Prompt Suggestion	接受提示建议
+Activate Next Pane	激活下一个窗格
+Activate Next Tab	激活下一个标签页
+Activate Previous Pane	激活上一个窗格
+Activate Previous Tab	激活上一个标签页
+Add Cursor Above	在上方添加光标
+Add Cursor Below	在下方添加光标
+Add Selection for Next Occurrence	将下一个匹配项加入选择
+Attach Selected Block as Agent Context	将所选区块附加为智能体上下文
+Attach Selected Text as Agent Context	将所选文本附加为智能体上下文
+Configure whether Warp attempts to “Warpify” (add support for blocks, input modes, etc) certain shells.	配置 Warp 是否尝试对特定 Shell 进行“Warp 化”（增加区块、输入模式等支持）。
+Subshells	子 Shell
+Subshells supported: bash, zsh, and fish.	支持的子 Shell：bash、zsh 和 fish。
+Added commands	新增命令
+command (supports regex)	命令（支持正则表达式）
+Warpify your interactive SSH sessions.	对交互式 SSH 会话进行 Warp 化。
+Warpify SSH Sessions	Warp 化 SSH 会话
+Reuse existing SSH ControlMaster	复用现有 SSH ControlMaster
+Attach to a live SSH ControlMaster you already have configured for the destination host instead of creating a Warp-owned one. Takes effect in new tabs.	连接到已为目标主机配置且正在运行的 SSH ControlMaster，而不是创建 Warp 自己的实例；在新标签页中生效。
+When this setting is enabled, Warp will scan terminal blocks for potential sensitive information and prevent saving or sending matching data. You can customize this list via regexes.	启用后，Warp 会扫描终端区块中的潜在敏感信息，并阻止保存或发送匹配数据；你可以使用正则表达式自定义列表。
+Network log console	网络日志控制台
+We've built a native console that allows you to view all communications from Warp to external servers to ensure you feel comfortable that your work is always kept safe.	我们提供了原生日志控制台，用于查看 Warp 与外部服务器之间的全部通信，便于确认工作数据始终安全。
+View network logging	查看网络日志
+New worktree config	新建工作树配置
+New tab config	新建标签页配置
+New tab group	新建标签页组
+Use	使用
+to reference these keybindings in a side pane at anytime.	可随时在侧边窗格中查看这些快捷键。
+# Full production UI coverage (2026-08-26)
+\nReview the command below, then 	\n请检查下面的命令，然后
+\nThe 	\n
+\nThe YAML file is saved to 	\nYAML 文件已保存到
+\nThe command below includes a one-time configuration of the Warp package repository and PGP signing key.	\n下面的命令包含 Warp 软件包仓库和 PGP 签名密钥的一次性配置。
+ Encountered an incorrect input detection? 	 输入检测有误？
+ Not the first time? See our 	 不止一次遇到？请查看我们的
+ Update team visibility in the 	 请在以下位置更新团队可见性：
+ for a more flexible pricing model.	，以获得更灵活的定价模式。
+ for custom limits and dedicated support.	，以获得自定义限额和专属支持。
+ for increased access to AI features.	，以获得更多 AI 功能使用权限。
+ for more AI credits.	，以获得更多 AI 点数。
+ for more AI usage.	，以获得更多 AI 用量。
+ for more credits and access to more models.	，以获得更多点数并使用更多模型。
+ for more powerful cloud agents.	，以使用更强大的云端智能体。
+ for security features like SSO and automatically applied zero data retention.	，以使用 SSO 和自动应用零数据保留等安全功能。
+ function ensures the Warp package repository is enabled, as we've detected you recently upgraded your distribution.	 函数可确保启用 Warp 软件包仓库，因为我们检测到你最近升级了发行版。
+ may resolve this issue.	 可能会解决此问题。
+ or 	 或
+ or a compatible tool, the pre-filled command will update Warp for you.	 或兼容工具安装 Warp，预填命令将为你更新 Warp。
+ routing chooses a model based on Warp's classification of the task's difficulty.	 路由会根据 Warp 对任务难度的分类选择模型。
+ routing chooses a model based on custom prompts.	 路由会根据自定义提示选择模型。
+ to 	 到
+ to continue.	 以继续。
+ to enable bringing your own API keys on your Enterprise plan.	，以在企业版方案中启用自带 API 密钥。
+ to get more AI usage.	，以获得更多 AI 用量。
+ to install the update and re-launch Warp.  	 以安装更新并重新启动 Warp。  
+ to learn more.	 了解更多。
+ to move the cursor?	 来移动光标吗？
+ to purchase add-on credits.	 以购买附加点数。
+ to regain access to AI features.	，以重新获得 AI 功能的使用权限。
+ to update to the latest version.	 以更新到最新版本。
+ to use your own API keys.	，以使用你自己的 API 密钥。
+ will automatically purchase your selected package when you run out. 	 会在用尽时自动购买你选择的套餐。
+). 	）。
+). Enabling the SSH extension in 	）。在
+, or 	，或
+A cloud environment is required to hand off this conversation.	移交此对话需要云端环境。
+A new version of the Warp plugin is available	Warp 插件有新版本可用
+API keys	API 密钥
+API keys added here are stored only on this device, not on Warp's servers.	此处添加的 API 密钥只存储在此设备上，不会存储在 Warp 的服务器上。
+Add a workflow argument	添加工作流参数
+Add custom endpoints to use third-party models. Custom endpoints must support OpenAI Chat Completions, OpenAI Responses, or Anthropic Messages.	添加自定义端点以使用第三方模型。自定义端点必须支持 OpenAI Chat Completions、OpenAI Responses 或 Anthropic Messages。
+Add diff set as context	将差异集添加为上下文
+Add file diff as context	将文件差异添加为上下文
+Allow the Warp Agent to generate an outline of your codebase that can be used for context. No code is ever stored on our servers. 	允许 Warp 智能体生成可用作上下文的代码库大纲。任何代码都不会存储在我们的服务器上。
+Already the default	已是默认项
+Ask the Warp agent to assist	让 Warp 智能体协助
+Ask the Warp agent to resume	让 Warp 智能体继续
+Ask the agent to check this command now, skipping its timer.	让智能体立即检查此命令并跳过计时器。
+Ask your team's admin to upgrade to the Build plan to use your own API keys.	请让团队管理员升级到 Build 方案，以使用你自己的 API 密钥。
+Attach file	附加文件
+Auth Token	身份验证令牌
+Automatically detect and spawn MCP servers from globally-scoped third-party AI agent configuration files (e.g. in your home directory). Servers detected inside a repository are never spawned automatically and must be enabled individually in the "Detected from" sections below. 	自动从全局范围的第三方 AI 智能体配置文件（例如主目录中的配置文件）检测并启动 MCP 服务器。在仓库内检测到的服务器绝不会自动启动，必须在下方“检测来源”部分逐个启用。
+Autonomy settings are configured as part of your team workspace.	自主性设置由你的团队工作区统一配置。
+Bad response	较差的回答
+Change git branch	更改 Git 分支
+Change role	更改角色
+Change working directory	更改工作目录
+Check out the 	查看
+Choose an environment	选择环境
+Choose if you'd like to use Warp Agent or third party agents.	选择使用 Warp 智能体还是第三方智能体。
+Clear upload	清除上传
+Click or use arrow keys to select, Enter to confirm.	点击或使用方向键选择，按 Enter 确认。
+Close panel	关闭面板
+Cloud agent run	云端智能体运行
+Cloud agent run cancelled	云端智能体运行已取消
+Cloud run created.	已创建云端运行。
+Codex is OpenAI's most advanced agentic coding model for real-world engineering.	Codex 是 OpenAI 面向真实工程场景的先进智能体编程模型。
+Collapse	折叠
+Commands, comma separated	命令，以逗号分隔
+Configure statusline	配置状态栏
+Contact your team admin to resolve billing issues.	请联系团队管理员解决账单问题。
+Context window usage	上下文窗口用量
+Continue conversation	继续对话
+Continue this cloud conversation	继续此云端对话
+Copy file path	复制文件路径
+Copy login URL (c)	复制登录 URL (c)
+Copy notebook contents into your personal workspace	将笔记本内容复制到个人工作区
+Copy notebook contents to your clipboard	将笔记本内容复制到剪贴板
+Copy transcript to clipboard	将文字记录复制到剪贴板
+Create and manage API keys to allow cloud agents to access your Warp account.\nFor more information, visit the 	创建和管理 API 密钥，以允许云端智能体访问你的 Warp 帐户。\n有关更多信息，请访问
+Create one in Oz, then refresh this card.	请先在 Oz 中创建一个，然后刷新此卡片。
+Describe when to use this model…	说明何时使用此模型…
+Did you intend 	你原本是想输入
+Directory path	目录路径
+Disabled by your administrator	已被管理员禁用
+Discovering project context…	正在发现项目上下文…
+Embed not found	未找到嵌入内容
+Enable Warp shell integration in this session	在此会话中启用 Warp shell 集成
+Enables codebase indexing and WARP.md	启用代码库索引和 WARP.md
+Enabling natural language detection will detect when natural language is written in the terminal input, and then automatically switch to Agent Mode for AI queries.	启用自然语言检测后，当终端输入中出现自然语言时，将自动切换到智能体模式进行 AI 查询。
+Encountered an incorrect detection? 	检测有误？
+Enter auth token	输入身份验证令牌
+Error rendering Mermaid diagram. Please check syntax.	渲染 Mermaid 图表时出错。请检查语法。
+Executable path	可执行文件路径
+Expand	展开
+Expand all lines	展开所有行
+Explore Warp's built-in AI features before committing to a plan, or bring your own inference.	在订阅方案前体验 Warp 的内置 AI 功能，或使用你自己的推理服务。
+Failed to render Mermaid diagram	无法渲染 Mermaid 图表
+File Uploads	文件上传
+Finding files that match 	正在查找匹配以下内容的文件：
+Follow up with existing conversation	继续现有对话
+Fork conversation	派生对话
+Fork this conversation locally	在本地派生此对话
+Former member	前成员
+Give Warp the option to automatically move active local agents to the cloud when your computer sleeps.	允许 Warp 在电脑休眠时自动将活跃的本地智能体移至云端。
+Good response	较好的回答
+Grep for 	Grep 搜索：
+Grepping for 	正在 Grep 搜索：
+Hand off to cloud (or type &)	移交到云端（或输入 &）
+If you installed Warp using 	如果你使用
+Ignore this suggestion	忽略此建议
+Infinitely scalable coding agent — run in local sessions or in the cloud.	可无限扩展的编程智能体——可在本地会话或云端运行。
+Initial query	初始查询
+Insert block	插入块
+Install the Warp plugin to enable rich agent notifications within Warp	安装 Warp 插件以在 Warp 中启用丰富的智能体通知
+Introducing the Warp Agent CLI: A coding agent that does what others can't	Warp Agent CLI 隆重登场：能完成其他工具无法完成之事的编程智能体
+Learn more on our 	在我们的以下页面了解更多：
+Line number:Column	行号:列号
+Link (web or file)	链接（网页或文件）
+Live session unavailable	实时会话不可用
+Loading…	正在加载…
+Log in with Warp	使用 Warp 登录
+MCP	MCP
+Manage API keys	管理 API 密钥
+Maximize	最大化
+Navigate to a repo and initialize it for coding	前往仓库并初始化以开始编程
+No limit	无限制
+Offline, trying to reconnect...	已离线，正在尝试重新连接...
+Open Rich Input	打开富文本输入
+Open coding agent settings	打开编程智能体设置
+Open file explorer	打开文件资源管理器
+Open in GitHub	在 GitHub 中打开
+Open this conversation in the Warp desktop app	在 Warp 桌面应用中打开此对话
+Open this exact URL manually:	手动打开以下完整 URL：
+OpenAI automatically applies long-context pricing when context exceeds 272,000 tokens. 	当上下文超过 272,000 个 token 时，OpenAI 会自动应用长上下文定价。
+Paste sign-in code	粘贴登录代码
+Paste your auth token below	在下方粘贴身份验证令牌
+Paste your auth token from the browser to get complete login.	从浏览器粘贴身份验证令牌以完成登录。
+Pay-as-you-go	按量付费
+Please include 'https://'	请包含“https://”
+Press Ctrl-C to exit.	按 Ctrl-C 退出。
+Press enter or r to retry · Ctrl-C to exit	按 Enter 或 r 重试 · 按 Ctrl-C 退出
+Privacy Settings	隐私设置
+Purchasing these credits would take you over your monthly spend limit. 	购买这些点数会使你超出每月支出限额。
+Pure is not yet supported in Warp. You might consider one of the supported prompts as an alternative.  	Warp 尚不支持 Pure。你可以考虑改用受支持的提示符。  
+Raw	原始内容
+Refresh notebook	刷新笔记本
+Reloading would exceed your monthly limit. 	重新加载会超出你的每月限额。
+Rendered	渲染结果
+Rendering Mermaid diagram…	正在渲染 Mermaid 图表…
+Request to log in failed.	登录请求失败。
+Request to sign up failed.	注册请求失败。
+Requesting a secure sign-in link...	正在请求安全登录链接...
+Restore environment variables from trash	从废纸篓恢复环境变量
+Restore notebook from trash	从废纸篓恢复笔记本
+Restore workflow from trash	从废纸篓恢复工作流
+Resume conversation	继续对话
+Retry login (r)	重试登录 (r)
+Retry opening browser (r)	重试打开浏览器 (r)
+Rewind to before this block	回退到此块之前
+Rules are custom prompts that describe when to use a specific model. Warp intelligently matches your tasks against these rules.	规则是用于说明何时使用特定模型的自定义提示。Warp 会智能地将任务与这些规则匹配。
+Rules are matched top to bottom — rules higher in the list take precedence over those below.	规则按从上到下的顺序匹配——列表中靠前的规则优先于靠后的规则。
+Rules help the Warp Agent follow your conventions, whether for codebases or specific workflows. 	规则可帮助 Warp 智能体遵循你的约定，无论是针对代码库还是特定工作流。
+Save and auto-sync this plan to your Warp Drive	保存此计划并自动同步到 Warp Drive
+Save with a recurring plan, or explore Warp's AI before committing.	通过周期性方案节省费用，或在订阅前体验 Warp 的 AI。
+Saved successfully to 	已成功保存到
+Search API keys	搜索 API 密钥
+Search MCP Servers	搜索 MCP 服务器
+Search diff sets or branches to compare…	搜索要比较的差异集或分支…
+Search for files that match 	搜索匹配以下内容的文件：
+Search in files	在文件中搜索
+Search repos	搜索仓库
+Search secrets or create a new one	搜索密钥或新建密钥
+Search tabs...	搜索标签页...
+Seems like your completions are not working (	你的补全功能似乎无法正常工作（
+Seems like your shell is taking a while to start...  	你的 shell 启动时间似乎较长...  
+Select defaults for using agents like Claude Code, Codex, and Gemini.	选择使用 Claude Code、Codex 和 Gemini 等智能体时的默认设置。
+Select your Warp Agent's defaults.	选择 Warp 智能体的默认设置。
+Sending message to 	正在发送消息给
+Set by Team Workspace	由团队工作区设置
+Share	共享
+Shift + ↑ sub-agents	Shift + ↑ 子智能体
+Show a toolbar with quick actions when running coding agents like 	运行以下编程智能体时显示含快捷操作的工具栏：
+Show credit usage details	显示点数用量详情
+Show version history	显示版本历史
+Sign in	登录
+Sign in on your browser to continue	在浏览器中登录以继续
+Sign in to edit	登录后编辑
+Slash commands	斜杠命令
+Sort by	排序方式
+Starting at $18 / mo, available with monthly or annual plans. Includes base credits, frontier models, cloud agents, collaboration, and more.	每月 $18 起，可按月或按年订阅。包含基础点数、前沿模型、云端智能体、协作等功能。
+Starting terminal…	正在启动终端…
+State of the art agent harness deeply integrated into the terminal.	深度集成到终端中的先进智能体框架。
+Sync light/dark theme with OS	跟随操作系统同步浅色/深色主题
+Tab configs	标签页配置
+The redirect URL pasted did not originate from this app. Please click the button below to try again.	粘贴的重定向 URL 并非来自此应用。请点击下方按钮重试。
+The selected hardware may not support rendering transparent windows.	所选硬件可能不支持渲染透明窗口。
+The transcript will appear when this child finishes.	此子智能体完成后将显示文字记录。
+These agents may start their own child agents	这些智能体可以启动自己的子智能体
+These agents may start their own child agents.	这些智能体可以启动自己的子智能体。
+This conversation cannot be deleted	无法删除此对话
+This shared conversation shows the state when you opened it. If the agent is still running, refresh to see the latest progress.	此共享对话显示的是你打开时的状态。如果智能体仍在运行，请刷新以查看最新进度。
+Toggle Case Sensitivity	切换大小写敏感
+Toggle Regex	切换正则表达式
+Transparency is not supported with your graphics drivers.	你的图形驱动程序不支持透明效果。
+Type your answer and press Enter	输入答案并按 Enter
+Untitled	未命名
+Use Codex directly in Oz and leverage features like in-app code review, agent session sharing and file editing.	直接在 Oz 中使用 Codex，并利用应用内代码审查、智能体会话共享和文件编辑等功能。
+Use Codex models in Warp	在 Warp 中使用 Codex 模型
+Use Oz cloud agents to run parallel agents, build agents that run autonomously, and check in on your agents from anywhere. 	使用 Oz 云端智能体并行运行多个智能体、构建自主运行的智能体，并从任何地方查看智能体状态。
+Use agents like Claude Code, Codex, and Gemini.	使用 Claude Code、Codex 和 Gemini 等智能体。
+Use cloud agents to run parallel agents, build agents that run autonomously, and check in on your agents from anywhere. 	使用云端智能体并行运行多个智能体、构建自主运行的智能体，并从任何地方查看智能体状态。
+Use your own API keys from model providers for Warp Agent. API keys are used to make requests to your chosen model provider. Using auto models or models you do not have available API keys for will consume Warp credits.	为 Warp 智能体使用你自己的模型提供商 API 密钥。API 密钥用于向你选择的模型提供商发出请求。使用自动模型或没有可用 API 密钥的模型将消耗 Warp 点数。
+View agent tasks you created	查看你创建的智能体任务
+View instructions to install the Warp plugin	查看 Warp 插件安装说明
+View instructions to update the Warp plugin	查看 Warp 插件更新说明
+View options	查看选项
+View pull request	查看拉取请求
+View run in Oz web	在 Oz 网页版中查看运行
+View this run in the Oz web app	在 Oz Web 应用中查看此运行
+View your agent tasks plus all shared team tasks	查看你的智能体任务和团队共享的所有任务
+Voice input	语音输入
+Voice input allows you to control Warp by speaking directly to your terminal (powered by 	语音输入让你可以直接对终端说话来控制 Warp（由
+Warp API Key	Warp API 密钥
+Warp Agent CLI	Warp Agent CLI
+Warp doesn't currently support your default shell, falling back to zsh.  	Warp 当前不支持你的默认 shell，将回退到 zsh。  
+Warp pipes through notifications from any CLI coding agent into a unified notification center that works across all coding agents and harnesses. 	Warp 会将任意 CLI 编程智能体的通知汇集到统一的通知中心，适用于所有编程智能体和框架。
+We couldn’t open your browser.	无法打开你的浏览器。
+What’s different about Warp	Warp 有何不同
+When enabled, 	启用后，
+You haven't added any MCP servers yet. Once you do, you'll be able to control how much autonomy the Warp Agent has when interacting with them. 	你尚未添加任何 MCP 服务器。添加后，你将能够控制 Warp 智能体与其交互时的自主程度。
+You must select that you want to automatically create a worktree in order to select this	必须先选择自动创建 worktree 才能选择此项
+You seem to be running an older (unsupported) version, please follow 	你似乎正在运行较旧（不受支持）的版本，请按照
+Your active and past conversations with local and ambient agents will appear here.	你与本地和环境智能体的当前及历史对话将显示在这里。
+Your administrator has enabled zero data retention for your team. User generated content will never be collected.	管理员已为你的团队启用零数据保留。用户生成的内容绝不会被收集。
+Your new team name	新的团队名称
+Your shell configuration is incompatible with Warp...  	你的 shell 配置与 Warp 不兼容...  
+[Code block unavailable]	[代码块不可用]
+[Empty table]	[空表格]
+[Table has no rows]	[表格没有行]
+[Unsupported embedded content]	[不支持的嵌入内容]
+alias name	别名名称
+default	默认
+dev build	开发版
+e.g. "Google API Key"	例如“Google API 密钥”
+e.g. "YOLO code"	例如“YOLO 代码”
+e.g. ls .*	例如 ls .*
+e.g. rm .*	例如 rm .*
+e.g. ~/code-repos/repo	例如 ~/code-repos/repo
+e.g., GLM-5	例如 GLM-5
+e.g., GLM-5-FP8	例如 GLM-5-FP8
+e.g., Zach's external models	例如 Zach 的外部模型
+e.g., sk-...	例如 sk-...
+this conversation	此对话
+… Transcribing	… 正在转写
+◔ Usage	◔ 用量
+ · loading…	 · 正在加载…
+Could not restore conversation: {message}	无法恢复对话：{message}
+ in {display_path}	，位置：{display_path}
+ in {display_path} cancelled	（位置：{display_path}）已取消
+ in {path}	，位置：{path}
+ in {path} cancelled	（位置：{path}）已取消
+({credits} credits)	（{credits} 点数）
++ {count} more	另有 {count} 个
+A: {answer}	答：{answer}
+Agents ({count})	智能体（{count}）
+Agents ({count}):	智能体（{count}）：
+Are you sure you want to transfer team ownership to {email}? You will no longer be the owner and will not be able to take any administrative actions for this team.	确定要将团队所有权转让给 {email} 吗？你将不再是所有者，也无法再对此团队执行任何管理操作。
+Cancelled grep for the following patterns in {display_path}	已取消在 {display_path} 中 Grep 搜索以下模式
+Cancelled search for files that match the following patterns in {path}	已取消在 {path} 中搜索匹配以下模式的文件
+Comment addressed: "{content}"	已处理评论：“{content}”
+Create a file named {file_name}…	创建名为 {file_name} 的文件…
+Created by {creator} • {time}	由 {creator} 创建 • {time}
+Credits used: {used} / {limit}.	已用点数：{used} / {limit}。
+Debug information: {debug_info}	调试信息：{debug_info}
+Default: {default_value}	默认值：{default_value}
+Error: {error}	错误：{error}
+Failed to authenticate with AWS Bedrock when using {model_name}. Run `{command}` to refresh credentials.	使用 {model_name} 时无法通过 AWS Bedrock 身份验证。请运行 `{command}` 刷新凭据。
+Find files that match the following patterns in {path}	在 {path} 中搜索匹配以下模式的文件
+Finding files that match the following patterns in {path}	正在 {path} 中查找匹配以下模式的文件
+Grep for the following patterns in {display_path}	在 {display_path} 中 Grep 搜索以下模式
+Grepping for the following patterns in {display_path}	正在 {display_path} 中 Grep 搜索以下模式
+Install {name}	安装 {name}
+Last instruction: {instruction}	上一条指令：{instruction}
+Limit: {limit}	限额：{limit}
+Login failed: {message}	登录失败：{message}
+Name: {environment_name}	名称：{environment_name}
+Open image at {url}	打开位于 {url} 的镜像
+Q: {question}	问：{question}
+Repo is initialized with a {file_name} file.	仓库已使用 {file_name} 文件初始化。
+Running `{command}`...	正在运行 `{command}`...
+Save {percent} on add-on credits by 	升级到 Build 方案可为附加点数节省 {percent}：
+Update {name}	更新 {name}
+Your agent is currently running on a {specs} machine. 	你的智能体当前正在 {specs} 规格的机器上运行。
+Your organization has provided an API key for {provider_name}. A key entered here takes precedence for {provider_name} requests.	你的组织已提供 {provider_name} 的 API 密钥。此处输入的密钥在 {provider_name} 请求中优先使用。
+{binding} to collapse plan	按 {binding} 折叠计划
+{count} file	{count} 个文件
+{count} files	{count} 个文件
+{count} outdated	{count} 条已过时
+{count} tools available	有 {count} 个工具可用
+{discount}% off	优惠 {discount}%
+{display_name} is not available for free users. 	免费用户无法使用 {display_name}。
+{time} until refresh.	距离刷新还有 {time}。
+▶▶ Auto approve {state}	▶▶ 自动批准：{state}
+on	开
+off	关
+Complexity-based	基于复杂度
+Rule-based	基于规则
+press enter	按 Enter
+auto-reload	自动重新加载
+Powerlevel10k now supports Warp!  	Powerlevel10k 现在支持 Warp！  
+Searched	已搜索
+Searching	正在搜索
+conversation	对话
+agent run	智能体运行
+{verb} 	{verb}
+{target_kind} 	{target_kind}
+Copied from	复制自
+Derived from	来源
+{prefix} 	{prefix}
+ {copy}	{copy}
+Run {package_manager_name} to update	运行 {package_manager_name} 进行更新
+{severity}: 	{severity}：
+Warning	警告
+Info	信息
+Hint	提示
+Diagnostic	诊断
+{description} 	{description}
+Command finished	命令已完成
+Agent needs your input	智能体需要你的输入
+Agent is monitoring command	智能体正在监控命令
+Agent waiting for instructions	智能体正在等待指令
+User is in control	用户正在控制
+Agent paused · user is in control	智能体已暂停 · 用户正在控制
+Agent handed control to you	智能体已将控制权交给你
+to take control	以接管控制
+to hand back	以交还控制
+{status} · {key_binding} {action}	{status} · {key_binding} {action}
+ · Check in {seconds}s	 · {seconds} 秒后检查
+ · Check in {minutes}m	 · {minutes} 分钟后检查
+[{label}]	[{label}]
+{status}{countdown}	{status}{countdown}
+({label})	（{label}）
+checking for updates…	正在检查更新…
+updating…	正在更新…
+up to date	已是最新版本
+automatic update failed	自动更新失败
+update installed, restart to apply	更新已安装，重启后应用
+update available — run brew upgrade --cask warp-agent-cli	有更新可用——请运行 brew upgrade --cask warp-agent-cli
+Allow · Ctrl+Enter	允许 · Ctrl+Enter
+Reject · Ctrl+C	拒绝 · Ctrl+C
+Visit the admin panel	访问管理面板
+to manage and create new teams.	以管理和创建新团队。
+Open the admin panel	打开管理面板
+to manage workspace settings and spend limits.	以管理工作区设置和支出限额。
+Upgrade to Build	升级到 Build
+to see team-level credit usage.	以查看团队级点数用量。
+Upgrade to Business	升级到 Business
+to see per-user credit attribution.	以查看每位用户的点数归属。
+Upgrade to Enterprise	升级到 Enterprise
+to see fine-grained credit attribution and set per-user spend limits.	以查看精细的点数归属并设置每位用户的支出限额。
+to set per-user spend limits.	以设置每位用户的支出限额。
+ID: {id}	ID：{id}
+Working directory: {cwd}	工作目录：{cwd}
+Updated at: {updated_at}	更新时间：{updated_at}
+{title} · Tab {index}	{title} · 标签页 {index}
+[image]	[图片]
+[file]	[文件]
+{kind} 	{kind}
+({seconds}s)	（{seconds} 秒）
+Open conversation	打开对话
+No notifications	没有通知
+Always allow	始终允许
+to toggle selection	以切换选择
+Don't show me suggested code banners again	不再显示代码建议横幅
+Rule	规则
+By continuing, you agree to Warp's 	继续即表示你同意 Warp 的
+If you'd like to opt out of analytics and AI features,	如果你不希望使用分析和 AI 功能，
+you can adjust your 	你可以调整
+Don't want to sign in right now? 	暂时不想登录？
+Are you sure you want to skip login?	确定要跳过登录吗？
+You can sign up later, but some features, such as AI,	你可以稍后注册，但 AI 等部分功能
+are only available to logged-in users. 	仅对已登录用户开放。
+Sign in on your browser \nto continue	在浏览器中登录\n以继续
+If your browser hasn't launched, 	如果浏览器没有启动，
+and open the page manually.	并手动打开页面。
+Using Warp Offline	离线使用 Warp
+ and open	并打开
+the page manually.	手动打开页面。
+Hunk:	代码块：
+Stash changes	暂存更改
+TRASH	废纸篓
+Trash	废纸篓
+Items in the trash will be deleted forever after 30 days.	废纸篓中的项目将在 30 天后永久删除。
+Who has access	谁有访问权限
+Share session QR code	共享会话二维码
+Unable to create QR code for this session link.	无法为此会话链接创建二维码。
+Missing source file	缺少源文件
+Viewing	查看中
+Editing	编辑中
+The Agentic Development Environment	智能体开发环境
+Same line prompt	同行提示符
+Separator	分隔符
+Current	当前
+Looks like you're out of credits. 	你的点数似乎已用尽。
+ for more credits.	以获得更多点数。
+No results found.	未找到结果。
+Not visible to other users	其他用户不可见
+Copyright 2026 Warp	版权所有 2026 Warp
+Show model picker in prompt	在提示符中显示模型选择器
+Toolbar layout	工具栏布局
+You may need to restart Warp for MacOS to apply the preferred icon style.	可能需要重启 Warp，macOS 才会应用首选图标样式。
+View all available system fonts	查看所有可用的系统字体
+Notebook font size	笔记本字体大小
+Cursor type is disabled in Vim mode	Vim 模式下已禁用光标类型
+Monthly spend limit	每月支出限额
+One-time purchase	一次性购买
+Contact your Account Executive for more add-on credits.	请联系客户经理以获取更多附加点数。
+Contact a team admin to enable add-on credits.	请联系团队管理员启用附加点数。
+Commands that enable the toolbar	启用工具栏的命令
+Add regex patterns to show the coding agent toolbar for matching commands.	添加正则表达式模式，为匹配的命令显示编程智能体工具栏。
+Initialized / indexed folders	已初始化 / 已索引的文件夹
+No folders have been initialized yet.	尚未初始化任何文件夹。
+INDEXING	正在索引
+LSP SERVERS	LSP 服务器
+New window	新窗口
+New tab	新标签页
+Split pane	拆分窗格
+Autohides on loss of keyboard focus	失去键盘焦点时自动隐藏
+Allowed Values: 1-20	允许的值：1-20
+Warp is the default terminal	Warp 是默认终端
+Not supported on Wayland. 	Wayland 不支持此功能。
+Changes will apply to new windows.	更改将应用于新窗口。
+No enterprise regexes have been configured by your organization.	你的组织尚未配置企业正则表达式。
+Choose how secrets are visually presented in the block list while keeping them searchable. This setting only affects what you see in the block list.	选择密钥在块列表中的显示方式，同时保持可搜索。此设置只影响你在块列表中看到的内容。
+Crash reports assist with debugging and stability improvements.	崩溃报告有助于调试和提升稳定性。
+Deleting...	正在删除...
+You don't have any shared blocks yet.	你还没有任何共享块。
+Getting blocks...	正在获取块...
+Failed to load blocks. Please try again.	无法加载块。请重试。
+Unshare block	取消共享块
+Monthly limit reached	已达到每月限额
+Finish your purchase in the browser	在浏览器中完成购买
+Credits will be added to your account after checkout.	结账后点数将添加到你的帐户。
+Out of credits	点数已用尽
+Show prompt	显示提示符
+Redact secrets (API keys, passwords, IP addresses, PII etc.)	隐去密钥（API 密钥、密码、IP 地址、个人身份信息等）
+Don't show again.	不再显示。
+Would you like to enable available language support for this codebase? This will give you smarter code navigation and inline error checking.	是否为此代码库启用可用的语言支持？这将提供更智能的代码导航和内联错误检查。
+Change your current theme.	更改当前主题。
+Pick a theme for when your system is in light mode.	选择系统处于浅色模式时使用的主题。
+Pick a theme for when your system is in dark mode.	选择系统处于深色模式时使用的主题。
+No matching themes!	没有匹配的主题！
+Shortcut	快捷键
+Skip Welcome Tips	跳过欢迎提示
+Complete!	完成！
+Nice work on finishing the welcome tips!	太棒了，你已完成欢迎提示！
+*Secrets are not sent to Warp's server.	*密钥不会发送到 Warp 的服务器。
+No matches found.	未找到匹配项。
+Warp is the intelligent terminal with AI and your dev team's knowledge built-in.	Warp 是内置 AI 和开发团队知识的智能终端。
+Fill out the arguments in this workflow and copy it to run in your terminal session	填写此工作流中的参数并复制，以在终端会话中运行
+Environment variables	环境变量
+Ask Warp AI to explain errors, suggest commands or write scripts.	让 Warp AI 解释错误、建议命令或编写脚本。
+Plan successfully activated!	方案已成功激活！
+Customize your Warp Agent	自定义 Warp 智能体
+Get AI access	获取 AI 使用权限
+Subscription	订阅
+Best value	超值之选
+Set up later	稍后设置
+Choose your AI setup	选择 AI 设置
+Use Warp Agent	使用 Warp 智能体
+Access more models	使用更多模型
+Use third party agents	使用第三方智能体
+Choose a theme	选择主题
+If you'd like to opt out of analytics, you can adjust your 	如果你不希望参与分析，可以调整
+Customize third party agents	自定义第三方智能体
+ and open the page manually. 	并手动打开页面。
+ to paste your token from the browser.	以粘贴浏览器中的令牌。
+You've run out of {object_type}s on your plan.	你的方案中的{object_type}数量已用尽。
+notebook	笔记本
+workflow	工作流
+folder	文件夹
+env-vars	环境变量集合
+rule	规则
+string_object_placeholder	共享对象
+{headline} {detail}	{headline} {detail}
+Upgrade for access to more notebooks, workflows, shared sessions, and AI credits.	升级即可使用更多笔记本、工作流、共享会话和 AI 点数。
+Shared objects have been restricted due to a subscription payment issue.	由于订阅付款问题，共享对象已受限。
+Please update your payment information to restore access.	请更新付款信息以恢复访问权限。
+Please contact support@warp.dev to restore access.	请联系 support@warp.dev 以恢复访问权限。
+Please contact a team admin to restore access.	请联系团队管理员以恢复访问权限。
+Live session started at {time} on {date}	实时会话于 {date} {time} 开始
+You must have full access to manage permissions. You have {access_level} access.	你必须拥有完整访问权限才能管理权限。你当前拥有{access_level}权限。
+view	查看
+edit	编辑
+access	访问
+Could not read {source}	无法读取 {source}
+Loading {source}...	正在加载 {source}...
+{editor} is editing	{editor} 正在编辑
+Ran {time}	运行于 {time}
+Resets {time}	重置时间：{time}
+Current backend: {backend}	当前后端：{backend}
+Executed on: {time}	执行时间：{time}
+Finished in {duration}	完成耗时：{duration}
+Last ran {time}	上次运行于 {time}
+Press 	按
+enter	Enter
+Creating cloud run…	正在创建云端运行…
+Environment: 	环境：
+Model: 	模型：
+ to navigate  	 以导航  
+ to go to start/end  	 跳至开头/结尾  
+ to send a message	 发送消息
+ to send a message  	 发送消息  
+ to navigate | 	 导航 | 
+ to go to start/end | 	 跳至开头/结尾 | 
+to toggle  	切换  
+to save and close  	保存并关闭  
+to reorder	重新排序
+context remaining	上下文剩余
+Spend: 	支出：
+ remaining	 剩余
+Credits used: 	已用点数：
+to exit	退出
+Agent questions	智能体问题
+to advance 	继续 
+to select 	选择 
+to cancel question	取消问题
+to navigate 	导航 
+Questions unavailable	问题不可用
+ to expand/collapse	 展开/折叠
+ to edit command	 编辑命令
+ to get started	 开始使用
+Waiting for login...	正在等待登录...
+Visit 	访问
+ to get started, then come back here.	 以开始使用，然后返回此处。
+ to stop	 停止
+Starting cloud run…	正在启动云端运行…
+Authenticate with GitHub, then run the orchestration request again.	请先通过 GitHub 身份验证，然后重新运行编排请求。
+to authenticate or click the link below	进行身份验证，或点击下方链接
+Cloud run in progress	云端运行进行中
+Cloud run blocked	云端运行已阻塞
+Cloud run succeeded	云端运行成功
+Cloud run failed	云端运行失败
+Cloud run cancelled	云端运行已取消
+to view or click the link below	查看，或点击下方链接
+ {instruction}	 {instruction}
+Conversation forked to cloud on {completed_at}{continuation}	对话已于 {completed_at} 派生到云端{continuation}
+; continuing locally	；同时继续在本地运行
+of {total} 	共 {total} 个 
+{credits} credits / {cost}	{credits} 点数 / {cost}
+ = {credits} credits	 = {credits} 点数
+ Ask a question...	 提问...
+ If you have any questions about the referral program, please contact referrals@warp.dev.	 如对推荐计划有任何疑问，请联系 referrals@warp.dev。
+ Retry	 重试
+ Type a response or click one above...	 输入回复，或点击上方选项...
+ anytime.	随时重新启用。
+ to import later.	，以便稍后导入。
+# Enter a shell command that generates variants, delimited by newlines.\n\ngit branch -a	# 输入用于生成变体的 shell 命令，每行一个。\n\ngit branch -a
+(ctrl+o).	(ctrl+o)。
+(queued until the command finishes)	（排队等待命令完成）
++ Add directory…	+ 添加目录…
++ Add new repo...	+ 添加新仓库...
+, ask a team admin to enable overages	，请联系团队管理员启用超额用量
+, ask a team admin to increase overages	，请联系团队管理员提高超额用量
+, contact a team admin	，请联系团队管理员
+<describe what you want to build>	<描述你想构建的内容>
+<describe your task>	<描述你的任务>
+<new title>	<新标题>
+<optional custom summarization instructions>	<可选的自定义摘要说明>
+<optional filename>	<可选文件名>
+<optional follow-up prompt>	<可选的后续提示>
+<optional repo paths or GitHub URLs>	<可选的仓库路径或 GitHub URL>
+<path/to/file[:line[:col]]> or "@" to search	<文件路径[:行[:列]]> 或输入 "@" 搜索
+<prompt to send after compaction>	<压缩后发送的提示>
+<prompt to send when agent is done>	<智能体完成后发送的提示>
+<tab name>	<标签页名称>
+API key	API 密钥
+Access your tab configs here.	在此访问标签页配置。
+Add MCP servers to extend the Warp Agent's capabilities. MCP servers expose data sources or tools to agents through a standardized interface, essentially acting like plugins. Add a custom server, or use the presets to get started with popular servers. You can also find team servers that have been shared with you here. 	添加 MCP 服务器以扩展 Warp 智能体的能力。MCP 服务器通过标准接口向智能体提供数据源或工具，本质上类似插件。你可以添加自定义服务器，或使用预设快速配置常用服务器。还可以在此查找与你共享的团队服务器。 
+Add alias	添加别名
+Agent harness	智能体运行框架
+Aliases allow you to create short strings to execute workflows. Each alias can have different argument values and environment variables, and aliases are personal to you.	别名可让你用简短字符串执行工作流。每个别名可以设置不同的参数值和环境变量，且别名仅供你个人使用。
+Allow automatic indexing	允许自动建立索引
+Are you sure you want to unshare this block?\n\nIt will no longer be accessible by link and will be permanently deleted from Warp servers.	确定要取消共享此区块吗？\n\n之后将无法再通过链接访问，并会从 Warp 服务器永久删除。
+At Limit -	已达上限 -
+At any time, you may choose to delete your Warp account permanently. You will no longer be able to use Warp.	你可以随时选择永久删除 Warp 账户。删除后将无法继续使用 Warp。
+Attach context	附加上下文
+Auto-approve all agent actions for this task	自动批准此任务中的所有智能体操作
+Auto-reload is enabled	已启用自动重新加载
+Automatically generate a theme based on extracted colors from an image (.png, .jpg).	根据从图片（.png、.jpg）中提取的颜色自动生成主题。
+Break this work into coordinated streams with multiple agents.	将此工作拆分为由多个智能体协同处理的任务流。
+Choose agent model	选择智能体模型
+Choose an AI execution profile	选择 AI 执行配置
+Choose an agent model	选择智能体模型
+Choose directory...	选择目录...
+Choose file...	选择文件...
+Choose files...	选择文件...
+Click the button below to link your Warp account to your SSO provider.	点击下方按钮，将 Warp 账户关联到 SSO 提供商。
+Cloud agent trial	云端智能体试用
+Codebase indexing	代码库索引
+Congrats!	恭喜！
+Connected to a live cloud agent session. Your next prompt continues on the running remote machine.	已连接到正在运行的云端智能体会话。你的下一条提示将在远程机器上继续执行。
+Contact an admin to join a team to gain access to more features.	请联系管理员加入团队，以使用更多功能。
+Contact support	联系支持
+Could not clear the selected API key. Try again.	无法清除所选 API 密钥，请重试。
+Could not save the Warp credit fallback setting.	无法保存 Warp 点数回退设置。
+Couldn't connect to the Warp SSH extension	无法连接到 Warp SSH 扩展
+Create Environment	创建环境
+Create PR	创建 PR
+Create theme	创建主题
+Delete theme	删除主题
+Discard all	全部丢弃
+Docker image to use for the environment	环境使用的 Docker 镜像
+Edit anyway	仍要编辑
+Edit prompt	编辑提示
+Enable In-band Generators for New Sessions	为新会话启用带内生成器
+Enable PTY Recording Mode (warp.pty.recording)	启用 PTY 录制模式（warp.pty.recording）
+Enable Shell Debug Mode (-x) for New Sessions	为新会话启用 Shell 调试模式（-x）
+Enter your prompt here... (e.g., 'Create a function to sort an array of objects by date' or 'Help me debug this React component').	在此输入提示...（例如“创建一个按日期排序对象数组的函数”或“帮我调试这个 React 组件”）。
+Enterprise credit usage isn't fully available in this view yet. Contact a team admin for detailed usage reporting.	此视图暂未完整提供企业点数用量。请联系团队管理员获取详细用量报告。
+Enterprise credit usage isn't fully available in this view yet. For the most accurate spend tracking, 	此视图暂未完整提供企业点数用量。若要最准确地跟踪支出，
+Environments	环境
+Environments define where your ambient agents run. Set one up in minutes via GitHub (recommended), Warp-assisted setup, or manual configuration.	环境用于定义环境智能体的运行位置。可通过 GitHub（推荐）、Warp 辅助设置或手动配置在几分钟内完成设置。
+Execution host	执行主机
+Export Default Settings as CSV to home dir	将默认设置导出为 CSV 到主目录
+File issue	提交问题
+Filter block output	筛选区块输出
+Find	查找
+Get exclusive Warp goodies when you refer someone*	推荐好友即可获得 Warp 专属好礼*
+Get started with AI	开始使用 AI
+GitHub link or local filepath to the repository	仓库的 GitHub 链接或本地文件路径
+Grok is already connected. Press Ctrl-X to disconnect.	Grok 已连接。按 Ctrl-X 断开连接。
+Hide Rich Input	隐藏富文本输入
+ID of the environment to integrate with	要集成的环境 ID
+If you take edit controls, the current editor will be forced into view mode	如果你取得编辑控制权，当前编辑者将被强制切换为查看模式
+If you want to create an environment with repos, rerun this command and pass in file paths or GitHub links as arguments, e.g. "/create-environment <filepath> <GitHub URL>".	如果要创建包含仓库的环境，请重新运行此命令，并将文件路径或 GitHub 链接作为参数传入，例如 "/create-environment <文件路径> <GitHub URL>"。
+Image too large to display	图片过大，无法显示
+In order to use Warp’s AI features, subscribe to a Warp plan or buy packs of credits.	要使用 Warp 的 AI 功能，请订阅 Warp 套餐或购买点数包。
+Index codebase	为代码库建立索引
+Indexing helps agents quickly understand context and provide targeted solutions. Code is never stored on the server.	索引可帮助智能体快速理解上下文并提供针对性解决方案。代码绝不会存储在服务器上。
+Initialization Settings	初始化设置
+Invite a friend to Warp	邀请好友使用 Warp
+It looks like you logged into a Warp account through a web browser. If you continue, any personal Warp drive objects and preferences from this anonymous session with be permanently deleted.	你似乎已通过网页浏览器登录 Warp 账户。如果继续，此匿名会话中的个人 Warp Drive 对象和偏好设置将被永久删除。
+Keep editing	继续编辑
+Kick off a cloud agent	启动云端智能体
+Latest updates	最新动态
+Load	加载
+Look incorrect? 	看起来不对？
+Looking for settings to import...	正在查找可导入的设置...
+More info	更多信息
+Name can only contain letters, numbers, hyphens, and underscores	名称只能包含字母、数字、连字符和下划线
+Name for the environment	环境名称
+New argument	新建参数
+New environment variables	新建环境变量
+Next, let’s set up your prompt. Warp has a custom prompt builder or you can select PS1 to honor your pre-existing prompt configuration.	接下来设置你的提示符。Warp 提供自定义提示符构建器，你也可以选择 PS1 以沿用现有提示符配置。
+No existing prompt.	没有现有提示符。
+No internet connection	无网络连接
+No search results found	未找到搜索结果
+Not connected to cloud agent. Your next prompt starts a new cloud machine to continue this conversation.	未连接到云端智能体。你的下一条提示将启动新的云端机器以继续此对话。
+Once you add a MCP server, it will be shown here.	添加 MCP 服务器后，它将显示在此处。
+Open admin panel	打开管理面板
+Open project rules	打开项目规则
+Please enter a line number	请输入行号
+Please enter a valid column number	请输入有效的列号
+Please enter a valid line number	请输入有效的行号
+Publish	发布
+Push	推送
+Replace	替换
+Requested Edit	请求的编辑
+Restart	重新启动
+Restricted due to payment issue	因付款问题受限
+Retry sync	重试同步
+Rules	规则
+Rules enhance the agent by providing structured guidelines that help maintain consistency, enforce best practices, and adapt to specific workflows, including codebases or broader tasks.	规则通过提供结构化指引来增强智能体能力，帮助保持一致性、落实最佳实践，并适应代码库或更广泛任务等特定工作流。
+Run metadata is not available	运行元数据不可用
+Save file as...	文件另存为...
+Save workflow	保存工作流
+Search models	搜索模型
+Search rules	搜索规则
+Secret command	密钥命令
+Select MCP servers	选择 MCP 服务器
+Select a settings profile to import:	选择要导入的设置配置：
+Send code review comments to agent	将代码审查评论发送给智能体
+Sharing in Warp Drive	在 Warp Drive 中共享
+Shell prompt (PS1)	Shell 提示符（PS1）
+Shift + ctrl + space a block or text selection to ask Warp AI.	按 Shift + Ctrl + 空格，将区块或所选文本发送给 Warp AI。
+Show In-band Command Blocks	显示带内命令区块
+Show Initialization Block	显示初始化区块
+Show Warpified SSH Blocks	显示 Warp 化 SSH 区块
+Show context lines around matches	显示匹配项周围的上下文行
+Sign up to participate in Warp's referral program	注册以参加 Warp 推荐计划
+Start remote control	启动远程控制
+Start using AI	开始使用 AI
+Starting shell...	正在启动 Shell...
+The first cloud-mode prompt cannot be changed.	无法更改云端模式的第一条提示。
+The primary model all agents will use.	所有智能体使用的主模型。
+Thinking	思考中
+Thinking...	思考中...
+This action cannot be undone	此操作无法撤销
+This action takes effect immediately	此操作立即生效
+This cannot be undone.	此操作无法撤销。
+This option is enforced by your organization's settings and cannot be customized.	此选项由组织设置强制执行，无法自定义。
+This will permanently delete the theme.	这将永久删除该主题。
+Thought for {duration}	思考了 {duration}
+Title (optional)	标题（可选）
+Tmux SSH warpification has been deprecated	基于 tmux 的 SSH Warp 化已弃用
+Try again	重试
+Try it out!	立即体验！
+Type '#' for AI command suggestions	输入“#”获取 AI 命令建议
+Type a commit message	输入提交信息
+Unlock smarter, more consistent responses by letting the Agent understand your codebase and generate rules for it. You can also do this at any point by running /init	让智能体理解代码库并为其生成规则，以获得更智能、更一致的响应。你也可以随时运行 /init 完成此操作
+Update Warp	更新 Warp
+Update from {publisher}	来自 {publisher} 的更新
+Usage reporting is currently limited	用量报告目前受限
+Use orchestration	使用编排
+Variables	变量
+Variant	变体
+Variants	变体
+Version {version}	版本 {version}
+View plans	查看套餐
+View status	查看状态
+Warp now connects to remote sessions using the SSH extension, which is more robust than the tmux-based flow. The tmux option has been removed.	Warp 现在使用 SSH 扩展连接远程会话，比基于 tmux 的流程更可靠。tmux 选项已移除。
+Warp prompt	Warp 提示符
+Warp terminal prompt	Warp 终端提示符
+Warp works with many custom prompts like oh-my-zsh, Starship, Powerlevel10K. 	Warp 支持许多自定义提示符，例如 oh-my-zsh、Starship 和 Powerlevel10K。
+We may collect certain console interactions to improve Warp's AI capabilities. You can opt out any time.	我们可能会收集部分控制台交互，以改进 Warp 的 AI 能力。你可以随时选择退出。
+While advanced features like file browsing and code review are currently disabled, the rest of your Warpified experience is fully available.	文件浏览和代码审查等高级功能目前已禁用，但其他 Warp 化体验仍可正常使用。
+Yes, empty trash	是，清空废纸篓
+You are offline.	你当前处于离线状态。
+You are offline. Some files will be read only.	你当前处于离线状态。部分文件将为只读。
+You are offline. Some rules will be read only.	你当前处于离线状态。部分规则将为只读。
+You can view this shared session, but run metadata is only visible to users with access to this run.	你可以查看此共享会话，但只有拥有该次运行访问权限的用户才能查看运行元数据。
+You have reached the maximum number of codebase indices for your plan. Delete existing indices to auto-index new codebases.	已达到当前套餐允许的代码库索引数量上限。请删除现有索引，以自动为新代码库建立索引。
+You need AI credits in order to use Warp’s agent.	你需要 AI 点数才能使用 Warp 智能体。
+Your organization has enabled SSO for your account	你的组织已为账户启用 SSO
+Your rules are disabled and won't be used as context in sessions. You can 	你的规则已禁用，不会在会话中用作上下文。你可以
+Your team’s visibility settings prevent you from creating invite links.	团队的可见性设置不允许你创建邀请链接。
+a team member	一位团队成员
+another device	另一台设备
+disabled	已禁用
+e.g. Never use unwrap in Rust	例如：在 Rust 中绝不使用 unwrap
+e.g. Rust rules	例如：Rust 规则
+e.g. https://us.api.openai.com/v1 for a regional endpoint	例如：https://us.api.openai.com/v1（区域端点）
+e.g., this environment is for all front end focused agents	例如：此环境供所有专注于前端的智能体使用
+md, yaml, yml	md、yaml、yml
+my-worker-host	my-worker-host
+|	|
+Ask Warp AI	询问 Warp AI
+Can I start additional agents for this task?	可以为此任务启动其他智能体吗？
+Hand off to cloud	移交到云端
+I’m sorry, I couldn’t complete that request.	抱歉，我无法完成该请求。
+This response won't count towards your usage.	此响应不会计入你的用量。
+Warp AI	Warp AI
+ctrl-c again to kill child agent	再次按 ctrl-c 终止子智能体
+⚠ 	⚠ 
+ New session in {directory}  {keybinding}	 在 {directory} 新建会话  {keybinding}
+Add a server	添加服务器
+Add credits	添加点数
+Authenticate GitHub	验证 GitHub 身份
+Certain restrictions apply.	需遵守特定限制。
+Contact sales	联系销售
+Create an account	创建账户
+Documentation.	文档。
+Enable premium overages	启用高级模型超额用量
+Increase it	提高限额
+Increase monthly spend limit	提高每月支出限额
+Increase your limit	提高限额
+Learn more.	了解更多。
+Let us know	告诉我们
+Let us know.	告诉我们。
+Manage Agent permissions	管理智能体权限
+Manage suggested code banner settings	管理代码建议横幅设置
+Please report any issues	请报告任何问题
+See supported providers.	查看支持的提供商。
+Sign up for more AI credits	注册以获取更多 AI 点数
+Switch to Business	切换到 Business 套餐
+Switch to the Build plan	切换到 Build 套餐
+Upgrade to Max	升级到 Max 套餐
+Upgrade to the Build plan	升级到 Build 套餐
+Visit docs	查看文档
+Wispr Flow	Wispr Flow
+bring your own key	使用你自己的密钥
+learn more about MCPs.	详细了解 MCP。
+more info	更多信息
+pricing page	定价页面
+settings	设置
+these instructions	这些说明
+troubleshooting docs	故障排除文档
+turn it back on	重新启用
+upgrading to a Build plan	升级到 Build 套餐
+use your own API keys	使用你自己的 API 密钥
+visit the admin panel	访问管理面板
+workspace admin panel	工作区管理面板
+Warping...	执行中...
+Adjusting tasks...	正在调整任务...
+Generating fix...	正在生成修复...
+Creating diff...	正在创建差异...
+Preparing question...	正在准备问题...
+Generating plan...	正在生成计划...
+Updating plan...	正在更新计划...
+Summarizing conversation...	正在总结对话...
+Summarizing command output...	正在总结命令输出...
+Searching codebase...	正在搜索代码库...
+Reading files...	正在读取文件...
+Grepping...	正在搜索...
+Finding files...	正在查找文件...
+Executing command...	正在执行命令...
+Writing command input...	正在写入命令输入...
+Waiting for command to exit...	正在等待命令退出...
+Searching the web...	正在搜索网页...
+{message} with {model}...	{message}（使用 {model}）...
+{message} with {model}	{message}（使用 {model}）
+{message} with {model}.	{message}（使用 {model}）。
+Warping with another model.	正在使用其他模型执行。

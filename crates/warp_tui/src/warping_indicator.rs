@@ -107,10 +107,13 @@ pub(crate) fn render_warping_indicator_row(
 
     let counter_style = builder.muted_text_style();
     let counter = TuiAnimated::new(Duration::from_secs(1), move || {
-        TuiText::new(format!("({}s)", clock.elapsed().as_secs()))
-            .with_style(counter_style)
-            .truncate()
-            .finish()
+        TuiText::new(warp_i18n::localize_format!(
+            "({seconds}s)",
+            seconds = clock.elapsed().as_secs()
+        ))
+        .with_style(counter_style)
+        .truncate()
+        .finish()
     });
 
     TuiFlex::row()
@@ -124,7 +127,10 @@ pub(crate) fn render_warping_indicator_row(
         .child(
             TuiText::from_spans([
                 ("  Ctrl + C".to_owned(), builder.primary_text_style()),
-                (" to stop".to_owned(), builder.muted_text_style()),
+                (
+                    warp_i18n::localize_ui(" to stop").into_owned().to_owned(),
+                    builder.muted_text_style(),
+                ),
             ])
             .truncate()
             .finish(),

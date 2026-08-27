@@ -490,9 +490,9 @@ impl PlatformPageWidget {
     ) -> Box<dyn Element> {
         let text = vec![
             FormattedTextFragment::plain_text(
-                "Create and manage API keys to allow cloud agents to access your Warp account.\nFor more information, visit the ",
+                warp_i18n::localize_ui("Create and manage API keys to allow cloud agents to access your Warp account.\nFor more information, visit the ").into_owned(),
             ),
-            FormattedTextFragment::hyperlink("Documentation.", API_KEY_DOCS_URL),
+            FormattedTextFragment::hyperlink(warp_i18n::localize_ui("Documentation.").into_owned(), API_KEY_DOCS_URL),
         ];
 
         let text_element = FormattedTextElement::new(

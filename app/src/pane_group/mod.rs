@@ -3121,9 +3121,9 @@ impl PaneGroup {
             Banner::<PaneGroupAction>::new_permanently_dismissible(
                 BannerTextContent::formatted_text(vec![
                     FormattedTextFragment::plain_text(
-                        "Warp doesn't currently support your default shell, falling back to zsh.  ",
+                        warp_i18n::localize_ui("Warp doesn't currently support your default shell, falling back to zsh.  ").into_owned(),
                     ),
-                    FormattedTextFragment::hyperlink("Learn more", WARP_SHELL_COMPATIBILITY_DOCS),
+                    FormattedTextFragment::hyperlink(warp_i18n::localize_ui("Learn more").into_owned(), WARP_SHELL_COMPATIBILITY_DOCS),
                 ]),
             )
         });

@@ -19,6 +19,7 @@ default-members = [
   "crates/warpui",
   "crates/warp_completer",
   "crates/warp_terminal",
+  "crates/warp_i18n",
   "crates/warp_util",
 ]
 
@@ -89,6 +90,7 @@ warp_features = { path = "crates/warp_features" }
 warp_files = { path = "crates/warp_files" }
 warp_graphql = { path = "crates/graphql" }
 warp_graphql_schema = { path = "crates/warp_graphql_schema" }
+warp_i18n = { path = "crates/warp_i18n" }
 warp_isolation_platform = { path = "crates/isolation_platform" }
 warp_js = { path = "crates/warp_js" }
 warp_logging = { path = "crates/warp_logging" }

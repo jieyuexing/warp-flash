@@ -324,7 +324,9 @@ impl TuiApiKeysMenuModel {
         match result {
             Ok(()) => self.refresh_rows(ctx),
             Err(_) => self.set_browsing_error(
-                "Could not clear the selected API key. Try again.".to_owned(),
+                warp_i18n::localize_ui("Could not clear the selected API key. Try again.")
+                    .into_owned()
+                    .to_owned(),
                 ctx,
             ),
         }
@@ -510,7 +512,11 @@ impl TuiApiKeysMenuModel {
         if provider == LLMProvider::Xai {
             if ApiKeyManager::as_ref(ctx).has_grok_subscription() {
                 self.set_browsing_error(
-                    "Grok is already connected. Press Ctrl-X to disconnect.".to_owned(),
+                    warp_i18n::localize_ui(
+                        "Grok is already connected. Press Ctrl-X to disconnect.",
+                    )
+                    .into_owned()
+                    .to_owned(),
                     ctx,
                 );
             } else {
@@ -555,7 +561,9 @@ impl TuiApiKeysMenuModel {
         match result {
             Ok(_) => self.refresh_rows(ctx),
             Err(_) => self.set_browsing_error(
-                "Could not save the Warp credit fallback setting.".to_owned(),
+                warp_i18n::localize_ui("Could not save the Warp credit fallback setting.")
+                    .into_owned()
+                    .to_owned(),
                 ctx,
             ),
         }

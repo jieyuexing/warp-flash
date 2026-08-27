@@ -16,7 +16,7 @@ impl UiComponent for Tooltip {
         let styles = self.styles;
         let mut container = Container::new(
             Text::new(
-                self.label,
+                warp_i18n::localize_ui(self.label),
                 styles.font_family_id.unwrap(),
                 styles.font_size.unwrap_or_default(),
             )
@@ -83,7 +83,7 @@ impl UiComponent for TooltipWithSublabel {
 
         let label_text = Container::new(
             Text::new_inline(
-                self.label,
+                warp_i18n::localize_ui(self.label),
                 styles.font_family_id.unwrap(),
                 styles.font_size.unwrap_or_default(),
             )
@@ -102,7 +102,7 @@ impl UiComponent for TooltipWithSublabel {
         );
         let sublabel_text = Container::new(
             Text::new_inline(
-                self.sublabel,
+                warp_i18n::localize_ui(self.sublabel),
                 styles.font_family_id.unwrap(),
                 styles.font_size.unwrap_or_default(),
             )

@@ -8,6 +8,7 @@ license.workspace = true
 [dependencies]
 pathfinder_color.workspace = true
 pathfinder_geometry.workspace = true
+warp_i18n.workspace = true
 warpui_core.workspace = true
 warp_core.workspace = true
 

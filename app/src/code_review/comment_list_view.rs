@@ -820,7 +820,7 @@ impl CommentListView {
             .finish();
 
             let outdated_text = Text::new(
-                format!("{outdated_count} outdated"),
+                warp_i18n::localize_format!("{count} outdated", count = outdated_count),
                 appearance.ui_font_family(),
                 appearance.ui_font_size(),
             )

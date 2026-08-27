@@ -77,7 +77,7 @@ pub(crate) fn conversation_restoring(app: &AppContext) -> Box<dyn TuiElement> {
                     muted,
                 ))
                 .child(
-                    TuiText::new("Loading session...")
+                    TuiText::new(warp_i18n::localize_ui("Loading session...").into_owned())
                         .with_style(muted)
                         .truncate()
                         .finish(),
@@ -97,12 +97,15 @@ pub(crate) fn conversation_restore_failed(message: &str) -> Box<dyn TuiElement> 
     vertically_centered(
         TuiFlex::column()
             .child(
-                TuiText::new(format!("Could not restore conversation: {message}"))
-                    .truncate()
-                    .finish(),
+                TuiText::new(warp_i18n::localize_format!(
+                    "Could not restore conversation: {message}",
+                    message = message
+                ))
+                .truncate()
+                .finish(),
             )
             .child(
-                TuiText::new("Press Ctrl-C to exit.")
+                TuiText::new(warp_i18n::localize_ui("Press Ctrl-C to exit.").into_owned())
                     .with_style(dim)
                     .truncate()
                     .finish(),
@@ -138,7 +141,7 @@ pub(crate) fn centered_in_viewport(content: Box<dyn TuiElement>) -> Box<dyn TuiE
 }
 
 pub(crate) fn render_welcome_title(builder: &TuiUiBuilder) -> Box<dyn TuiElement> {
-    TuiText::new("Welcome to Warp")
+    TuiText::new(warp_i18n::localize_ui("Welcome to Warp").into_owned())
         .with_style(builder.brand_primary_style().add_modifier(Modifier::BOLD))
         .truncate()
         .finish()
@@ -149,7 +152,7 @@ pub(crate) fn append_welcome_capability_section(
     builder: &TuiUiBuilder,
 ) -> TuiFlex {
     column = column.child(
-        TuiText::new("What’s different about Warp")
+        TuiText::new(warp_i18n::localize_ui("What’s different about Warp").into_owned())
             .with_style(builder.muted_text_style())
             .truncate()
             .finish(),
@@ -204,19 +207,27 @@ pub(crate) fn signed_out_welcome(
         .child(
             TuiText::from_spans([
                 ("> ".to_owned(), brand_accent),
-                ("Press ".to_owned(), muted),
                 (
-                    "enter".to_owned(),
+                    warp_i18n::localize_ui("Press ").into_owned().to_owned(),
+                    muted,
+                ),
+                (
+                    warp_i18n::localize_ui("enter").into_owned().to_owned(),
                     brand_accent.add_modifier(Modifier::BOLD),
                 ),
-                (" to get started".to_owned(), muted),
+                (
+                    warp_i18n::localize_ui(" to get started")
+                        .into_owned()
+                        .to_owned(),
+                    muted,
+                ),
             ])
             .finish(),
         )
         .child(
             TuiHoverable::new(
                 login_mouse,
-                TuiText::new("Log in with Warp")
+                TuiText::new(warp_i18n::localize_ui("Log in with Warp").into_owned())
                     .with_style(login_style)
                     .truncate()
                     .finish(),
@@ -227,7 +238,7 @@ pub(crate) fn signed_out_welcome(
         .child(
             TuiHoverable::new(
                 copy_mouse,
-                TuiText::new("Copy login URL (c)")
+                TuiText::new(warp_i18n::localize_ui("Copy login URL (c)").into_owned())
                     .with_style(copy_style)
                     .truncate()
                     .finish(),
@@ -293,7 +304,7 @@ pub(crate) fn login_waiting(
         .add_modifier(Modifier::BOLD);
     let mut content = TuiFlex::column()
         .child(
-            TuiText::new("Welcome to Warp")
+            TuiText::new(warp_i18n::localize_ui("Welcome to Warp").into_owned())
                 .with_style(title)
                 .truncate()
                 .finish(),
@@ -301,7 +312,12 @@ pub(crate) fn login_waiting(
         .child(
             TuiText::from_spans([
                 ("● ".to_owned(), builder.attention_glyph_style()),
-                ("Waiting for login...".to_owned(), primary),
+                (
+                    warp_i18n::localize_ui("Waiting for login...")
+                        .into_owned()
+                        .to_owned(),
+                    primary,
+                ),
             ])
             .finish(),
         )
@@ -322,9 +338,17 @@ pub(crate) fn login_waiting(
             TuiHoverable::new(
                 login_mouse,
                 TuiText::from_spans([
-                    ("Visit ".to_owned(), muted),
+                    (
+                        warp_i18n::localize_ui("Visit ").into_owned().to_owned(),
+                        muted,
+                    ),
                     (browser_url.to_owned(), link_style),
-                    (" to get started, then come back here.".to_owned(), muted),
+                    (
+                        warp_i18n::localize_ui(" to get started, then come back here.")
+                            .into_owned()
+                            .to_owned(),
+                        muted,
+                    ),
                 ])
                 .finish(),
             )
@@ -362,9 +386,11 @@ pub(crate) fn login_waiting(
         );
     } else {
         content = content.child(
-            TuiText::new("Requesting a secure sign-in link...")
-                .with_style(muted)
-                .finish(),
+            TuiText::new(
+                warp_i18n::localize_ui("Requesting a secure sign-in link...").into_owned(),
+            )
+            .with_style(muted)
+            .finish(),
         );
     }
 
@@ -436,19 +462,19 @@ pub(crate) fn login_browser_open_failed(
     let mut on_copy_key = on_copy.clone();
     let content = TuiFlex::column()
         .child(
-            TuiText::new("Welcome to Warp")
+            TuiText::new(warp_i18n::localize_ui("Welcome to Warp").into_owned())
                 .with_style(title)
                 .truncate()
                 .finish(),
         )
         .child(
-            TuiText::new("We couldn’t open your browser.")
+            TuiText::new(warp_i18n::localize_ui("We couldn’t open your browser.").into_owned())
                 .with_style(builder.attention_glyph_style())
                 .finish(),
         )
         .child(blank_row())
         .child(
-            TuiText::new("Open this exact URL manually:")
+            TuiText::new(warp_i18n::localize_ui("Open this exact URL manually:").into_owned())
                 .with_style(muted)
                 .finish(),
         )
@@ -475,7 +501,7 @@ pub(crate) fn login_browser_open_failed(
         .child(
             TuiHoverable::new(
                 retry_mouse,
-                TuiText::new("Retry opening browser (r)")
+                TuiText::new(warp_i18n::localize_ui("Retry opening browser (r)").into_owned())
                     .with_style(retry_style)
                     .truncate()
                     .finish(),
@@ -580,7 +606,7 @@ pub(crate) fn terminal_starting() -> Box<dyn TuiElement> {
     let dim = TuiStyle::default().add_modifier(Modifier::DIM);
     vertically_centered(
         TuiFlex::column().child(
-            TuiText::new("Starting terminal…")
+            TuiText::new(warp_i18n::localize_ui("Starting terminal…").into_owned())
                 .with_style(dim)
                 .truncate()
                 .finish(),
@@ -615,21 +641,24 @@ pub(crate) fn login_failed(
     let mut on_retry_enter = on_retry.clone();
     let content = TuiFlex::column()
         .child(
-            TuiText::new("Welcome to Warp")
+            TuiText::new(warp_i18n::localize_ui("Welcome to Warp").into_owned())
                 .with_style(title)
                 .truncate()
                 .finish(),
         )
         .child(
-            TuiText::new(format!("Login failed: {message}"))
-                .with_style(builder.error_text_style())
-                .truncate()
-                .finish(),
+            TuiText::new(warp_i18n::localize_format!(
+                "Login failed: {message}",
+                message = message
+            ))
+            .with_style(builder.error_text_style())
+            .truncate()
+            .finish(),
         )
         .child(
             TuiHoverable::new(
                 retry_mouse,
-                TuiText::new("Retry login (r)")
+                TuiText::new(warp_i18n::localize_ui("Retry login (r)").into_owned())
                     .with_style(retry_style)
                     .truncate()
                     .finish(),
@@ -638,10 +667,12 @@ pub(crate) fn login_failed(
             .finish(),
         )
         .child(
-            TuiText::new("Press enter or r to retry · Ctrl-C to exit")
-                .with_style(muted)
-                .truncate()
-                .finish(),
+            TuiText::new(
+                warp_i18n::localize_ui("Press enter or r to retry · Ctrl-C to exit").into_owned(),
+            )
+            .with_style(muted)
+            .truncate()
+            .finish(),
         )
         .finish();
     TuiEventHandler::new(auth_layout(clock, animation_config, content, &builder))

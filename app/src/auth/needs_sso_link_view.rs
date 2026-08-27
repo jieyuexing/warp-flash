@@ -77,8 +77,12 @@ impl View for NeedsSsoLinkView {
         .finish();
 
         LoginErrorModal::new(app)
-            .with_header("Your organization has enabled SSO for your account")
-            .with_detail("Click the button below to link your Warp account to your SSO provider.")
+            .with_header(warp_i18n::localize_ui(
+                "Your organization has enabled SSO for your account",
+            ))
+            .with_detail(warp_i18n::localize_ui(
+                "Click the button below to link your Warp account to your SSO provider.",
+            ))
             .with_action(link_sso_button)
             .build()
             .finish()

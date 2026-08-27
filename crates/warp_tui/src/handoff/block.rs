@@ -401,14 +401,22 @@ impl TuiHandoffBlock {
                 )
                 .child(TuiText::new(" ").finish())
                 .child(
-                    TuiText::new("A cloud environment is required to hand off this conversation.")
-                        .with_style(builder.primary_text_style())
-                        .finish(),
+                    TuiText::new(
+                        warp_i18n::localize_ui(
+                            "A cloud environment is required to hand off this conversation.",
+                        )
+                        .into_owned(),
+                    )
+                    .with_style(builder.primary_text_style())
+                    .finish(),
                 )
                 .child(
-                    TuiText::new("Create one in Oz, then refresh this card.")
-                        .with_style(builder.muted_text_style())
-                        .finish(),
+                    TuiText::new(
+                        warp_i18n::localize_ui("Create one in Oz, then refresh this card.")
+                            .into_owned(),
+                    )
+                    .with_style(builder.muted_text_style())
+                    .finish(),
                 )
                 .finish();
         }
@@ -447,14 +455,16 @@ impl TuiHandoffBlock {
             TuiHandoffPhase::Committed { .. } => TuiText::from_spans([
                 ("● ".to_owned(), builder.attention_glyph_style()),
                 (
-                    "Creating cloud run…".to_owned(),
+                    warp_i18n::localize_ui("Creating cloud run…")
+                        .into_owned()
+                        .to_owned(),
                     builder.primary_text_style(),
                 ),
             ])
             .finish(),
             TuiHandoffPhase::Created { url, .. } => TuiFlex::column()
                 .child(
-                    TuiText::new("Cloud run created.")
+                    TuiText::new(warp_i18n::localize_ui("Cloud run created.").into_owned())
                         .with_style(builder.primary_text_style())
                         .finish(),
                 )
@@ -545,12 +555,13 @@ impl TuiHandoffBlock {
                 TuiText::from_spans([
                     ("⟣ ".to_owned(), builder.option_selector_selected_style()),
                     (
-                        format!(
-                            "Conversation forked to cloud on {completed_at}{}",
-                            if continuing_locally {
-                                "; continuing locally"
+                        warp_i18n::localize_format!(
+                            "Conversation forked to cloud on {completed_at}{continuation}",
+                            completed_at = completed_at,
+                            continuation = if continuing_locally {
+                                warp_i18n::localize_ui("; continuing locally")
                             } else {
-                                ""
+                                std::borrow::Cow::Borrowed("")
                             }
                         ),
                         builder.primary_text_style(),
@@ -607,10 +618,18 @@ fn render_metadata_line(
     builder: &TuiUiBuilder,
 ) -> Box<dyn TuiElement> {
     TuiText::from_spans([
-        ("Environment: ".to_owned(), builder.primary_text_style()),
+        (
+            warp_i18n::localize_ui("Environment: ")
+                .into_owned()
+                .to_owned(),
+            builder.primary_text_style(),
+        ),
         (environment, builder.orchestration_selected_value_style()),
         ("  •  ".to_owned(), builder.muted_text_style()),
-        ("Model: ".to_owned(), builder.primary_text_style()),
+        (
+            warp_i18n::localize_ui("Model: ").into_owned().to_owned(),
+            builder.primary_text_style(),
+        ),
         (model, builder.orchestration_selected_value_style()),
     ])
     .finish()
@@ -690,7 +709,10 @@ impl TuiView for TuiHandoffBlock {
         let header = TuiContainer::new(
             TuiText::from_spans([
                 ("■ ".to_owned(), builder.option_selector_selected_style()),
-                (HANDOFF_TITLE.to_owned(), builder.primary_text_style()),
+                (
+                    warp_i18n::localize_ui(HANDOFF_TITLE).into_owned(),
+                    builder.primary_text_style(),
+                ),
             ])
             .finish(),
         )

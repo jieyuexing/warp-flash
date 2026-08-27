@@ -288,10 +288,15 @@ impl Button {
         let styles = self.styles(state);
         // Text & font / Icon
         let label = match self.label {
-            ButtonLabel::Text(text) => Span::new(text, styles).build().finish(),
-            ButtonLabel::CenteredText(text) => {
-                Align::new(Span::new(text, styles).build().finish()).finish()
-            }
+            ButtonLabel::Text(text) => Span::new(warp_i18n::localize_ui(text), styles)
+                .build()
+                .finish(),
+            ButtonLabel::CenteredText(text) => Align::new(
+                Span::new(warp_i18n::localize_ui(text), styles)
+                    .build()
+                    .finish(),
+            )
+            .finish(),
             ButtonLabel::Icon(icon) => {
                 if let Some(color) = styles.font_color {
                     icon.with_color(color).finish()
@@ -302,7 +307,12 @@ impl Button {
             ButtonLabel::TextAndIcon(text_and_icon) => {
                 let text = Shrinkable::new(
                     1.,
-                    Container::new(Span::new(text_and_icon.text, styles).build().finish()).finish(),
+                    Container::new(
+                        Span::new(warp_i18n::localize_ui(text_and_icon.text), styles)
+                            .build()
+                            .finish(),
+                    )
+                    .finish(),
                 )
                 .finish();
                 let icon = if let Some(color) = styles.font_color {

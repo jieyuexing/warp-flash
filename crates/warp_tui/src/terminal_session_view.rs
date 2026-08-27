@@ -3726,9 +3726,9 @@ impl TuiTerminalSessionView {
         }
         let auto_approve = TuiHoverable::new(
             self.warping_auto_approve_mouse.clone(),
-            TuiText::new(format!(
-                "▶▶ Auto approve {}",
-                if enabled { "on" } else { "off" }
+            TuiText::new(warp_i18n::localize_format!(
+                "▶▶ Auto approve {state}",
+                state = warp_i18n::localize_ui(if enabled { "on" } else { "off" })
             ))
             .with_style(style)
             .truncate()
@@ -5465,7 +5465,7 @@ impl TuiTerminalSessionView {
         if show_starting_shell_hint {
             content = content.child(
                 TuiContainer::new(
-                    TuiText::new(STARTING_SHELL_HINT)
+                    TuiText::new(warp_i18n::localize_ui(STARTING_SHELL_HINT).into_owned())
                         .with_style(builder.muted_text_style())
                         .truncate()
                         .finish(),

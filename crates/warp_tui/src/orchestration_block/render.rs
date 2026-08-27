@@ -160,9 +160,9 @@ impl TuiOrchestrationBlock {
         let mut column = TuiFlex::column();
 
         column.add_child(
-            TuiText::new(format!(
-                "Agents ({}):",
-                self.request_fields.agent_run_configs.len()
+            TuiText::new(warp_i18n::localize_format!(
+                "Agents ({count}):",
+                count = self.request_fields.agent_run_configs.len()
             ))
             .with_style(builder.primary_text_style())
             .truncate()
@@ -174,10 +174,13 @@ impl TuiOrchestrationBlock {
         // the GUI card; copy per design review (trailing period, no glyph).
         if FeatureFlag::MultiLevelOrchestration.is_enabled() {
             column.add_child(
-                TuiText::new("These agents may start their own child agents.")
-                    .with_style(builder.muted_text_style())
-                    .truncate()
-                    .finish(),
+                TuiText::new(
+                    warp_i18n::localize_ui("These agents may start their own child agents.")
+                        .into_owned(),
+                )
+                .with_style(builder.muted_text_style())
+                .truncate()
+                .finish(),
             );
         }
         column.add_child(TuiText::new(" ").finish());
@@ -206,7 +209,7 @@ impl TuiOrchestrationBlock {
         TuiText::from_spans([
             ("■ ".to_string(), builder.attention_glyph_style()),
             (
-                ORCHESTRATION_BLOCK_TITLE.to_string(),
+                warp_i18n::localize_ui(ORCHESTRATION_BLOCK_TITLE).into_owned(),
                 builder.primary_text_style(),
             ),
         ])

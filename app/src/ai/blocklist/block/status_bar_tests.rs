@@ -1,9 +1,6 @@
 use warp_core::features::FeatureFlag;
 
-use super::{
-    ModelInUse, UNNAMED_FALLBACK_MODEL_WARPING_TEXT, WarpingModelInputs, WarpingModelMessage,
-    warping_model_message,
-};
+use super::{ModelInUse, WarpingModelInputs, WarpingModelMessage, warping_model_message};
 use crate::ai::agent::OutputModelInfo;
 
 fn named(display_name: &str) -> ModelInUse {
@@ -62,7 +59,7 @@ fn names_the_model_reported_for_the_exchange() {
     assert_eq!(
         warping_model_message(for_current(Some(named("Claude Sonnet 4.5")))),
         Some(WarpingModelMessage {
-            text: "Warping with Claude Sonnet 4.5...".to_owned(),
+            text: "执行中（使用 Claude Sonnet 4.5）...".to_owned(),
             model_display_name: Some("Claude Sonnet 4.5".to_owned()),
             show_fallback_explanation: false,
         })
@@ -116,7 +113,7 @@ fn names_a_fallback_model_without_the_naming_flag() {
     assert_eq!(
         warping_model_message(for_current(Some(fallback("Claude Haiku 4.5")))),
         Some(WarpingModelMessage {
-            text: "Warping with Claude Haiku 4.5.".to_owned(),
+            text: "执行中（使用 Claude Haiku 4.5）。".to_owned(),
             model_display_name: None,
             show_fallback_explanation: true,
         })
@@ -137,11 +134,11 @@ fn ends_the_fallback_message_in_a_period_and_the_named_message_in_an_ellipsis() 
 
     assert_eq!(
         fallback_text.as_deref(),
-        Some("Warping with Claude Haiku 4.5.")
+        Some("执行中（使用 Claude Haiku 4.5）。")
     );
     assert_eq!(
         named_text.as_deref(),
-        Some("Warping with Claude Haiku 4.5...")
+        Some("执行中（使用 Claude Haiku 4.5）...")
     );
 }
 
@@ -157,7 +154,7 @@ fn names_a_fallback_model_without_the_explanation_line() {
     assert_eq!(
         warping_model_message(for_current(Some(fallback("Claude Haiku 4.5")))),
         Some(WarpingModelMessage {
-            text: "Warping with Claude Haiku 4.5...".to_owned(),
+            text: "执行中（使用 Claude Haiku 4.5）...".to_owned(),
             model_display_name: Some("Claude Haiku 4.5".to_owned()),
             show_fallback_explanation: false,
         })
@@ -175,7 +172,7 @@ fn describes_an_unnamed_fallback_model_generically() {
     assert_eq!(
         warping_model_message(for_current(Some(ModelInUse::from(&model_info("", true))))),
         Some(WarpingModelMessage {
-            text: UNNAMED_FALLBACK_MODEL_WARPING_TEXT.to_owned(),
+            text: "正在使用其他模型执行。".to_owned(),
             model_display_name: None,
             show_fallback_explanation: true,
         })
@@ -223,7 +220,7 @@ fn names_the_previous_exchanges_fallback_model_on_agent_follow_ups() {
             is_new_user_query: false,
         }),
         Some(WarpingModelMessage {
-            text: "Warping with Claude Haiku 4.5.".to_owned(),
+            text: "执行中（使用 Claude Haiku 4.5）。".to_owned(),
             // Borrowed, so it stays out of the row's other messages: the lookback
             // was justified for this one sentence, not for five more.
             model_display_name: None,

@@ -2346,7 +2346,7 @@ impl CodeDiffView {
         let formatted_text = FormattedTextElement::new(
             FormattedText::new([FormattedTextLine::Line(vec![
                 FormattedTextFragment::hyperlink(
-                    "Manage suggested code banner settings",
+                    warp_i18n::localize_ui("Manage suggested code banner settings").into_owned(),
                     "Settings > AI",
                 ),
             ])]),

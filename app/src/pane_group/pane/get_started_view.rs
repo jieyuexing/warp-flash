@@ -272,13 +272,14 @@ impl GetStartedView {
                     })
                     .with_text_and_icon_label(TextAndIcon::new(
                         TextAndIconAlignment::IconFirst,
-                        format!(
-                            " New session in {}  {}",
-                            dirs::home_dir()
+                        warp_i18n::localize_format!(
+                            " New session in {directory}  {keybinding}",
+                            directory = dirs::home_dir()
                                 .map(|dir| dir.display().to_string())
                                 .unwrap_or("~".to_string()),
-                            keybinding_name_to_display_string("workspace:new_tab", app)
-                                .unwrap_or_default()
+                            keybinding =
+                                keybinding_name_to_display_string("workspace:new_tab", app)
+                                    .unwrap_or_default()
                         ),
                         ui::Icon::Terminal.to_warpui_icon(theme.foreground()),
                         MainAxisSize::Min,
