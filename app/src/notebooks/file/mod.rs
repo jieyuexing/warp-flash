@@ -253,7 +253,10 @@ impl FileNotebookView {
                 view_position_id.clone(),
                 editor_model,
                 links.clone(),
-                RichTextEditorConfig::default(),
+                RichTextEditorConfig {
+                    max_width: Some(styles::notebook_editor_max_width()),
+                    ..Default::default()
+                },
                 ctx,
             );
             view.set_interaction_state(InteractionState::Selectable, ctx);
