@@ -1,4 +1,5 @@
 //! Implementation of terminal panes.
+use std::cell::{Cell, RefCell};
 #[cfg(not(target_family = "wasm"))]
 use std::collections::HashMap;
 use std::sync::mpsc::SyncSender;
@@ -40,7 +41,9 @@ use crate::ai::llms::LLMPreferences;
 use crate::ai::orchestration::{RemoteChildLaunchConfig, prepare_remote_child_launch};
 use crate::app_state::{AmbientAgentPaneSnapshot, LeafContents, TerminalPaneSnapshot};
 use crate::code::buffer_location::LocalOrRemotePath;
-use crate::external_cli_resume::{ExternalCliAgent, ExternalCliResumeTarget};
+use crate::external_cli_resume::{
+    ExternalCliAgent, ExternalCliResumeTarget, external_cli_agent_from_command,
+};
 #[cfg(not(target_family = "wasm"))]
 use crate::external_cli_resume::{active_codex_resume_target, active_grok_resume_target};
 use crate::features::FeatureFlag;
@@ -89,8 +92,9 @@ pub struct TerminalPane {
 
     pane_configuration: ModelHandle<PaneConfiguration>,
 
-    /// The external CLI session associated with this pane before the current process started.
-    external_cli_resume_target: Option<ExternalCliResumeTarget>,
+    /// The external CLI session associated with this pane across process restarts.
+    external_cli_resume_target: RefCell<Option<ExternalCliResumeTarget>>,
+    external_cli_resume_process_group_id: Cell<Option<u32>>,
 
     /// Defining `terminal_manager` before `view` means that `terminal_manager`
     /// gets dropped first (guaranteed by the language), which halts the event
@@ -168,16 +172,17 @@ impl TerminalPane {
             model_event_sender,
             uuid,
             pane_configuration,
-            external_cli_resume_target: None,
+            external_cli_resume_target: RefCell::new(None),
+            external_cli_resume_process_group_id: Cell::new(None),
             view,
         }
     }
 
     pub(in crate::pane_group) fn with_external_cli_resume_target(
-        mut self,
+        self,
         target: Option<ExternalCliResumeTarget>,
     ) -> Self {
-        self.external_cli_resume_target = target;
+        self.external_cli_resume_target.replace(target);
         self
     }
 
@@ -202,6 +207,11 @@ impl TerminalPane {
         let terminal_view = self.terminal_view(app);
         let view = terminal_view.as_ref(app);
         let cwd = view.pwd_if_local(app);
+        let foreground_process_group_id = self
+            .terminal_manager(app)
+            .as_ref(app)
+            .foreground_process_group_id(app);
+        let active_command = view.active_long_running_command();
         let codex_resume_target = CLIAgentSessionsModel::as_ref(app)
             .session(terminal_view.id())
             .filter(|session| session.agent == CLIAgent::Codex)
@@ -213,20 +223,40 @@ impl TerminalPane {
                 )
             })
             .or_else(|| {
-                view.active_long_running_command()
-                    .and_then(|command| active_codex_resume_target(&command, cwd.as_deref()))
+                (foreground_process_group_id.is_some()
+                    && self.external_cli_resume_process_group_id.get()
+                        == foreground_process_group_id
+                    && active_command
+                        .as_deref()
+                        .and_then(external_cli_agent_from_command)
+                        == Some(ExternalCliAgent::Codex))
+                .then(|| self.external_cli_resume_target.borrow().clone())
+                .flatten()
+                .filter(|target| target.agent == ExternalCliAgent::Codex)
+            })
+            .or_else(|| {
+                active_command.as_deref().and_then(|command| {
+                    active_codex_resume_target(command, cwd.as_deref(), foreground_process_group_id)
+                })
             });
 
         #[cfg(not(target_family = "wasm"))]
-        let grok_resume_target = view
-            .active_long_running_command()
-            .and_then(|command| active_grok_resume_target(&command, cwd.as_deref()));
+        let grok_resume_target = active_command
+            .as_deref()
+            .and_then(|command| active_grok_resume_target(command, cwd.as_deref()));
         #[cfg(target_family = "wasm")]
         let grok_resume_target = None;
 
-        codex_resume_target
-            .or(grok_resume_target)
-            .or_else(|| self.external_cli_resume_target.clone())
+        let resolved_target = codex_resume_target.or(grok_resume_target);
+        if let Some(target) = resolved_target {
+            self.external_cli_resume_target
+                .replace(Some(target.clone()));
+            self.external_cli_resume_process_group_id
+                .set(foreground_process_group_id);
+            return Some(target);
+        }
+
+        self.external_cli_resume_target.borrow().clone()
     }
 
     /// The UUID that identifies this terminal session across app restarts.

@@ -543,6 +543,13 @@ impl<S> TerminalManager<S> {
         self.model.clone()
     }
 
+    #[cfg(unix)]
+    pub(super) fn pty_foreground_process_group_id(&self, ctx: &AppContext) -> Option<u32> {
+        self.terminal_attributes_poller
+            .as_ref()
+            .and_then(|poller| poller.as_ref(ctx).foreground_process_group_id())
+    }
+
     /// Returns the remote server controller owned by this manager.
     pub(super) fn remote_server_controller(&self) -> ModelHandle<RemoteServerController> {
         self.remote_server_controller.clone()

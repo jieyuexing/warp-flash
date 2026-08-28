@@ -1988,6 +1988,11 @@ impl TerminalManagerTrait for TerminalManager<TerminalView> {
         self.model.clone()
     }
 
+    #[cfg(unix)]
+    fn foreground_process_group_id(&self, ctx: &AppContext) -> Option<u32> {
+        self.pty_foreground_process_group_id(ctx)
+    }
+
     fn on_view_detached(
         &self,
         // The detach type is intentionally ignored: a sharer always stops sharing immediately,

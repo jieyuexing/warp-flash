@@ -25,6 +25,11 @@ pub trait TerminalManager: Any {
     /// Returns the backing terminal model.
     fn model(&self) -> Arc<FairMutex<TerminalModel>>;
 
+    /// Returns the process group currently controlling the local PTY, when available.
+    fn foreground_process_group_id(&self, _ctx: &AppContext) -> Option<u32> {
+        None
+    }
+
     /// Called when the terminal pane detaches from its pane group. This is a sensitive path -
     /// do not do anything with high latency here. Note that we cannot rely on events emitted
     /// here to be processed before the window closes.

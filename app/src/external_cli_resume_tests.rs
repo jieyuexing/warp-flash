@@ -101,6 +101,7 @@ fn codex_resume_command_preserves_its_explicit_session_id() {
         "/opt/bin/codex resume session-123 --yolo",
         "/work/project",
         codex_home.path(),
+        &[],
     )
     .expect("explicit resume target");
 
@@ -136,7 +137,73 @@ fn plain_codex_launch_does_not_guess_a_session_from_shared_cwd() {
     }
 
     assert!(
-        active_codex_resume_target_from_root("codex --yolo", "/work/project", codex_home.path())
-            .is_none()
+        active_codex_resume_target_from_root(
+            "codex --yolo",
+            "/work/project",
+            codex_home.path(),
+            &[],
+        )
+        .is_none()
+    );
+}
+
+#[cfg(not(target_family = "wasm"))]
+#[test]
+fn plain_codex_launch_uses_the_rollout_opened_by_its_process_group() {
+    let codex_home = tempfile::tempdir().expect("codex home");
+    let sessions = codex_home.path().join("sessions/2026/08/27");
+    fs::create_dir_all(&sessions).expect("session bucket");
+    let current = sessions.join("rollout-current.jsonl");
+    let unrelated = sessions.join("rollout-unrelated.jsonl");
+    fs::write(
+        &current,
+        r#"{"type":"session_meta","payload":{"id":"session-current","cwd":"/work/project","source":"cli"}}
+"#,
+    )
+    .expect("current rollout");
+    fs::write(
+        &unrelated,
+        r#"{"type":"session_meta","payload":{"id":"session-unrelated","cwd":"/work/project","source":"cli"}}
+"#,
+    )
+    .expect("unrelated rollout");
+
+    let target = active_codex_resume_target_from_root(
+        "codex --yolo",
+        "/work/project",
+        codex_home.path(),
+        &[current],
+    )
+    .expect("process-bound rollout should resolve");
+
+    assert_eq!(target.session_id, "session-current");
+}
+
+#[cfg(not(target_family = "wasm"))]
+#[test]
+fn plain_codex_launch_rejects_multiple_open_cli_rollouts() {
+    let codex_home = tempfile::tempdir().expect("codex home");
+    let sessions = codex_home.path().join("sessions/2026/08/27");
+    fs::create_dir_all(&sessions).expect("session bucket");
+    let first = sessions.join("rollout-first.jsonl");
+    let second = sessions.join("rollout-second.jsonl");
+    for (path, id) in [(&first, "session-first"), (&second, "session-second")] {
+        fs::write(
+            path,
+            format!(
+                "{{\"type\":\"session_meta\",\"payload\":{{\"id\":\"{id}\",\"cwd\":\"/work/project\",\"source\":\"cli\"}}}}\n"
+            ),
+        )
+        .expect("rollout");
+    }
+
+    assert!(
+        active_codex_resume_target_from_root(
+            "codex",
+            "/work/project",
+            codex_home.path(),
+            &[first, second],
+        )
+        .is_none()
     );
 }

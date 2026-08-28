@@ -42,6 +42,11 @@ impl TerminalAttributesPoller {
         self.poll_epoch += 1;
     }
 
+    pub fn foreground_process_group_id(&self) -> Option<u32> {
+        let process_group = nix::unistd::tcgetpgrp(self.fd).ok()?.as_raw();
+        u32::try_from(process_group).ok()
+    }
+
     fn poll_terminal_attributes(&mut self, poll_epoch: usize, ctx: &mut ModelContext<Self>) {
         if poll_epoch != self.poll_epoch {
             return;
