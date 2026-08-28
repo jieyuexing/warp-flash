@@ -13,7 +13,7 @@ use warp_core::ui::appearance::Appearance;
 use warpui::platform::WindowStyle;
 use warpui::{App, ModelHandle, SingletonEntity};
 
-use super::FileTreeView;
+use super::{FileTreeAction, FileTreeIdentifier, FileTreeView};
 use crate::auth::AuthStateProvider;
 use crate::server::server_api::team::MockTeamClient;
 use crate::server::server_api::workspace::MockWorkspaceClient;
@@ -169,6 +169,54 @@ fn set_show_hidden_files(app: &mut App, show_hidden_files: bool) {
     CodeSettings::handle(app).update(app, |settings, ctx| {
         Setting::set_value(&mut settings.show_hidden_files, show_hidden_files, ctx)
             .expect("show hidden files setting updates");
+    });
+}
+
+#[test]
+fn local_file_context_menu_offers_system_default_application() {
+    VirtualFS::test("file_tree_system_default_context_menu", |dirs, mut vfs| {
+        vfs.mkdir("tree")
+            .with_files(vec![Stub::FileWithContent("tree/README.md", "# Read me\n")]);
+        let tree = dirs.tests().join("tree");
+        let markdown_file = tree.join("README.md");
+
+        App::test((), |mut app| async move {
+            let (_, repository_metadata_model) = initialize_app(&mut app);
+            let (_, file_tree_view) = app.add_window(WindowStyle::NotStealFocus, FileTreeView::new);
+
+            file_tree_view.update(&mut app, |view, ctx| {
+                view.set_is_active(true, ctx);
+                view.set_root_directories(vec![tree.clone()], ctx);
+            });
+            await_repository_indexed(&mut app, &repository_metadata_model, &tree).await;
+
+            file_tree_view.read(&app, |view, _ctx| {
+                let root = std_path(&tree);
+                let root_dir = view
+                    .root_directories
+                    .get(&root)
+                    .expect("root directory is tracked");
+                let (index, item) = root_dir
+                    .items
+                    .iter()
+                    .enumerate()
+                    .find(|(_, item)| item.path() == &std_path(&markdown_file))
+                    .expect("Markdown file is visible");
+                let id = FileTreeIdentifier { root, index };
+
+                let menu_items = view.context_menu_items(item, &id);
+
+                assert!(menu_items.iter().any(|menu_item| {
+                    menu_item.item_on_select_action().is_some_and(|action| {
+                        matches!(
+                            action,
+                            FileTreeAction::OpenWithSystemDefault { id: action_id }
+                                if action_id == &id
+                        )
+                    })
+                }));
+            });
+        });
     });
 }
 

@@ -112,6 +112,9 @@ pub enum FileTreeAction {
     OpenInFinder {
         id: FileTreeIdentifier,
     },
+    OpenWithSystemDefault {
+        id: FileTreeIdentifier,
+    },
     Rename {
         id: FileTreeIdentifier,
     },
@@ -2355,15 +2358,17 @@ impl FileTreeView {
                             .with_on_select_action(FileTreeAction::OpenInNewTab { id: id.clone() })
                             .into_item(),
                         ]);
-                    } else {
-                        items.push(
-                            MenuItemFields::new(warp_i18n::localize_ui("Open file").into_owned())
-                                .with_on_select_action(FileTreeAction::ItemClicked {
-                                    id: id.clone(),
-                                })
-                                .into_item(),
-                        );
                     }
+                    items.push(
+                        MenuItemFields::new(
+                            warp_i18n::localize_ui("Open with system default application")
+                                .into_owned(),
+                        )
+                        .with_on_select_action(FileTreeAction::OpenWithSystemDefault {
+                            id: id.clone(),
+                        })
+                        .into_item(),
+                    );
                 }
                 FileTreeItem::DirectoryHeader { .. } => {
                     items.push(
@@ -3125,6 +3130,16 @@ impl TypedActionView for FileTreeView {
                 {
                     let path = item.path().to_local_path_lossy();
                     ctx.open_file_path_in_explorer(&path);
+                }
+                self.context_menu_state.take();
+            }
+            FileTreeAction::OpenWithSystemDefault { id } => {
+                if !self.is_remote_item(id)
+                    && let Some(root_dir) = self.root_directories.get(&id.root)
+                    && let Some(item @ FileTreeItem::File { .. }) = root_dir.items.get(id.index)
+                {
+                    let path = item.path().to_local_path_lossy();
+                    ctx.open_file_path(&path);
                 }
                 self.context_menu_state.take();
             }
