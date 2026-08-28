@@ -1,0 +1,323 @@
+#!/bin/bash
+
+set -euo pipefail
+
+workspace_root="$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)"
+worker_path="$workspace_root/script/macos/install_warposs_worker"
+capture_helper_path="$workspace_root/script/macos/capture_warposs_agent_sessions"
+current_app="${WARPOS_INSTALL_CURRENT_APP:-/Applications/Warposs.app}"
+state_root="${WARPOS_INSTALL_STATE_ROOT:-$HOME/Library/Application Support/Warposs/install-handoff}"
+backup_root="${WARPOS_INSTALL_BACKUP_ROOT:-$HOME/Applications}"
+expected_bundle_id="${WARPOS_INSTALL_EXPECTED_BUNDLE_ID:-dev.warp.WarpOss}"
+label_prefix="${WARPOS_INSTALL_LABEL_PREFIX:-dev.warposs.install}"
+database_path="${WARPOS_INSTALL_DATABASE_PATH:-}"
+
+action="install"
+build_bundle=true
+bundle_path=""
+relaunch=true
+
+usage() {
+    cat <<'EOF'
+Usage: ./script/install-warposs [options]
+
+Build, validate, and stage the local Warposs app without terminating a running instance. If
+Warposs is running, a detached handoff waits for those exact processes to exit naturally before
+backing up the installed app, switching to the new bundle, and relaunching it.
+
+Options:
+  --bundle PATH     Install an already-built .app bundle instead of building first.
+  --skip-build      Reuse target/debug/bundle/osx/WarpOss.app.
+  --current-app     Override the installed app path.
+  --no-relaunch     Do not open Warposs after installation.
+  --status          Show the installed version and latest handoff state.
+  --cancel          Cancel a waiting handoff without deleting its staged bundle.
+  -h, --help        Show this help.
+EOF
+}
+
+while (( "$#" )); do
+    case "$1" in
+        --bundle)
+            if [[ "$#" -lt 2 ]]; then
+                echo "Missing path for --bundle." >&2
+                exit 1
+            fi
+            bundle_path="$2"
+            build_bundle=false
+            shift 2
+            ;;
+        --skip-build)
+            build_bundle=false
+            shift
+            ;;
+        --current-app)
+            if [[ "$#" -lt 2 ]]; then
+                echo "Missing path for --current-app." >&2
+                exit 1
+            fi
+            current_app="$2"
+            shift 2
+            ;;
+        --no-relaunch)
+            relaunch=false
+            shift
+            ;;
+        --status)
+            action="status"
+            shift
+            ;;
+        --cancel)
+            action="cancel"
+            shift
+            ;;
+        -h|--help)
+            usage
+            exit 0
+            ;;
+        *)
+            echo "Unknown option: $1" >&2
+            usage >&2
+            exit 1
+            ;;
+    esac
+done
+
+active_link="$state_root/active"
+
+active_state_dir() {
+    if [[ -L "$active_link" ]]; then
+        /usr/bin/readlink "$active_link"
+    fi
+}
+
+read_state_file() {
+    local state_dir="$1"
+    local name="$2"
+    if [[ -f "$state_dir/$name" ]]; then
+        /bin/cat "$state_dir/$name"
+    fi
+}
+
+job_is_loaded() {
+    local label="$1"
+    /bin/launchctl list "$label" >/dev/null 2>&1
+}
+
+show_status() {
+    if [[ -f "$current_app/Contents/Info.plist" ]]; then
+        local installed_version
+        installed_version="$(
+            /usr/bin/plutil -extract CFBundleVersion raw -o - "$current_app/Contents/Info.plist"
+        )"
+        echo "Installed: $current_app ($installed_version)"
+    else
+        echo "Installed: none at $current_app"
+    fi
+
+    local state_dir
+    state_dir="$(active_state_dir)"
+    if [[ -z "$state_dir" || ! -d "$state_dir" ]]; then
+        echo "Handoff: none"
+        return
+    fi
+
+    local status label bundle_version captured_sessions
+    status="$(read_state_file "$state_dir" status)"
+    label="$(read_state_file "$state_dir" label)"
+    bundle_version="$(read_state_file "$state_dir" bundle-version)"
+    captured_sessions=0
+    if [[ -f "$state_dir/external-cli-sessions" ]]; then
+        captured_sessions="$(
+            /usr/bin/wc -l < "$state_dir/external-cli-sessions" | /usr/bin/tr -d ' '
+        )"
+    fi
+    echo "Handoff: ${status:-unknown} ($bundle_version)"
+    echo "Captured agent sessions: $captured_sessions"
+    echo "State: $state_dir"
+    if [[ -n "$label" ]] && job_is_loaded "$label"; then
+        echo "Worker: running ($label)"
+    else
+        echo "Worker: not loaded"
+    fi
+}
+
+cancel_handoff() {
+    local state_dir
+    state_dir="$(active_state_dir)"
+    if [[ -z "$state_dir" || ! -d "$state_dir" ]]; then
+        echo "No handoff is available to cancel." >&2
+        exit 1
+    fi
+
+    local status label
+    status="$(read_state_file "$state_dir" status)"
+    label="$(read_state_file "$state_dir" label)"
+    if [[ "$status" != "waiting" ]]; then
+        echo "The latest handoff is $status and cannot be cancelled." >&2
+        exit 1
+    fi
+
+    printf '%s\n' "cancelled" > "$state_dir/status"
+    if [[ -n "$label" ]]; then
+        /bin/launchctl remove "$label" >/dev/null 2>&1 || true
+    fi
+    echo "Cancelled handoff. The staged bundle remains at $state_dir/Warposs.app"
+}
+
+if [[ "$action" == "status" ]]; then
+    show_status
+    exit 0
+fi
+if [[ "$action" == "cancel" ]]; then
+    cancel_handoff
+    exit 0
+fi
+
+if [[ "$(uname -s)" != "Darwin" ]]; then
+    echo "Warposs app installation is supported only on macOS." >&2
+    exit 1
+fi
+
+if [[ ! -x "$capture_helper_path" ]]; then
+    echo "Agent-session capture helper is missing or not executable: $capture_helper_path" >&2
+    exit 1
+fi
+
+existing_state_dir="$(active_state_dir)"
+if [[ -n "$existing_state_dir" && -d "$existing_state_dir" ]]; then
+    existing_status="$(read_state_file "$existing_state_dir" status)"
+    if [[ "$existing_status" == "waiting" || "$existing_status" == "installing" ]]; then
+        echo "A Warposs handoff is already $existing_status. Use --status or --cancel." >&2
+        exit 1
+    fi
+fi
+
+if [[ -z "$bundle_path" ]]; then
+    target_dir="$(cargo metadata --no-deps --format-version 1 | jq -r .target_directory)"
+    if [[ -z "$target_dir" || "$target_dir" == "null" ]]; then
+        target_dir="$workspace_root/target"
+    fi
+    bundle_path="$target_dir/debug/bundle/osx/WarpOss.app"
+fi
+
+if [[ "$build_bundle" == "true" ]]; then
+    WARP_BIN_NAME=warp-oss WARP_CHANNEL=oss FEATURES=gui \
+        "$workspace_root/script/macos/run" --dont-open
+fi
+
+if [[ ! -d "$bundle_path" ]]; then
+    echo "Bundle does not exist: $bundle_path" >&2
+    exit 1
+fi
+if [[ ! -x "$bundle_path/Contents/MacOS/warp-oss" ]]; then
+    echo "Bundle executable is missing: $bundle_path/Contents/MacOS/warp-oss" >&2
+    exit 1
+fi
+
+bundle_id="$(/usr/bin/plutil -extract CFBundleIdentifier raw -o - "$bundle_path/Contents/Info.plist")"
+if [[ "$bundle_id" != "$expected_bundle_id" ]]; then
+    echo "Expected bundle id $expected_bundle_id, got $bundle_id." >&2
+    exit 1
+fi
+bundle_version="$(
+    /usr/bin/plutil -extract CFBundleVersion raw -o - "$bundle_path/Contents/Info.plist"
+)"
+/usr/bin/codesign --verify --deep --strict "$bundle_path"
+
+if [[ -z "$database_path" ]]; then
+    data_profile="$(
+        /usr/bin/plutil \
+            -extract LSEnvironment.WARP_DATA_PROFILE \
+            raw \
+            -o - \
+            "$current_app/Contents/Info.plist" \
+            2>/dev/null \
+            || true
+    )"
+    data_directory="$expected_bundle_id"
+    if [[ -n "$data_profile" ]]; then
+        data_directory="$data_directory-$data_profile"
+    fi
+    database_path="$HOME/Library/Group Containers/2BBY89MBSN.dev.warp/Library/Application Support/$data_directory/warp.sqlite"
+fi
+
+/bin/mkdir -p "$state_root" "$backup_root" "$(/usr/bin/dirname "$current_app")"
+state_dir="$(/usr/bin/mktemp -d "$state_root/update.XXXXXX")"
+staged_app="$state_dir/Warposs.app"
+/usr/bin/ditto "$bundle_path" "$staged_app"
+/usr/bin/codesign --verify --deep --strict "$staged_app"
+
+timestamp="$(/bin/date +%Y%m%d-%H%M%S)"
+backup_app="$backup_root/Warposs Backup $timestamp.app"
+if [[ -e "$backup_app" ]]; then
+    backup_app="$backup_root/Warposs Backup $timestamp-$$.app"
+fi
+
+update_id="$(/usr/bin/basename "$state_dir" | /usr/bin/tr -c 'A-Za-z0-9-' '-')"
+label="$label_prefix.$update_id"
+current_executable="$current_app/Contents/MacOS/warp-oss"
+
+printf '%s\n' "$label" > "$state_dir/label"
+printf '%s\n' "$current_app" > "$state_dir/current-app"
+printf '%s\n' "$backup_app" > "$state_dir/backup-app"
+printf '%s\n' "$bundle_version" > "$state_dir/bundle-version"
+printf '%s\n' "$database_path" > "$state_dir/database-path"
+printf '%s\n' "$expected_bundle_id" > "$state_dir/expected-bundle-id"
+printf '%s\n' "$relaunch" > "$state_dir/relaunch"
+if [[ -d "$current_app" ]]; then
+    printf '%s\n' "yes" > "$state_dir/had-current-app"
+else
+    printf '%s\n' "no" > "$state_dir/had-current-app"
+fi
+printf '%s\n' "waiting" > "$state_dir/status"
+: > "$state_dir/processes"
+: > "$state_dir/external-cli-sessions"
+/bin/cp "$capture_helper_path" "$state_dir/capture-agent-sessions"
+/bin/chmod 700 "$state_dir/capture-agent-sessions"
+
+if ! "$state_dir/capture-agent-sessions" \
+    "$expected_bundle_id" \
+    "$state_dir/external-cli-sessions"; then
+    printf '%s\n' "failed" > "$state_dir/status"
+    printf '%s\n' "Could not capture active Agent sessions; installation was not staged." \
+        > "$state_dir/message"
+    echo "Could not capture active Agent sessions; installation was not staged." >&2
+    exit 1
+fi
+
+if [[ -x "$current_executable" ]]; then
+    while IFS= read -r process_row; do
+        process_row="${process_row#"${process_row%%[![:space:]]*}"}"
+        pid="${process_row%%[[:space:]]*}"
+        command="${process_row#"$pid"}"
+        command="${command#"${command%%[![:space:]]*}"}"
+        case "$command" in
+            "$current_executable"|"$current_executable "*)
+                printf '%s\t%s\n' "$pid" "$command" >> "$state_dir/processes"
+                ;;
+        esac
+    done < <(/bin/ps -ww -axo pid=,command=)
+fi
+
+/bin/ln -sfn "$state_dir" "$active_link"
+
+if ! /bin/launchctl submit -l "$label" -- /bin/bash "$worker_path" "$state_dir" "$label"; then
+    printf '%s\n' "failed" > "$state_dir/status"
+    printf '%s\n' "Could not submit the detached handoff worker." > "$state_dir/message"
+    echo "Could not submit the detached handoff worker." >&2
+    exit 1
+fi
+
+process_count="$(/usr/bin/wc -l < "$state_dir/processes" | /usr/bin/tr -d ' ')"
+captured_session_count="$(
+    /usr/bin/wc -l < "$state_dir/external-cli-sessions" | /usr/bin/tr -d ' '
+)"
+if [[ "$process_count" -gt 0 ]]; then
+    echo "Staged Warposs $bundle_version without interrupting $process_count running process(es)."
+    echo "The detached handoff will install it after those exact processes exit naturally."
+else
+    echo "No running Warposs process was found; installation is completing in the background."
+fi
+echo "Captured $captured_session_count active Agent session(s) for restart resume."
+echo "State: $state_dir"

@@ -19,9 +19,54 @@ remain defined or deferred rather than enabled product behavior.
 - [Product contract](../../specs/warposs-cli-mediation/PRODUCT.md)
 - [Technical contract and P1 slice](../../specs/warposs-cli-mediation/TECH.md)
 - [Current P0 status](../../specs/warposs-cli-mediation/STATUS.md)
+- [Markdown rendering v2 PRD](../../specs/warposs-markdown-rendering/PRODUCT.md)
 
 Product changes and product specifications belong in this Warp repository. External
 orchestration documents may link here but must not become Warp build or runtime dependencies.
+
+## Local macOS installation
+
+Use the repository-owned installer when replacing `/Applications/Warposs.app` from this
+checkout:
+
+```bash
+./script/install-warposs
+```
+
+The installer builds and validates an ad-hoc-signed OSS bundle without terminating Warposs. If
+the installed app is running, it captures those exact process identities, stages the new bundle,
+and submits a detached handoff. The handoff waits for those processes to exit naturally, moves
+the previous app to a timestamped backup under `~/Applications`, verifies the replacement, opens
+it, and unloads itself. It never sends a quit or kill signal to Warposs.
+
+Before the handoff and while it is waiting, the installer also snapshots each unambiguous active
+Agent identity as terminal-pane UUID plus provider session ID. Only after the old app exits does
+the worker check and back up `warp.sqlite`, transactionally merge those identities into the pane
+records, and replace the app. This bridges upgrades from a running build that did not yet persist
+Agent resume targets. Conflicting identities abort the replacement instead of guessing by working
+directory. `--status` reports how many identities are currently captured.
+
+```bash
+./script/install-warposs --status
+./script/install-warposs --cancel
+./script/install-warposs --skip-build
+./script/install-warposs --bundle /path/to/WarpOss.app
+```
+
+Cancellation unloads only a waiting handoff and preserves its staged bundle for inspection.
+Failed verification leaves the installed app unchanged or restores its backup before relaunch.
+
+## External Agent restart recovery
+
+Persisted terminal tabs retain an exact Codex or Grok resume target when the active session can
+be identified safely. Structured CLI events remain the first source. For a plain Codex launch,
+Warposs binds the PTY's foreground process group to the rollout file that process actually has
+open, validates its session metadata and working directory, and stores the resulting session ID
+with the tab snapshot. Restoring the workspace then runs `codex resume <session-id>` in that tab.
+
+Warposs never selects a Codex session only because it shares the same working directory: several
+sessions can legitimately use one checkout. If no unique process-bound identity is available, the
+tab is restored as a terminal without an inferred resume command.
 
 ## Upstream baseline
 

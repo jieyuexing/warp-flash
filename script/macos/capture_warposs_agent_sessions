@@ -1,0 +1,158 @@
+#!/bin/bash
+
+set -u
+
+if [[ "$#" -ne 2 ]]; then
+    echo "Usage: capture_warposs_agent_sessions BUNDLE_ID OUTPUT_PATH" >&2
+    exit 1
+fi
+
+bundle_id="$1"
+output_path="$2"
+ps_bin="${WARPOS_CAPTURE_PS:-/bin/ps}"
+lsof_bin="${WARPOS_CAPTURE_LSOF:-/usr/sbin/lsof}"
+plutil_bin="${WARPOS_CAPTURE_PLUTIL:-/usr/bin/plutil}"
+
+umask 077
+temp_dir="$(/usr/bin/mktemp -d "${TMPDIR:-/tmp}/warposs-agent-capture.XXXXXX")" || exit 1
+trap '/bin/rm -rf "$temp_dir"' EXIT
+raw_sessions="$temp_dir/raw-sessions"
+unique_sessions="$temp_dir/unique-sessions"
+next_output="$temp_dir/output"
+: > "$raw_sessions"
+
+extract_process_environment_value() {
+    local key="$1"
+    local process_details="$2"
+    CAPTURE_ENV_KEY="$key" /usr/bin/perl -ne '
+        while (/(?:^| )\Q$ENV{CAPTURE_ENV_KEY}\E=([^ ]*)(?= |$)/g) {
+            $value = $1;
+        }
+        print $value if defined $value;
+    ' <<< "$process_details"
+}
+
+safe_session_id() {
+    local session_id="$1"
+    [[ -n "$session_id" && "${#session_id}" -le 256 \
+        && "$session_id" =~ ^[A-Za-z0-9._:-]+$ ]]
+}
+
+single_unique_value() {
+    /usr/bin/sed '/^$/d' | LC_ALL=C /usr/bin/sort -u | /usr/bin/awk '
+        NR == 1 { value = $0 }
+        END { if (NR == 1) print value }
+    '
+}
+
+while IFS= read -r process_row; do
+    process_row="${process_row#"${process_row%%[![:space:]]*}"}"
+    [[ -n "$process_row" ]] || continue
+
+    pid="${process_row%%[[:space:]]*}"
+    process_row="${process_row#"$pid"}"
+    process_row="${process_row#"${process_row%%[![:space:]]*}"}"
+    process_group_id="${process_row%%[[:space:]]*}"
+    process_row="${process_row#"$process_group_id"}"
+    process_row="${process_row#"${process_row%%[![:space:]]*}"}"
+    foreground_process_group_id="${process_row%%[[:space:]]*}"
+    process_details="${process_row#"$foreground_process_group_id"}"
+    process_details="${process_details#"${process_details%%[![:space:]]*}"}"
+
+    [[ "$pid" =~ ^[0-9]+$ && "$process_group_id" =~ ^[0-9]+$ ]] || continue
+    if [[ "$foreground_process_group_id" =~ ^[0-9]+$ \
+        && "$foreground_process_group_id" -ne 0 \
+        && "$process_group_id" != "$foreground_process_group_id" ]]; then
+        continue
+    fi
+
+    process_bundle_id="$(
+        extract_process_environment_value "__CFBundleIdentifier" "$process_details"
+    )"
+    [[ "$process_bundle_id" == "$bundle_id" ]] || continue
+
+    pane_uuid="$(
+        extract_process_environment_value "WARP_TERMINAL_SESSION_UUID" "$process_details"
+    )"
+    pane_uuid="${pane_uuid//-/}"
+    [[ "$pane_uuid" =~ ^[A-Fa-f0-9]{32}$ ]] || continue
+    pane_uuid="$(printf '%s' "$pane_uuid" | /usr/bin/tr '[:upper:]' '[:lower:]')"
+
+    codex_ids="$temp_dir/codex-$pid"
+    grok_ids="$temp_dir/grok-$pid"
+    : > "$codex_ids"
+    : > "$grok_ids"
+    while IFS= read -r open_file; do
+        case "$open_file" in
+            n*/sessions/*/rollout-*.jsonl)
+                session_path="${open_file#n}"
+                [[ -f "$session_path" ]] || continue
+                record_type="$(
+                    /usr/bin/head -c 262144 "$session_path" \
+                        | /usr/bin/head -n 1 \
+                        | "$plutil_bin" -extract type raw -o - - 2>/dev/null
+                )"
+                source="$(
+                    /usr/bin/head -c 262144 "$session_path" \
+                        | /usr/bin/head -n 1 \
+                        | "$plutil_bin" -extract payload.source raw -o - - 2>/dev/null
+                )"
+                session_id="$(
+                    /usr/bin/head -c 262144 "$session_path" \
+                        | /usr/bin/head -n 1 \
+                        | "$plutil_bin" -extract payload.id raw -o - - 2>/dev/null
+                )"
+                if [[ "$record_type" == "session_meta" && "$source" == "cli" ]] \
+                    && safe_session_id "$session_id"; then
+                    printf '%s\n' "$session_id" >> "$codex_ids"
+                fi
+                ;;
+            n*/relocations/*.lock)
+                session_id="${open_file##*/}"
+                session_id="${session_id%.lock}"
+                if safe_session_id "$session_id"; then
+                    printf '%s\n' "$session_id" >> "$grok_ids"
+                fi
+                ;;
+        esac
+    done < <("$lsof_bin" -p "$pid" -Fn 2>/dev/null)
+
+    codex_id="$(single_unique_value < "$codex_ids")"
+    grok_id="$(single_unique_value < "$grok_ids")"
+    if [[ -n "$codex_id" && -z "$grok_id" ]]; then
+        printf 'codex\t%s\t%s\n' "$pane_uuid" "$codex_id" >> "$raw_sessions"
+    elif [[ -n "$grok_id" && -z "$codex_id" ]]; then
+        printf 'grok\t%s\t%s\n' "$pane_uuid" "$grok_id" >> "$raw_sessions"
+    fi
+done < <("$ps_bin" eww -axo pid=,pgid=,tpgid=,command=)
+
+LC_ALL=C /usr/bin/sort -u "$raw_sessions" > "$unique_sessions"
+/usr/bin/awk -F '\t' '
+    NF == 3 {
+        identity = $1 FS $3
+        if (!($2 in pane_identity)) {
+            pane_identity[$2] = identity
+            pane_line[$2] = $0
+        } else if (pane_identity[$2] != identity) {
+            pane_conflict[$2] = 1
+        }
+
+        if (!(identity in identity_pane)) {
+            identity_pane[identity] = $2
+        } else if (identity_pane[identity] != $2) {
+            identity_conflict[identity] = 1
+        }
+    }
+    END {
+        for (pane in pane_line) {
+            identity = pane_identity[pane]
+            if (!pane_conflict[pane] && !identity_conflict[identity]) {
+                print pane_line[pane]
+            }
+        }
+    }
+' "$unique_sessions" | LC_ALL=C /usr/bin/sort -t $'\t' -k2,2 > "$next_output"
+
+/bin/mkdir -p "$(/usr/bin/dirname "$output_path")"
+/bin/chmod 600 "$next_output"
+/bin/mv "$next_output" "$output_path"

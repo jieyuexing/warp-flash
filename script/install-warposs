@@ -1,0 +1,12 @@
+#!/usr/bin/env bash
+
+set -euo pipefail
+
+repo_root="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
+
+if [[ "$(uname -s)" != "Darwin" ]]; then
+    echo "Warposs app installation is supported only on macOS." >&2
+    exit 1
+fi
+
+exec "$repo_root/script/macos/install_warposs" "$@"

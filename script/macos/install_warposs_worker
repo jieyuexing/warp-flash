@@ -1,0 +1,330 @@
+#!/bin/bash
+
+set -u
+
+if [[ "$#" -ne 2 ]]; then
+    echo "Usage: install_warposs_worker STATE_DIR LABEL" >&2
+    exit 1
+fi
+
+state_dir="$1"
+label="$2"
+exec >> "$state_dir/worker.log" 2>&1
+
+remove_job() {
+    /bin/launchctl remove "$label" >/dev/null 2>&1 || true
+}
+
+for state_name in \
+    label \
+    current-app \
+    backup-app \
+    bundle-version \
+    database-path \
+    expected-bundle-id \
+    relaunch \
+    had-current-app \
+    status \
+    processes \
+    external-cli-sessions \
+    capture-agent-sessions; do
+    if [[ ! -f "$state_dir/$state_name" ]]; then
+        echo "Missing handoff state file: $state_name"
+        remove_job
+        exit 1
+    fi
+done
+
+recorded_label="$(/bin/cat "$state_dir/label")"
+if [[ "$recorded_label" != "$label" ]]; then
+    echo "Handoff label does not match its state."
+    remove_job
+    exit 1
+fi
+
+current_app="$(/bin/cat "$state_dir/current-app")"
+backup_app="$(/bin/cat "$state_dir/backup-app")"
+bundle_version="$(/bin/cat "$state_dir/bundle-version")"
+database_path="$(/bin/cat "$state_dir/database-path")"
+expected_bundle_id="$(/bin/cat "$state_dir/expected-bundle-id")"
+relaunch="$(/bin/cat "$state_dir/relaunch")"
+had_current_app="$(/bin/cat "$state_dir/had-current-app")"
+staged_app="$state_dir/Warposs.app"
+failed_app="$state_dir/failed.app"
+capture_helper="$state_dir/capture-agent-sessions"
+external_cli_sessions="$state_dir/external-cli-sessions"
+applied_session_count=0
+
+finish() {
+    local status="$1"
+    local message="$2"
+    local relaunch_current="${3:-true}"
+    printf '%s\n' "$status" > "$state_dir/status"
+    printf '%s\n' "$message" > "$state_dir/message"
+    echo "$message"
+    if [[ "$status" == "failed" && "$relaunch" == "true" && "$relaunch_current" == "true" \
+        && -d "$current_app" ]]; then
+        /usr/bin/open "$current_app" || true
+    fi
+    remove_job
+    exit 0
+}
+
+current_status="$(/bin/cat "$state_dir/status")"
+if [[ "$current_status" != "waiting" ]]; then
+    remove_job
+    exit 0
+fi
+
+process_matches() {
+    local pid="$1"
+    local expected="$2"
+    local actual
+    actual="$(/bin/ps -ww -p "$pid" -o command= 2>/dev/null)" || return 1
+    [[ "$actual" == "$expected" ]]
+}
+
+watched_process_is_running() {
+    local pid expected
+    while IFS=$'\t' read -r pid expected; do
+        if [[ -n "$pid" ]] && process_matches "$pid" "$expected"; then
+            return 0
+        fi
+    done < "$state_dir/processes"
+    return 1
+}
+
+current_app_process_is_running() {
+    local current_executable process_row pid command
+    current_executable="$current_app/Contents/MacOS/warp-oss"
+    while IFS= read -r process_row; do
+        process_row="${process_row#"${process_row%%[![:space:]]*}"}"
+        pid="${process_row%%[[:space:]]*}"
+        command="${process_row#"$pid"}"
+        command="${command#"${command%%[![:space:]]*}"}"
+        case "$command" in
+            "$current_executable"|"$current_executable "*)
+                return 0
+                ;;
+        esac
+    done < <(/bin/ps -ww -axo pid=,command=)
+    return 1
+}
+
+refresh_external_cli_sessions() {
+    local snapshot merged
+    snapshot="$(/usr/bin/mktemp "$state_dir/agent-snapshot.XXXXXX")" || return 0
+    if ! "$capture_helper" "$expected_bundle_id" "$snapshot"; then
+        /bin/rm -f "$snapshot"
+        if [[ ! -f "$state_dir/capture-refresh-failed" ]]; then
+            : > "$state_dir/capture-refresh-failed"
+            echo "Could not refresh active Agent sessions; keeping the last successful capture."
+        fi
+        return 0
+    fi
+
+    if [[ -s "$snapshot" ]]; then
+        merged="$(/usr/bin/mktemp "$state_dir/agent-merged.XXXXXX")" || {
+            /bin/rm -f "$snapshot"
+            return 0
+        }
+        /usr/bin/awk -F '\t' -v snapshot="$snapshot" '
+            FILENAME != snapshot && NF == 3 {
+                pane_line[$2] = $0
+                pane_identity[$2] = $1 FS $3
+                next
+            }
+            FILENAME == snapshot && NF == 3 {
+                identity = $1 FS $3
+                for (pane in pane_identity) {
+                    if (pane != $2 && pane_identity[pane] == identity) {
+                        delete pane_identity[pane]
+                        delete pane_line[pane]
+                    }
+                }
+                pane_identity[$2] = identity
+                pane_line[$2] = $0
+            }
+            END {
+                for (pane in pane_line) {
+                    print pane_line[pane]
+                }
+            }
+        ' "$external_cli_sessions" "$snapshot" \
+            | LC_ALL=C /usr/bin/sort -t $'\t' -k2,2 > "$merged"
+        /bin/chmod 600 "$merged"
+        /bin/mv "$merged" "$external_cli_sessions"
+    fi
+    /bin/rm -f "$snapshot"
+}
+
+apply_external_cli_sessions() {
+    local session_count sqlite_bin quick_check column_count database_backup sql_file
+    local agent pane_uuid session_id matched_panes verified_target
+    session_count="$(/usr/bin/wc -l < "$external_cli_sessions" | /usr/bin/tr -d ' ')"
+    if [[ "$session_count" -eq 0 ]]; then
+        return
+    fi
+
+    sqlite_bin="/usr/bin/sqlite3"
+    if [[ ! -x "$sqlite_bin" ]]; then
+        finish "failed" "Captured Agent sessions, but sqlite3 is unavailable; the app was not replaced."
+    fi
+    if [[ -z "$database_path" || ! -f "$database_path" ]]; then
+        finish "failed" "Captured Agent sessions, but the Warposs database is unavailable; the app was not replaced."
+    fi
+
+    quick_check="$("$sqlite_bin" -batch -bail "$database_path" "PRAGMA quick_check(1);" 2>/dev/null)"
+    if [[ "$quick_check" != "ok" ]]; then
+        finish "failed" "The Warposs database failed its pre-install check; the app was not replaced."
+    fi
+    column_count="$(
+        "$sqlite_bin" -batch -bail "$database_path" \
+            "SELECT count(*) FROM pragma_table_info('terminal_panes') WHERE name = 'external_cli_resume_target';" \
+            2>/dev/null
+    )"
+    if [[ "$column_count" != "1" ]]; then
+        finish "failed" "The installed Warposs database cannot store Agent resume state; the app was not replaced."
+    fi
+
+    while IFS=$'\t' read -r agent pane_uuid session_id; do
+        if [[ "$agent" != "codex" && "$agent" != "grok" ]] \
+            || [[ ! "$pane_uuid" =~ ^[a-f0-9]{32}$ ]] \
+            || [[ -z "$session_id" || "${#session_id}" -gt 256 ]] \
+            || [[ ! "$session_id" =~ ^[A-Za-z0-9._:-]+$ ]]; then
+            finish "failed" "Captured Agent resume state was invalid; the app was not replaced."
+        fi
+        matched_panes="$(
+            "$sqlite_bin" -batch -bail "$database_path" \
+                "SELECT count(*) FROM terminal_panes WHERE lower(hex(uuid)) = '$pane_uuid';" \
+                2>/dev/null
+        )"
+        if [[ "$matched_panes" != "1" ]]; then
+            finish "failed" "A captured Agent session no longer matched its terminal pane; the app was not replaced."
+        fi
+    done < "$external_cli_sessions"
+
+    "$sqlite_bin" -batch -bail "$database_path" "PRAGMA wal_checkpoint(FULL);" >/dev/null
+    database_backup="$state_dir/warp-before-agent-resume-merge.sqlite"
+    if ! /bin/cp -p "$database_path" "$database_backup"; then
+        finish "failed" "Could not back up Agent resume state; the app was not replaced."
+    fi
+    /bin/chmod 600 "$database_backup"
+
+    sql_file="$state_dir/external-cli-resume.sql"
+    printf '%s\n' "PRAGMA busy_timeout = 5000;" "BEGIN IMMEDIATE;" > "$sql_file"
+    while IFS=$'\t' read -r agent pane_uuid session_id; do
+        printf '%s\n' \
+            "UPDATE terminal_panes" \
+            "SET external_cli_resume_target = json_object(" \
+            "    'agent', '$agent'," \
+            "    'session_id', '$session_id'," \
+            "    'cwd', cwd" \
+            ")" \
+            "WHERE lower(hex(uuid)) = '$pane_uuid';" \
+            >> "$sql_file"
+    done < "$external_cli_sessions"
+    printf '%s\n' "COMMIT;" >> "$sql_file"
+    /bin/chmod 600 "$sql_file"
+
+    if ! "$sqlite_bin" -batch -bail "$database_path" < "$sql_file" >/dev/null; then
+        finish "failed" "Could not persist captured Agent resume state; the app was not replaced."
+    fi
+
+    while IFS=$'\t' read -r agent pane_uuid session_id; do
+        verified_target="$(
+            "$sqlite_bin" -batch -bail "$database_path" \
+                "SELECT count(*) FROM terminal_panes
+                 WHERE lower(hex(uuid)) = '$pane_uuid'
+                   AND json_extract(external_cli_resume_target, '$.agent') = '$agent'
+                   AND json_extract(external_cli_resume_target, '$.session_id') = '$session_id';" \
+                2>/dev/null
+        )"
+        if [[ "$verified_target" != "1" ]]; then
+            finish "failed" "Persisted Agent resume state failed verification; the app was not replaced."
+        fi
+    done < "$external_cli_sessions"
+
+    applied_session_count="$session_count"
+    printf '%s\n' "$applied_session_count" > "$state_dir/applied-agent-session-count"
+    echo "Persisted $applied_session_count captured Agent session(s) for restart resume."
+}
+
+echo "Waiting for the captured Warposs processes to exit naturally."
+refresh_external_cli_sessions
+while watched_process_is_running || current_app_process_is_running; do
+    current_status="$(/bin/cat "$state_dir/status")"
+    if [[ "$current_status" != "waiting" ]]; then
+        remove_job
+        exit 0
+    fi
+    refresh_external_cli_sessions
+    /bin/sleep 2
+done
+
+current_status="$(/bin/cat "$state_dir/status")"
+if [[ "$current_status" != "waiting" ]]; then
+    remove_job
+    exit 0
+fi
+printf '%s\n' "installing" > "$state_dir/status"
+
+apply_external_cli_sessions
+
+if [[ ! -d "$staged_app" ]]; then
+    finish "failed" "Staged app is missing; the current installation was not changed."
+fi
+if ! /usr/bin/codesign --verify --deep --strict "$staged_app"; then
+    finish "failed" "Staged app failed signature verification; the current installation was not changed."
+fi
+if [[ -e "$backup_app" || -e "$failed_app" ]]; then
+    finish "failed" "A backup or failed-update path already exists; refusing to overwrite it."
+fi
+if [[ "$had_current_app" == "yes" && ! -d "$current_app" ]]; then
+    finish "failed" "The current app disappeared before installation; refusing to continue."
+fi
+if [[ "$had_current_app" == "no" && -e "$current_app" ]]; then
+    finish "failed" "An app appeared at the install path; refusing to overwrite it."
+fi
+
+if [[ "$had_current_app" == "yes" ]]; then
+    if ! /bin/mv "$current_app" "$backup_app"; then
+        finish "failed" "Could not move the current app to its backup path."
+    fi
+fi
+
+if ! /bin/mv "$staged_app" "$current_app"; then
+    if [[ "$had_current_app" == "yes" ]]; then
+        if /bin/mv "$backup_app" "$current_app"; then
+            finish "failed" "Could not install the staged app; the previous app was restored."
+        fi
+        finish "failed" "Could not install the staged app or restore its backup at $backup_app."
+    fi
+    finish "failed" "Could not install the staged app."
+fi
+
+if ! /usr/bin/codesign --verify --deep --strict "$current_app"; then
+    if ! /bin/mv "$current_app" "$failed_app"; then
+        finish \
+            "failed" \
+            "Installed app failed verification; its backup remains at $backup_app." \
+            "false"
+    fi
+    if [[ "$had_current_app" == "yes" ]]; then
+        if /bin/mv "$backup_app" "$current_app"; then
+            finish "failed" "Installed app failed verification; the previous app was restored."
+        fi
+        finish "failed" "Installed app failed verification; its backup remains at $backup_app."
+    fi
+    finish "failed" "Installed app failed verification and remains at $failed_app."
+fi
+
+if [[ "$relaunch" == "true" ]]; then
+    if ! /usr/bin/open "$current_app"; then
+        echo "Installed Warposs but could not relaunch it automatically."
+    fi
+fi
+
+finish \
+    "installed" \
+    "Installed Warposs $bundle_version; preserved $applied_session_count Agent session(s); previous app: $backup_app"

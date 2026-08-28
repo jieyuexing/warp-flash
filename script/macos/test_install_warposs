@@ -1,0 +1,351 @@
+#!/bin/bash
+
+set -euo pipefail
+
+workspace_root="$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)"
+installer="$workspace_root/script/macos/install_warposs"
+capture_helper="$workspace_root/script/macos/capture_warposs_agent_sessions"
+temp_dir="$(/usr/bin/mktemp -d)"
+watched_pids=()
+
+cleanup() {
+    local state_root state_dir label pid command
+    for state_root in "$temp_dir"/*/state; do
+        if [[ -L "$state_root/active" ]]; then
+            state_dir="$(/usr/bin/readlink "$state_root/active")"
+            if [[ -f "$state_dir/label" ]]; then
+                label="$(/bin/cat "$state_dir/label")"
+                /bin/launchctl remove "$label" >/dev/null 2>&1 || true
+            fi
+        fi
+    done
+    for pid in "${watched_pids[@]}"; do
+        command="$(/bin/ps -ww -p "$pid" -o command= 2>/dev/null || true)"
+        if [[ "$command" == *"$temp_dir/"* ]]; then
+            /bin/kill "$pid" 2>/dev/null || true
+            wait "$pid" 2>/dev/null || true
+        fi
+    done
+    /bin/rm -rf "$temp_dir"
+}
+trap cleanup EXIT
+
+create_app() {
+    local app_path="$1"
+    local version="$2"
+    /bin/mkdir -p "$app_path/Contents/MacOS"
+    /bin/cp /bin/sleep "$app_path/Contents/MacOS/warp-oss"
+    /bin/chmod 755 "$app_path/Contents/MacOS/warp-oss"
+    cat > "$app_path/Contents/Info.plist" <<EOF
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+    <key>CFBundleExecutable</key>
+    <string>warp-oss</string>
+    <key>CFBundleIdentifier</key>
+    <string>test.warposs</string>
+    <key>CFBundleName</key>
+    <string>Warposs Test</string>
+    <key>CFBundleVersion</key>
+    <string>$version</string>
+</dict>
+</plist>
+EOF
+    /usr/bin/codesign --force --deep --sign - "$app_path" >/dev/null
+}
+
+bundle_version() {
+    /usr/bin/plutil -extract CFBundleVersion raw -o - "$1/Contents/Info.plist"
+}
+
+wait_for_status() {
+    local state_dir="$1"
+    local expected="$2"
+    local attempt status
+    for ((attempt = 0; attempt < 80; attempt++)); do
+        status="$(/bin/cat "$state_dir/status")"
+        if [[ "$status" == "$expected" ]]; then
+            return 0
+        fi
+        /bin/sleep 0.1
+    done
+    echo "Timed out waiting for $expected; current status: $status" >&2
+    return 1
+}
+
+run_installer() {
+    local state_root="$1"
+    local backup_root="$2"
+    local label_prefix="$3"
+    shift 3
+    WARPOS_INSTALL_STATE_ROOT="$state_root" \
+        WARPOS_INSTALL_BACKUP_ROOT="$backup_root" \
+        WARPOS_INSTALL_EXPECTED_BUNDLE_ID="test.warposs" \
+        WARPOS_INSTALL_LABEL_PREFIX="$label_prefix" \
+        "$installer" "$@"
+}
+
+capture_case="$temp_dir/capture"
+/bin/mkdir -p "$capture_case"
+rollout_one="$capture_case/rollout-one.jsonl"
+rollout_two="$capture_case/rollout-two.jsonl"
+mock_ps="$capture_case/ps"
+mock_lsof="$capture_case/lsof"
+capture_output="$capture_case/sessions"
+cat > "$rollout_one" <<'EOF'
+{"type":"session_meta","payload":{"id":"session-one","cwd":"/work/one","source":"cli"}}
+EOF
+cat > "$rollout_two" <<'EOF'
+{"type":"session_meta","payload":{"id":"session-two","cwd":"/work/two","source":"cli"}}
+EOF
+cat > "$mock_ps" <<'EOF'
+#!/bin/bash
+if [[ "${WARPOS_TEST_CAPTURE_MODE:-single}" == "conflict" ]]; then
+    printf '%s\n' \
+        '101 101 101 codex __CFBundleIdentifier=test.warposs WARP_TERMINAL_SESSION_UUID=00112233445566778899aabbccddeeff' \
+        '202 202 202 codex __CFBundleIdentifier=test.warposs WARP_TERMINAL_SESSION_UUID=00112233445566778899aabbccddeeff'
+elif [[ "${WARPOS_TEST_CAPTURE_MODE:-single}" == "identity-conflict" ]]; then
+    printf '%s\n' \
+        '101 101 101 codex __CFBundleIdentifier=test.warposs WARP_TERMINAL_SESSION_UUID=00112233445566778899aabbccddeeff' \
+        '202 202 202 codex __CFBundleIdentifier=test.warposs WARP_TERMINAL_SESSION_UUID=ffeeddccbbaa99887766554433221100'
+else
+    printf '%s\n' \
+        '101 101 101 codex __CFBundleIdentifier=test.warposs WARP_TERMINAL_SESSION_UUID=00112233445566778899aabbccddeeff'
+fi
+EOF
+cat > "$mock_lsof" <<'EOF'
+#!/bin/bash
+case "$2" in
+    101)
+        printf 'p101\nn%s\n' "$WARPOS_TEST_ROLLOUT_ONE"
+        ;;
+    202)
+        if [[ "${WARPOS_TEST_CAPTURE_MODE:-single}" == "identity-conflict" ]]; then
+            printf 'p202\nn%s\n' "$WARPOS_TEST_ROLLOUT_ONE"
+        else
+            printf 'p202\nn%s\n' "$WARPOS_TEST_ROLLOUT_TWO"
+        fi
+        ;;
+esac
+EOF
+/bin/chmod 755 "$mock_ps" "$mock_lsof"
+
+WARPOS_CAPTURE_PS="$mock_ps" \
+WARPOS_CAPTURE_LSOF="$mock_lsof" \
+WARPOS_TEST_ROLLOUT_ONE="$rollout_one" \
+WARPOS_TEST_ROLLOUT_TWO="$rollout_two" \
+    "$capture_helper" "test.warposs" "$capture_output"
+[[ "$(/bin/cat "$capture_output")" == $'codex\t00112233445566778899aabbccddeeff\tsession-one' ]]
+
+WARPOS_CAPTURE_PS="$mock_ps" \
+WARPOS_CAPTURE_LSOF="$mock_lsof" \
+WARPOS_TEST_CAPTURE_MODE="conflict" \
+WARPOS_TEST_ROLLOUT_ONE="$rollout_one" \
+WARPOS_TEST_ROLLOUT_TWO="$rollout_two" \
+    "$capture_helper" "test.warposs" "$capture_output"
+[[ ! -s "$capture_output" ]]
+
+WARPOS_CAPTURE_PS="$mock_ps" \
+WARPOS_CAPTURE_LSOF="$mock_lsof" \
+WARPOS_TEST_CAPTURE_MODE="identity-conflict" \
+WARPOS_TEST_ROLLOUT_ONE="$rollout_one" \
+WARPOS_TEST_ROLLOUT_TWO="$rollout_two" \
+    "$capture_helper" "test.warposs" "$capture_output"
+[[ ! -s "$capture_output" ]]
+
+wait_case="$temp_dir/wait"
+current_app="$wait_case/Current Warposs.app"
+new_bundle="$wait_case/New Warposs.app"
+state_root="$wait_case/state"
+backup_root="$wait_case/backups"
+create_app "$current_app" "old"
+create_app "$new_bundle" "new"
+"$current_app/Contents/MacOS/warp-oss" 30 &
+watched_pid=$!
+watched_pids+=("$watched_pid")
+
+run_installer \
+    "$state_root" \
+    "$backup_root" \
+    "dev.warposs.install-test.$$.wait" \
+    --bundle "$new_bundle" \
+    --current-app "$current_app" \
+    --no-relaunch
+
+state_dir="$(/usr/bin/readlink "$state_root/active")"
+label="$(/bin/cat "$state_dir/label")"
+[[ "$(/bin/cat "$state_dir/status")" == "waiting" ]]
+[[ "$(bundle_version "$current_app")" == "old" ]]
+/bin/kill -0 "$watched_pid"
+/bin/launchctl list "$label" >/dev/null
+"$current_app/Contents/MacOS/warp-oss" 30 &
+replacement_pid=$!
+watched_pids+=("$replacement_pid")
+/bin/kill "$watched_pid"
+wait "$watched_pid" 2>/dev/null || true
+/bin/sleep 0.3
+[[ "$(/bin/cat "$state_dir/status")" == "waiting" ]]
+[[ "$(bundle_version "$current_app")" == "old" ]]
+/bin/kill -0 "$replacement_pid"
+/bin/kill "$replacement_pid"
+wait "$replacement_pid" 2>/dev/null || true
+wait_for_status "$state_dir" "installed"
+[[ "$(bundle_version "$current_app")" == "new" ]]
+backup_app="$(/bin/cat "$state_dir/backup-app")"
+[[ "$(bundle_version "$backup_app")" == "old" ]]
+if /bin/launchctl list "$label" >/dev/null 2>&1; then
+    echo "Expected the completed handoff worker to unload itself." >&2
+    exit 1
+fi
+/bin/sleep 0.5
+[[ "$(/bin/cat "$state_dir/status")" == "installed" ]]
+[[ "$(/usr/bin/grep -c '^Installed Warposs new;' "$state_dir/worker.log")" == "1" ]]
+
+resume_case="$temp_dir/resume"
+current_app="$resume_case/Current Warposs.app"
+new_bundle="$resume_case/New Warposs.app"
+state_root="$resume_case/state"
+backup_root="$resume_case/backups"
+resume_database="$resume_case/warp.sqlite"
+create_app "$current_app" "old"
+create_app "$new_bundle" "new"
+/usr/bin/sqlite3 "$resume_database" <<'SQL'
+CREATE TABLE terminal_panes (
+    id INTEGER PRIMARY KEY NOT NULL,
+    uuid BLOB NOT NULL UNIQUE,
+    cwd TEXT,
+    external_cli_resume_target TEXT
+);
+INSERT INTO terminal_panes (id, uuid, cwd)
+VALUES (1, X'00112233445566778899AABBCCDDEEFF', '/work/one');
+SQL
+"$current_app/Contents/MacOS/warp-oss" 30 &
+watched_pid=$!
+watched_pids+=("$watched_pid")
+
+WARPOS_INSTALL_DATABASE_PATH="$resume_database" run_installer \
+    "$state_root" \
+    "$backup_root" \
+    "dev.warposs.install-test.$$.resume" \
+    --bundle "$new_bundle" \
+    --current-app "$current_app" \
+    --no-relaunch
+
+state_dir="$(/usr/bin/readlink "$state_root/active")"
+printf 'codex\t00112233445566778899aabbccddeeff\tsession-one\n' \
+    > "$state_dir/external-cli-sessions"
+/bin/kill "$watched_pid"
+wait "$watched_pid" 2>/dev/null || true
+wait_for_status "$state_dir" "installed"
+[[ "$(bundle_version "$current_app")" == "new" ]]
+[[ "$(
+    /usr/bin/sqlite3 "$resume_database" \
+        "SELECT json_extract(external_cli_resume_target, '$.session_id') FROM terminal_panes WHERE id = 1;"
+)" == "session-one" ]]
+[[ "$(/bin/cat "$state_dir/applied-agent-session-count")" == "1" ]]
+[[ -f "$state_dir/warp-before-agent-resume-merge.sqlite" ]]
+[[ "$(
+    /usr/bin/sqlite3 "$state_dir/warp-before-agent-resume-merge.sqlite" \
+        "SELECT external_cli_resume_target IS NULL FROM terminal_panes WHERE id = 1;"
+)" == "1" ]]
+[[ "$(
+    /usr/bin/grep -c '^Installed Warposs new; preserved 1 Agent session(s);' \
+        "$state_dir/worker.log"
+)" == "1" ]]
+
+cancel_case="$temp_dir/cancel"
+current_app="$cancel_case/Current Warposs.app"
+new_bundle="$cancel_case/New Warposs.app"
+state_root="$cancel_case/state"
+backup_root="$cancel_case/backups"
+create_app "$current_app" "old"
+create_app "$new_bundle" "new"
+"$current_app/Contents/MacOS/warp-oss" 30 &
+watched_pid=$!
+watched_pids+=("$watched_pid")
+
+run_installer \
+    "$state_root" \
+    "$backup_root" \
+    "dev.warposs.install-test.$$.cancel" \
+    --bundle "$new_bundle" \
+    --current-app "$current_app" \
+    --no-relaunch
+state_dir="$(/usr/bin/readlink "$state_root/active")"
+label="$(/bin/cat "$state_dir/label")"
+run_installer \
+    "$state_root" \
+    "$backup_root" \
+    "dev.warposs.install-test.$$.cancel" \
+    --current-app "$current_app" \
+    --cancel
+
+[[ "$(/bin/cat "$state_dir/status")" == "cancelled" ]]
+[[ "$(bundle_version "$current_app")" == "old" ]]
+[[ -d "$state_dir/Warposs.app" ]]
+/bin/kill -0 "$watched_pid"
+if /bin/launchctl list "$label" >/dev/null 2>&1; then
+    echo "Expected cancellation to unload the handoff worker." >&2
+    exit 1
+fi
+/bin/kill "$watched_pid"
+wait "$watched_pid" 2>/dev/null || true
+/bin/sleep 0.5
+[[ "$(bundle_version "$current_app")" == "old" ]]
+
+deferred_failure_case="$temp_dir/deferred-failure"
+current_app="$deferred_failure_case/Current Warposs.app"
+new_bundle="$deferred_failure_case/New Warposs.app"
+state_root="$deferred_failure_case/state"
+backup_root="$deferred_failure_case/backups"
+create_app "$current_app" "old"
+create_app "$new_bundle" "new"
+"$current_app/Contents/MacOS/warp-oss" 30 &
+watched_pid=$!
+watched_pids+=("$watched_pid")
+
+run_installer \
+    "$state_root" \
+    "$backup_root" \
+    "dev.warposs.install-test.$$.deferred-failure" \
+    --bundle "$new_bundle" \
+    --current-app "$current_app" \
+    --no-relaunch
+state_dir="$(/usr/bin/readlink "$state_root/active")"
+label="$(/bin/cat "$state_dir/label")"
+backup_app="$(/bin/cat "$state_dir/backup-app")"
+printf '%s' "invalid" >> "$state_dir/Warposs.app/Contents/MacOS/warp-oss"
+/bin/kill "$watched_pid"
+wait "$watched_pid" 2>/dev/null || true
+wait_for_status "$state_dir" "failed"
+[[ "$(bundle_version "$current_app")" == "old" ]]
+[[ ! -e "$backup_app" ]]
+if /bin/launchctl list "$label" >/dev/null 2>&1; then
+    echo "Expected a failed handoff worker to unload itself." >&2
+    exit 1
+fi
+
+invalid_case="$temp_dir/invalid"
+current_app="$invalid_case/Current Warposs.app"
+invalid_bundle="$invalid_case/Invalid Warposs.app"
+state_root="$invalid_case/state"
+backup_root="$invalid_case/backups"
+create_app "$current_app" "old"
+create_app "$invalid_bundle" "invalid"
+printf '%s' "invalid" >> "$invalid_bundle/Contents/MacOS/warp-oss"
+
+if run_installer \
+    "$state_root" \
+    "$backup_root" \
+    "dev.warposs.install-test.$$.invalid" \
+    --bundle "$invalid_bundle" \
+    --current-app "$current_app" \
+    --no-relaunch; then
+    echo "Expected an invalid bundle signature to be rejected." >&2
+    exit 1
+fi
+[[ "$(bundle_version "$current_app")" == "old" ]]
+[[ ! -e "$state_root/active" ]]
+
+echo "Warposs install handoff tests passed."
