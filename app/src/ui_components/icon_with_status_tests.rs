@@ -2,7 +2,9 @@ use std::time::Duration;
 
 use warp_core::ui::theme::Fill;
 
-use super::{OZ_AMBIENT_BACKGROUND_COLOR, pulse_alpha, warp_agent_circle_colors};
+use super::{
+    OZ_AMBIENT_BACKGROUND_COLOR, pulse_alpha, unbadged_circle_padding, warp_agent_circle_colors,
+};
 use crate::themes::default_themes::{dark_theme, light_theme};
 
 #[test]
@@ -27,6 +29,11 @@ fn ambient_warp_agent_circle_keeps_purple_background_in_all_themes() {
 
     assert_eq!(warp_agent_circle_colors(&dark_theme(), true), expected);
     assert_eq!(warp_agent_circle_colors(&light_theme(), true), expected);
+}
+
+#[test]
+fn unbadged_agent_circle_is_centered_in_its_status_footprint() {
+    assert!((unbadged_circle_padding(24.) - 2.88).abs() < f32::EPSILON * 4.);
 }
 
 #[test]

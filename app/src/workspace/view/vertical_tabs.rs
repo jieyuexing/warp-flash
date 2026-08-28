@@ -125,6 +125,16 @@ const TAB_COLOR_HOVER_OPACITY: Opacity = 50;
 /// Opacity for a colored row that is part of a multi-selection.
 const TAB_COLOR_MULTI_SELECT_OPACITY: Opacity = 30;
 
+fn grouped_tab_member_padding(is_mini: bool) -> Padding {
+    if is_mini {
+        Padding::uniform(0.)
+    } else {
+        Padding::uniform(0.)
+            .with_left(TAB_GROUP_MEMBER_INDENT)
+            .with_right(TAB_GROUP_CONTENT_INSET)
+    }
+}
+
 // Circular icon constants
 const ICON_WITH_STATUS_GAP: f32 = 8.;
 pub(super) const VERTICAL_TABS_DETAIL_SIDECAR_POSITION_ID: &str = "vertical_tabs:detail_sidecar";
@@ -3450,11 +3460,7 @@ fn render_grouped_tab_container(
                 );
                 content.add_child(
                     Container::new(tab_element)
-                        .with_padding(
-                            Padding::uniform(0.)
-                                .with_left(TAB_GROUP_MEMBER_INDENT)
-                                .with_right(TAB_GROUP_CONTENT_INSET),
-                        )
+                        .with_padding(grouped_tab_member_padding(is_mini))
                         .finish(),
                 );
             }

@@ -12,8 +12,8 @@ use super::{
     VerticalTabsDetailTargetKind, VerticalTabsPanelState, VerticalTabsSummaryBranchEntry,
     VerticalTabsSummaryData, VerticalTabsSummaryPrimaryLabel, branch_label_display,
     coalesce_summary_branch_entries, code_detail_kind_label, compact_branch_subtitle_display,
-    detail_sidecar_width_and_bounds, detail_target_for_hovered_row, is_mini_panel_width,
-    non_terminal_search_text_fragments, pane_ids_for_display_granularity,
+    detail_sidecar_width_and_bounds, detail_target_for_hovered_row, grouped_tab_member_padding,
+    is_mini_panel_width, non_terminal_search_text_fragments, pane_ids_for_display_granularity,
     pane_search_text_fragments, preferred_agent_tab_titles, push_normalized_unique_summary_label,
     search_fragments_contain_query, select_summary_pane_kind_icons,
     should_keep_detail_sidecar_visible_for_mouse_position, should_show_tab_group_header,
@@ -49,6 +49,20 @@ fn mini_panel_width_switches_to_icon_only_at_the_boundary() {
     assert!(is_mini_panel_width(112.));
     assert!(!is_mini_panel_width(113.));
     assert!(!is_mini_panel_width(248.));
+}
+
+#[test]
+fn mini_group_members_drop_the_expanded_sidebar_indent() {
+    assert_eq!(
+        grouped_tab_member_padding(true),
+        warpui::elements::Padding::uniform(0.)
+    );
+    assert_eq!(
+        grouped_tab_member_padding(false),
+        warpui::elements::Padding::uniform(0.)
+            .with_left(12.)
+            .with_right(4.)
+    );
 }
 
 #[test]
