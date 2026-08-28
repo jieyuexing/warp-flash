@@ -5,6 +5,7 @@ mod block_banner;
 pub mod block_onboarding;
 pub(crate) mod blocklist_filter;
 mod bookmarks;
+mod cli_agent_markdown_reader;
 mod context_menu;
 pub mod init;
 pub mod inline_banner;
@@ -181,6 +182,9 @@ use warpui::{
     end_trace_after_next, record_trace_event, windowing,
 };
 
+use self::cli_agent_markdown_reader::{
+    CliAgentMarkdownReader, cli_agent_markdown_snapshot_source, parse_cli_agent_markdown_snapshot,
+};
 use self::link_detection::HighlightedLinkOption;
 pub use self::link_detection::{GridHighlightedLink, RichContentLink, RichContentLinkTooltipInfo};
 use super::available_shells::AvailableShell;
@@ -1377,6 +1381,7 @@ pub enum ContextMenuAction {
     EditPrompt,
     EditAgentToolbar,
     EditCLIAgentToolbar,
+    ToggleCliAgentMarkdownReader,
     /// Ask AI about the current context. Handled by blocklist AI if its feature flag is enabled and
     /// the AI assistant panel otherwise.
     AskAI(AskAISource),
@@ -1510,6 +1515,7 @@ impl fmt::Debug for ContextMenuAction {
             EditPrompt => f.write_str("EditPrompt"),
             EditAgentToolbar => f.write_str("EditAgentToolbar"),
             EditCLIAgentToolbar => f.write_str("EditCLIAgentToolbar"),
+            ToggleCliAgentMarkdownReader => f.write_str("ToggleCliAgentMarkdownReader"),
             AskAI(_) => f.write_str("AskAIAssistant"),
             OpenWorkflowModal => f.write_str("OpenWorkflowModal"),
             OpenShareSessionModal => f.write_str("OpenShareSessionModal"),
@@ -2872,6 +2878,8 @@ pub struct TerminalView {
     /// A stable, local title derived from the first non-empty prompt submitted to the
     /// active CLI-agent session. Later prompts must not rename the task underneath the user.
     first_cli_user_prompt_title: Option<String>,
+
+    cli_agent_markdown_reader: Option<CliAgentMarkdownReader>,
 
     // If there is a selected conversation in the view before bootstrapping (from loading a conversation into a new pane),
     // we want to keep the title as the conversation title, so we should ignore the model event setting the title after bootstrapping finishes
@@ -4488,6 +4496,7 @@ impl TerminalView {
             current_repo_path: None,
             terminal_title: Default::default(),
             first_cli_user_prompt_title: None,
+            cli_agent_markdown_reader: None,
             ignore_next_set_title_event: false,
             cli_subagent_views: Default::default(),
             cli_subagent_controller,
@@ -12738,6 +12747,7 @@ impl TerminalView {
             }
 
             ModelEvent::TerminalModeSwapped(mode) => {
+                self.cli_agent_markdown_reader = None;
                 #[cfg(feature = "local_tty")]
                 {
                     let active_command = self
@@ -13520,6 +13530,7 @@ impl TerminalView {
                 terminal_view_id, ..
             } if *terminal_view_id == self.view_id => {
                 self.first_cli_user_prompt_title = None;
+                self.cli_agent_markdown_reader = None;
                 let mut model = self.model.lock();
                 let active_block = model.block_list_mut().active_block_mut();
                 active_block.enable_full_grid_clear_behavior();
@@ -13530,6 +13541,7 @@ impl TerminalView {
             CLIAgentSessionsModelEvent::Ended {
                 terminal_view_id, ..
             } if *terminal_view_id == self.view_id => {
+                self.cli_agent_markdown_reader = None;
                 let mut model = self.model.lock();
                 let active_block = model.block_list_mut().active_block_mut();
                 if FeatureFlag::TrimTrailingBlankLines.is_enabled() {
@@ -13578,6 +13590,8 @@ impl TerminalView {
         if *terminal_view_id != self.view_id {
             return;
         }
+
+        self.cli_agent_markdown_reader = None;
 
         if let Some(conversation_id) = self.child_conversation_id_for_cli_status_updates(ctx) {
             BlocklistAIHistoryModel::handle(ctx).update(ctx, |history_model, ctx| {
@@ -14746,6 +14760,14 @@ impl TerminalView {
 
     /// Gets the selected text from the terminal, if any.
     pub fn selected_text(&self, ctx: &AppContext) -> Option<String> {
+        if let Some(selected_text) = self
+            .cli_agent_markdown_reader
+            .as_ref()
+            .and_then(CliAgentMarkdownReader::selected_text)
+        {
+            return Some(selected_text);
+        }
+
         let semantic_selection = SemanticSelection::handle(ctx).as_ref(ctx);
         let input_mode = *InputModeSettings::handle(ctx)
             .as_ref(ctx)
@@ -16686,12 +16708,40 @@ impl TerminalView {
             .is_some()
     }
 
+    fn current_cli_agent_markdown_reader(
+        &self,
+        ctx: &AppContext,
+    ) -> Option<CliAgentMarkdownReader> {
+        let has_active_cli_agent_session = self.has_active_cli_agent_session(ctx);
+        let source = {
+            let model = self.model.lock();
+            cli_agent_markdown_snapshot_source(&model, has_active_cli_agent_session)?
+        };
+
+        parse_cli_agent_markdown_snapshot(&source).map(CliAgentMarkdownReader::new)
+    }
+
+    fn toggle_cli_agent_markdown_reader(&mut self, ctx: &mut ViewContext<Self>) {
+        if self.cli_agent_markdown_reader.take().is_none() {
+            self.cli_agent_markdown_reader = self.current_cli_agent_markdown_reader(ctx);
+        }
+        ctx.notify();
+    }
+
     fn is_inverted_blocklist(&self, ctx: &ViewContext<Self>) -> bool {
         let input_mode = *InputModeSettings::as_ref(ctx).input_mode.value();
         input_mode.is_inverted_blocklist()
     }
 
     fn copy(&mut self, ctx: &mut ViewContext<Self>) {
+        if let Some(reader) = &self.cli_agent_markdown_reader {
+            if let Some(selected_text) = reader.selected_text() {
+                ctx.clipboard()
+                    .write(ClipboardContent::plain_text(selected_text));
+            }
+            return;
+        }
+
         // First check if there's selected text in the CLI subagent views
         for subagent_view in self.cli_subagent_views.values() {
             if let Some(selected_text) = subagent_view.as_ref(ctx).selected_text(ctx) {
@@ -17383,6 +17433,31 @@ impl TerminalView {
             }
         }
 
+        if self.cli_agent_markdown_reader.is_none()
+            && matches!(
+                menu_source,
+                BlockListMenuSource::RegularBlockRightClick { .. }
+                    | BlockListMenuSource::RichContentBlockRightClick { .. }
+                    | BlockListMenuSource::OutsideBlockRightClick { .. }
+            )
+            && cli_agent_markdown_snapshot_source(&model, self.has_active_cli_agent_session(ctx))
+                .is_some()
+        {
+            if !items.is_empty() {
+                items.insert(0, MenuItem::Separator);
+            }
+            items.insert(
+                0,
+                MenuItemFields::new(
+                    warp_i18n::localize_ui("View tab in Markdown reader").into_owned(),
+                )
+                .with_on_select_action(TerminalAction::ContextMenu(
+                    ContextMenuAction::ToggleCliAgentMarkdownReader,
+                ))
+                .into_item(),
+            );
+        }
+
         if matches!(
             menu_source,
             BlockListMenuSource::RegularBlockRightClick { .. }
@@ -17966,12 +18041,36 @@ impl TerminalView {
         ctx: &mut ViewContext<Self>,
     ) -> Vec<MenuItem<TerminalAction>> {
         let mut menu_items = Vec::new();
+        if let Some(reader) = &self.cli_agent_markdown_reader {
+            if reader.selected_text().is_some() {
+                menu_items.push(
+                    MenuItemFields::new("Copy")
+                        .with_on_select_action(TerminalAction::ContextMenu(
+                            ContextMenuAction::CopySelectedText,
+                        ))
+                        .with_key_shortcut_label(Some("⌘-C"))
+                        .into_item(),
+                );
+                menu_items.push(MenuItem::Separator);
+            }
+            menu_items.push(
+                MenuItemFields::new(warp_i18n::localize_ui("Show terminal output").into_owned())
+                    .with_on_select_action(TerminalAction::ContextMenu(
+                        ContextMenuAction::ToggleCliAgentMarkdownReader,
+                    ))
+                    .into_item(),
+            );
+        }
+
         let model = self.model.lock();
 
         let semantic_selection = SemanticSelection::as_ref(ctx);
         let selection_string =
             model.selection_to_string(semantic_selection, self.is_inverted_blocklist(ctx), ctx);
-        if selection_string.is_some() {
+        if selection_string.is_some() && self.cli_agent_markdown_reader.is_none() {
+            if !menu_items.is_empty() {
+                menu_items.push(MenuItem::Separator);
+            }
             menu_items.push(
                 MenuItemFields::new("Copy")
                     .with_on_select_action(TerminalAction::ContextMenu(
@@ -21559,6 +21658,15 @@ impl TerminalView {
     }
 
     fn context_menu_copy_selected_text(&mut self, ctx: &mut ViewContext<Self>) {
+        if let Some(reader) = &self.cli_agent_markdown_reader {
+            if let Some(selected_text) = reader.selected_text() {
+                ctx.clipboard()
+                    .write(ClipboardContent::plain_text(selected_text));
+            }
+            self.close_context_menu(ctx, true);
+            return;
+        }
+
         {
             let semantic_selection = SemanticSelection::as_ref(ctx);
             let model = self.model.lock();
@@ -25284,6 +25392,7 @@ impl TerminalView {
                     ctx.emit(Event::OpenCLIAgentToolbarEditor);
                 }
             }
+            ToggleCliAgentMarkdownReader => self.toggle_cli_agent_markdown_reader(ctx),
             AskAI(ask_source) => {
                 if FeatureFlag::AgentMode.is_enabled() {
                     send_telemetry_from_ctx!(
@@ -27005,6 +27114,32 @@ impl TypedActionView for TerminalView {
         use TerminalAction::*;
         let input_mode = *InputModeSettings::as_ref(ctx).input_mode.value();
 
+        if self.cli_agent_markdown_reader.is_some() {
+            if matches!(
+                action,
+                MaybeDismissToolTip {
+                    from_keybinding: true
+                }
+            ) {
+                self.cli_agent_markdown_reader = None;
+                ctx.notify();
+                return;
+            }
+            if matches!(
+                action,
+                Paste
+                    | UserInputSequence(_)
+                    | ControlSequence(_)
+                    | KeyDown(_)
+                    | TypedCharacters(_)
+                    | CtrlD
+                    | CtrlC
+            ) {
+                self.cli_agent_markdown_reader = None;
+                ctx.notify();
+            }
+        }
+
         match action {
             Scroll { delta } => self.scroll(*delta, ctx),
             AltScroll { delta, point } => self.alt_scroll(*delta, *point, ctx),
@@ -28238,6 +28373,12 @@ impl View for TerminalView {
                         self.render_orchestration_child_live_unavailable(app)
                     } else if should_show_loading {
                         self.render_viewer_loading(app)
+                    } else if let Some(reader) = &self.cli_agent_markdown_reader {
+                        did_wrap_terminal_size = true;
+                        wrap_in_terminal_size_element(
+                            &self.resize_tx,
+                            reader.render(&self.content_element_position_id, appearance),
+                        )
                     } else if is_alt_screen_active {
                         did_wrap_terminal_size = true;
                         wrap_in_terminal_size_element(

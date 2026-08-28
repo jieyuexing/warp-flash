@@ -9751,6 +9751,54 @@ fn cmd_k_in_agent_view_cancels_in_progress_conversation_and_starts_new_one() {
 }
 
 #[test]
+fn copy_uses_cli_agent_markdown_reader_selection() {
+    App::test((), |mut app| async move {
+        initialize_app_for_terminal_view(&mut app);
+        let terminal = add_window_with_terminal(&mut app, None);
+
+        terminal.update(&mut app, |view, ctx| {
+            let formatted_text = parse_cli_agent_markdown_snapshot("# Result\nselected text")
+                .expect("reader content should parse");
+            let reader = CliAgentMarkdownReader::new(formatted_text);
+            reader.set_selected_text_for_test(Some("selected text".to_owned()));
+            view.cli_agent_markdown_reader = Some(reader);
+
+            view.handle_action(&TerminalAction::Copy, ctx);
+
+            assert_eq!(read_from_clipboard(ctx), "selected text");
+            assert!(view.cli_agent_markdown_reader.is_some());
+        });
+    })
+}
+
+#[test]
+fn markdown_reader_context_menu_offers_copy_for_a_selection() {
+    App::test((), |mut app| async move {
+        initialize_app_for_terminal_view(&mut app);
+        let terminal = add_window_with_terminal(&mut app, None);
+
+        terminal.update(&mut app, |view, ctx| {
+            let formatted_text = parse_cli_agent_markdown_snapshot("# Result\nselected text")
+                .expect("reader content should parse");
+            let reader = CliAgentMarkdownReader::new(formatted_text);
+            reader.set_selected_text_for_test(Some("selected text".to_owned()));
+            view.cli_agent_markdown_reader = Some(reader);
+
+            let menu_items = view.rebuild_alt_screen_context_menu_items(ctx);
+
+            assert!(menu_items.iter().any(|item| {
+                item.item_on_select_action().is_some_and(|action| {
+                    matches!(
+                        action,
+                        TerminalAction::ContextMenu(ContextMenuAction::CopySelectedText)
+                    )
+                })
+            }));
+        });
+    })
+}
+
+#[test]
 #[cfg(target_os = "linux")]
 fn copy_forwards_etx_to_pty_on_linux_alt_screen_without_warp_selection() {
     App::test((), |mut app| async move {

@@ -1661,3 +1661,6 @@ Unstage	取消暂存
 Unstage all	全部取消暂存
 Unstaged changes	已取消暂存更改
 Unversioned files are not deleted from the Version Control panel	版本控制面板不会删除未纳入版本控制的文件
+Markdown reader · visual snapshot	Markdown 阅读器 · 可视化快照
+Show terminal output	显示终端输出
+View tab in Markdown reader	在 Markdown 阅读器中查看标签页
