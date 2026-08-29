@@ -627,7 +627,9 @@ Automated checks are necessary but do not prove the result on screen.
 
 - Desktop: run the real GUI on macOS, Windows, and Linux; verify a streaming fixture, tool-card
   interleaving, selection, scroll retention, Source toggle, link opening, code copy, wide table,
-  blocked image, Mermaid success/failure, light/dark/high-contrast themes, and 200% scale.
+  blocked image, Mermaid success/failure, light/dark/high-contrast themes, and 200% scale. Use the
+  checked-in [`obsidian-reader-reference.md`](fixtures/obsidian-reader-reference.md) for the shared
+  desktop reading-width, typography, code, table, quote, and selection checks.
 - TUI: run `./script/run-tui` in a real terminal; verify the same semantic fixture at narrow and
   wide widths, 16-color/no-color, OSC 8 supported/unsupported, keyboard actions, and resize.
 - Cross-front-end: save the exact source and semantic snapshot from both paths and compare them.
@@ -762,6 +764,7 @@ The following are explicitly decided for this PRD and do not block P0:
 - [CLI-agent event model](../../app/src/terminal/cli_agent_sessions/event/mod.rs)
 - [CLI-agent session state](../../app/src/terminal/cli_agent_sessions/mod.rs)
 - [External CLI whole-tab Markdown reader experiment](../../app/src/terminal/view/cli_agent_markdown_reader.rs)
+- [Obsidian-style desktop reader visual fixture](fixtures/obsidian-reader-reference.md)
 - [Mermaid Markdown product contract](../mermaid-markdown-in-plans/PRODUCT.md)
 - [Markdown table consistency contract](../zachlloyd/markdown-table-consistency/PRODUCT.md)
 - [Wide Markdown table scrolling contract](../zachlloyd/wide-markdown-table-scrolling/PRODUCT.md)
