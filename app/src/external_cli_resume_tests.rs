@@ -62,12 +62,63 @@ fn grok_registry_requires_exactly_one_session_for_the_cwd() {
     ]"#;
 
     assert_eq!(
-        active_grok_resume_target_from_contents(one, "/work/project")
+        active_grok_resume_target_from_contents(one, "/work/project", None)
             .map(|target| target.session_id),
         Some("grok-one".to_owned())
     );
-    assert!(active_grok_resume_target_from_contents(ambiguous, "/work/project").is_none());
-    assert!(active_grok_resume_target_from_contents(one, "/work/other").is_none());
+    assert!(active_grok_resume_target_from_contents(ambiguous, "/work/project", None).is_none());
+    assert!(active_grok_resume_target_from_contents(one, "/work/other", None).is_none());
+}
+
+#[cfg(not(target_family = "wasm"))]
+#[test]
+fn grok_registry_uses_the_latest_session_for_the_foreground_process() {
+    let registry = r#"[
+        {
+            "session_id":"grok-placeholder",
+            "pid":42,
+            "cwd":"/work/project",
+            "opened_at":"2026-08-29T02:04:59.569515Z"
+        },
+        {
+            "session_id":"grok-current",
+            "pid":42,
+            "cwd":"/work/project",
+            "opened_at":"2026-08-29T02:05:02.653535Z"
+        },
+        {
+            "session_id":"grok-other-process",
+            "pid":43,
+            "cwd":"/work/project",
+            "opened_at":"2026-08-29T02:06:00Z"
+        }
+    ]"#;
+
+    let target = active_grok_resume_target_from_contents(registry, "/work/project", Some(42))
+        .expect("foreground Grok process should identify its latest session");
+
+    assert_eq!(target.session_id, "grok-current");
+}
+
+#[cfg(not(target_family = "wasm"))]
+#[test]
+fn grok_registry_rejects_tied_latest_sessions_for_the_foreground_process() {
+    let registry = r#"[
+        {
+            "session_id":"grok-one",
+            "pid":42,
+            "cwd":"/work/project",
+            "opened_at":"2026-08-29T02:05:02Z"
+        },
+        {
+            "session_id":"grok-two",
+            "pid":42,
+            "cwd":"/work/project",
+            "opened_at":"2026-08-29T02:05:02Z"
+        }
+    ]"#;
+
+    assert!(active_grok_resume_target_from_contents(registry, "/work/project", Some(42)).is_none());
 }
 
 #[cfg(unix)]
@@ -86,9 +137,12 @@ fn grok_registry_accepts_equivalent_cwd_symlinks() {
         "cwd": actual_cwd,
     }])
     .to_string();
-    let target =
-        active_grok_resume_target_from_contents(&registry, alias_cwd.to_str().expect("alias cwd"))
-            .expect("equivalent cwd target");
+    let target = active_grok_resume_target_from_contents(
+        &registry,
+        alias_cwd.to_str().expect("alias cwd"),
+        None,
+    )
+    .expect("equivalent cwd target");
 
     assert_eq!(target.session_id, "grok-symlink");
 }

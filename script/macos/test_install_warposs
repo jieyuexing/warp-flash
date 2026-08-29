@@ -93,6 +93,29 @@ rollout_two="$capture_case/rollout-two.jsonl"
 mock_ps="$capture_case/ps"
 mock_lsof="$capture_case/lsof"
 capture_output="$capture_case/sessions"
+grok_home="$capture_case/grok-home"
+grok_placeholder_events="$grok_home/sessions/work/grok-placeholder/events.jsonl"
+grok_current_events="$grok_home/sessions/work/grok-current/events.jsonl"
+/bin/mkdir -p "$(/usr/bin/dirname "$grok_placeholder_events")"
+/bin/mkdir -p "$(/usr/bin/dirname "$grok_current_events")"
+: > "$grok_placeholder_events"
+printf '%s\n' '{"type":"turn_started"}' > "$grok_current_events"
+cat > "$grok_home/active_sessions.json" <<'EOF'
+[
+  {
+    "session_id": "grok-placeholder",
+    "pid": 303,
+    "cwd": "/work/grok",
+    "opened_at": "2026-08-29T02:04:59.569515Z"
+  },
+  {
+    "session_id": "grok-current",
+    "pid": 303,
+    "cwd": "/work/grok",
+    "opened_at": "2026-08-29T02:05:02.653535Z"
+  }
+]
+EOF
 cat > "$rollout_one" <<'EOF'
 {"type":"session_meta","payload":{"id":"session-one","cwd":"/work/one","source":"cli"}}
 EOF
@@ -109,6 +132,9 @@ elif [[ "${WARPOS_TEST_CAPTURE_MODE:-single}" == "identity-conflict" ]]; then
     printf '%s\n' \
         '101 101 101 codex __CFBundleIdentifier=test.warposs WARP_TERMINAL_SESSION_UUID=00112233445566778899aabbccddeeff' \
         '202 202 202 codex __CFBundleIdentifier=test.warposs WARP_TERMINAL_SESSION_UUID=ffeeddccbbaa99887766554433221100'
+elif [[ "${WARPOS_TEST_CAPTURE_MODE:-single}" == "grok-current-layout" ]]; then
+    printf '303 303 303 grok __CFBundleIdentifier=test.warposs WARP_TERMINAL_SESSION_UUID=11223344556677889900aabbccddeeff GROK_HOME=%s\n' \
+        "$WARPOS_TEST_GROK_HOME"
 else
     printf '%s\n' \
         '101 101 101 codex __CFBundleIdentifier=test.warposs WARP_TERMINAL_SESSION_UUID=00112233445566778899aabbccddeeff'
@@ -126,6 +152,11 @@ case "$2" in
         else
             printf 'p202\nn%s\n' "$WARPOS_TEST_ROLLOUT_TWO"
         fi
+        ;;
+    303)
+        printf 'p303\nn%s\nn%s\n' \
+            "$WARPOS_TEST_GROK_PLACEHOLDER_EVENTS" \
+            "$WARPOS_TEST_GROK_CURRENT_EVENTS"
         ;;
 esac
 EOF
@@ -153,6 +184,15 @@ WARPOS_TEST_ROLLOUT_ONE="$rollout_one" \
 WARPOS_TEST_ROLLOUT_TWO="$rollout_two" \
     "$capture_helper" "test.warposs" "$capture_output"
 [[ ! -s "$capture_output" ]]
+
+WARPOS_CAPTURE_PS="$mock_ps" \
+WARPOS_CAPTURE_LSOF="$mock_lsof" \
+WARPOS_TEST_CAPTURE_MODE="grok-current-layout" \
+WARPOS_TEST_GROK_HOME="$grok_home" \
+WARPOS_TEST_GROK_PLACEHOLDER_EVENTS="$grok_placeholder_events" \
+WARPOS_TEST_GROK_CURRENT_EVENTS="$grok_current_events" \
+    "$capture_helper" "test.warposs" "$capture_output"
+[[ "$(/bin/cat "$capture_output")" == $'grok\t11223344556677889900aabbccddeeff\tgrok-current' ]]
 
 wait_case="$temp_dir/wait"
 current_app="$wait_case/Current Warposs.app"
@@ -219,6 +259,8 @@ CREATE TABLE terminal_panes (
 );
 INSERT INTO terminal_panes (id, uuid, cwd)
 VALUES (1, X'00112233445566778899AABBCCDDEEFF', '/work/one');
+INSERT INTO terminal_panes (id, uuid, cwd)
+VALUES (2, X'11223344556677889900AABBCCDDEEFF', '/work/grok');
 SQL
 "$current_app/Contents/MacOS/warp-oss" 30 &
 watched_pid=$!
@@ -233,7 +275,9 @@ WARPOS_INSTALL_DATABASE_PATH="$resume_database" run_installer \
     --no-relaunch
 
 state_dir="$(/usr/bin/readlink "$state_root/active")"
-printf 'codex\t00112233445566778899aabbccddeeff\tsession-one\n' \
+printf '%s\n' \
+    $'codex\t00112233445566778899aabbccddeeff\tsession-one' \
+    $'grok\t11223344556677889900aabbccddeeff\tgrok-current' \
     > "$state_dir/external-cli-sessions"
 /bin/kill "$watched_pid"
 wait "$watched_pid" 2>/dev/null || true
@@ -243,14 +287,22 @@ wait_for_status "$state_dir" "installed"
     /usr/bin/sqlite3 "$resume_database" \
         "SELECT json_extract(external_cli_resume_target, '$.session_id') FROM terminal_panes WHERE id = 1;"
 )" == "session-one" ]]
-[[ "$(/bin/cat "$state_dir/applied-agent-session-count")" == "1" ]]
+[[ "$(
+    /usr/bin/sqlite3 "$resume_database" \
+        "SELECT json_extract(external_cli_resume_target, '$.session_id') FROM terminal_panes WHERE id = 2;"
+)" == "grok-current" ]]
+[[ "$(
+    /usr/bin/sqlite3 "$resume_database" \
+        "SELECT json_extract(external_cli_resume_target, '$.agent') FROM terminal_panes WHERE id = 2;"
+)" == "grok" ]]
+[[ "$(/bin/cat "$state_dir/applied-agent-session-count")" == "2" ]]
 [[ -f "$state_dir/warp-before-agent-resume-merge.sqlite" ]]
 [[ "$(
     /usr/bin/sqlite3 "$state_dir/warp-before-agent-resume-merge.sqlite" \
-        "SELECT external_cli_resume_target IS NULL FROM terminal_panes WHERE id = 1;"
-)" == "1" ]]
+        "SELECT count(*) FROM terminal_panes WHERE external_cli_resume_target IS NULL;"
+)" == "2" ]]
 [[ "$(
-    /usr/bin/grep -c '^Installed Warposs new; preserved 1 Agent session(s);' \
+    /usr/bin/grep -c '^Installed Warposs new; preserved 2 Agent session(s);' \
         "$state_dir/worker.log"
 )" == "1" ]]
 

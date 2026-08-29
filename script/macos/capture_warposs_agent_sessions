@@ -45,6 +45,41 @@ single_unique_value() {
     '
 }
 
+latest_grok_session_for_process() {
+    local process_id="$1"
+    local registry_path="$2"
+    local candidates_path="$3"
+    local index=0
+    local entry_pid session_id opened_at
+    local latest_id=""
+    local latest_opened_at=""
+    local latest_is_tied="false"
+
+    [[ -f "$registry_path" ]] || return 0
+    while entry_pid="$($plutil_bin -extract "$index.pid" raw -o - "$registry_path" 2>/dev/null)"; do
+        session_id="$($plutil_bin -extract "$index.session_id" raw -o - "$registry_path" 2>/dev/null)"
+        opened_at="$($plutil_bin -extract "$index.opened_at" raw -o - "$registry_path" 2>/dev/null)"
+        index=$((index + 1))
+
+        [[ "$entry_pid" == "$process_id" ]] || continue
+        safe_session_id "$session_id" || continue
+        /usr/bin/grep -Fqx "$session_id" "$candidates_path" || continue
+        [[ "$opened_at" =~ ^[0-9]{4}-[0-9]{2}-[0-9]{2}T[0-9:.]+Z$ ]] || continue
+
+        if [[ -z "$latest_opened_at" || "$opened_at" > "$latest_opened_at" ]]; then
+            latest_id="$session_id"
+            latest_opened_at="$opened_at"
+            latest_is_tied="false"
+        elif [[ "$opened_at" == "$latest_opened_at" && "$session_id" != "$latest_id" ]]; then
+            latest_is_tied="true"
+        fi
+    done
+
+    if [[ -n "$latest_id" && "$latest_is_tied" == "false" ]]; then
+        printf '%s\n' "$latest_id"
+    fi
+}
+
 while IFS= read -r process_row; do
     process_row="${process_row#"${process_row%%[![:space:]]*}"}"
     [[ -n "$process_row" ]] || continue
@@ -80,8 +115,10 @@ while IFS= read -r process_row; do
 
     codex_ids="$temp_dir/codex-$pid"
     grok_ids="$temp_dir/grok-$pid"
+    nonempty_grok_ids="$temp_dir/grok-nonempty-$pid"
     : > "$codex_ids"
     : > "$grok_ids"
+    : > "$nonempty_grok_ids"
     while IFS= read -r open_file; do
         case "$open_file" in
             n*/sessions/*/rollout-*.jsonl)
@@ -114,11 +151,39 @@ while IFS= read -r process_row; do
                     printf '%s\n' "$session_id" >> "$grok_ids"
                 fi
                 ;;
+            n*/sessions/*/*/events.jsonl)
+                session_path="${open_file#n}"
+                [[ -f "$session_path" ]] || continue
+                session_dir="${session_path%/events.jsonl}"
+                session_id="${session_dir##*/}"
+                if safe_session_id "$session_id"; then
+                    printf '%s\n' "$session_id" >> "$grok_ids"
+                    if [[ -s "$session_path" ]]; then
+                        printf '%s\n' "$session_id" >> "$nonempty_grok_ids"
+                    fi
+                fi
+                ;;
         esac
     done < <("$lsof_bin" -p "$pid" -Fn 2>/dev/null)
 
     codex_id="$(single_unique_value < "$codex_ids")"
     grok_id="$(single_unique_value < "$grok_ids")"
+    if [[ -z "$grok_id" && -s "$grok_ids" ]]; then
+        grok_home="$(extract_process_environment_value "GROK_HOME" "$process_details")"
+        if [[ -z "$grok_home" ]]; then
+            process_home="$(extract_process_environment_value "HOME" "$process_details")"
+            grok_home="${process_home:-$HOME}/.grok"
+        fi
+        grok_id="$(
+            latest_grok_session_for_process \
+                "$pid" \
+                "$grok_home/active_sessions.json" \
+                "$grok_ids"
+        )"
+    fi
+    if [[ -z "$grok_id" ]]; then
+        grok_id="$(single_unique_value < "$nonempty_grok_ids")"
+    fi
     if [[ -n "$codex_id" && -z "$grok_id" ]]; then
         printf 'codex\t%s\t%s\n' "$pane_uuid" "$codex_id" >> "$raw_sessions"
     elif [[ -n "$grok_id" && -z "$codex_id" ]]; then

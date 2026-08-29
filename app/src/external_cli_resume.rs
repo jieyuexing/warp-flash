@@ -6,6 +6,8 @@ use std::path::Path;
 #[cfg(not(target_family = "wasm"))]
 use std::path::PathBuf;
 
+#[cfg(not(target_family = "wasm"))]
+use chrono::{DateTime, FixedOffset};
 #[cfg(target_os = "macos")]
 use command::blocking::Command;
 use serde::{Deserialize, Serialize};
@@ -259,6 +261,7 @@ fn open_files_for_process_group(_process_group_id: u32) -> Vec<PathBuf> {
 pub(crate) fn active_grok_resume_target(
     command: &str,
     cwd: Option<&str>,
+    process_id: Option<u32>,
 ) -> Option<ExternalCliResumeTarget> {
     if external_cli_agent_from_command(command) != Some(ExternalCliAgent::Grok) {
         return None;
@@ -273,17 +276,26 @@ pub(crate) fn active_grok_resume_target(
     let grok_home = std::env::var_os("GROK_HOME")
         .map(PathBuf::from)
         .unwrap_or_else(|| home.join(".grok"));
-    active_grok_resume_target_from_file(&grok_home.join("active_sessions.json"), cwd)
+    active_grok_resume_target_from_file(&grok_home.join("active_sessions.json"), cwd, process_id)
 }
 
 #[cfg(not(target_family = "wasm"))]
-fn active_grok_resume_target_from_file(path: &Path, cwd: &str) -> Option<ExternalCliResumeTarget> {
-    #[derive(Deserialize)]
-    struct ActiveGrokSession {
-        session_id: String,
-        cwd: String,
-    }
+#[derive(Deserialize)]
+struct ActiveGrokSession {
+    session_id: String,
+    cwd: String,
+    #[serde(default)]
+    pid: Option<u32>,
+    #[serde(default)]
+    opened_at: Option<String>,
+}
 
+#[cfg(not(target_family = "wasm"))]
+fn active_grok_resume_target_from_file(
+    path: &Path,
+    cwd: &str,
+    process_id: Option<u32>,
+) -> Option<ExternalCliResumeTarget> {
     let file = File::open(path).ok()?;
     let mut contents = String::new();
     file.take(MAX_ACTIVE_SESSIONS_BYTES)
@@ -291,24 +303,62 @@ fn active_grok_resume_target_from_file(path: &Path, cwd: &str) -> Option<Externa
         .ok()?;
     let sessions = serde_json::from_str::<Vec<ActiveGrokSession>>(&contents).ok()?;
 
-    let mut matches = sessions
+    let matches = sessions
         .into_iter()
         .filter(|session| equivalent_existing_paths(Path::new(&session.cwd), Path::new(cwd)))
-        .filter_map(|session| {
-            ExternalCliResumeTarget::new(
-                ExternalCliAgent::Grok,
-                session.session_id,
-                Some(session.cwd),
-            )
-        });
-    let target = matches.next()?;
-    matches.next().is_none().then_some(target)
+        .collect::<Vec<_>>();
+    let session = select_active_grok_session(matches, process_id)?;
+
+    ExternalCliResumeTarget::new(
+        ExternalCliAgent::Grok,
+        session.session_id,
+        Some(session.cwd),
+    )
+}
+
+#[cfg(not(target_family = "wasm"))]
+fn select_active_grok_session(
+    mut sessions: Vec<ActiveGrokSession>,
+    process_id: Option<u32>,
+) -> Option<ActiveGrokSession> {
+    let Some(process_id) = process_id else {
+        return (sessions.len() == 1).then(|| sessions.remove(0));
+    };
+
+    sessions.retain(|session| session.pid == Some(process_id));
+    if sessions.len() == 1 {
+        return sessions.pop();
+    }
+    if sessions.len() < 2 {
+        return None;
+    }
+
+    let mut sessions = sessions
+        .into_iter()
+        .map(|session| {
+            let opened_at = session.opened_at.as_deref().and_then(|timestamp| {
+                DateTime::<FixedOffset>::parse_from_rfc3339(timestamp).ok()
+            })?;
+            Some((opened_at, session))
+        })
+        .collect::<Option<Vec<_>>>()?;
+    sessions.sort_by(|(left, _), (right, _)| left.cmp(right));
+    let (latest_timestamp, latest_session) = sessions.pop()?;
+    if sessions
+        .last()
+        .is_some_and(|(timestamp, _)| timestamp == &latest_timestamp)
+    {
+        return None;
+    }
+
+    Some(latest_session)
 }
 
 #[cfg(all(test, not(target_family = "wasm")))]
 pub(super) fn active_grok_resume_target_from_contents(
     contents: &str,
     cwd: &str,
+    process_id: Option<u32>,
 ) -> Option<ExternalCliResumeTarget> {
     use std::io::Write;
 
@@ -316,5 +366,5 @@ pub(super) fn active_grok_resume_target_from_contents(
     let path = directory.path().join("active_sessions.json");
     let mut file = std::fs::File::create(&path).ok()?;
     file.write_all(contents.as_bytes()).ok()?;
-    active_grok_resume_target_from_file(&path, cwd)
+    active_grok_resume_target_from_file(&path, cwd, process_id)
 }

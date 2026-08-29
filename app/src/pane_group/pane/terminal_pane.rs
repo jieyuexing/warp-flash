@@ -241,9 +241,9 @@ impl TerminalPane {
             });
 
         #[cfg(not(target_family = "wasm"))]
-        let grok_resume_target = active_command
-            .as_deref()
-            .and_then(|command| active_grok_resume_target(command, cwd.as_deref()));
+        let grok_resume_target = active_command.as_deref().and_then(|command| {
+            active_grok_resume_target(command, cwd.as_deref(), foreground_process_group_id)
+        });
         #[cfg(target_family = "wasm")]
         let grok_resume_target = None;
 
