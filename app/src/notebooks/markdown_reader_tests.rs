@@ -1,6 +1,14 @@
 use super::*;
 
 #[test]
+fn reading_config_uses_the_reference_readable_line_length() {
+    assert_eq!(
+        MarkdownReaderConfig::reading_view(false).max_width.as_f32(),
+        700.
+    );
+}
+
+#[test]
 fn authoritative_documents_retain_exact_source_and_source_actions() {
     let source = "# Heading\r\n\r\n> Quote\r\n";
     let document = MarkdownReaderDocument::authoritative(source);

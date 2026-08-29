@@ -1,16 +1,21 @@
 # Warposs Markdown rendering v2 product requirements document
 
-Status: `proposed`; research and product contract complete; a bounded whole-tab visual-reader
-experiment is implemented for inline external CLI block output, but the V2 parser/presenter
-rollout has not started
+Status: `foundation landed`; research and product contract complete; file-backed Markdown and
+bounded external CLI visual snapshots now share one selectable desktop reader and one scoped
+reading style profile. The source-preserving V2 parser/IR and transcript/TUI rollout have not
+started.
 
 Product owner: Warposs OSS
 
 Repository evidence baseline: Warp `8313e69fc01d99c32e0b4f9ee24cdec6b3bbb214`, observed
 2026-08-27
 
+Implementation snapshot: Warp `72bc599c7`, observed 2026-08-29
+
 External research snapshot: default branches observed 2026-08-27; exact commits are recorded in
 [GitHub project research](#github-project-research)
+
+Obsidian documentation snapshot: official Help and Developer Documentation observed 2026-08-29
 
 ## Executive decision
 
@@ -27,13 +32,13 @@ The implementation direction is:
    Mermaid, and Warp fenced extensions;
 3. keep a stable rendered prefix and reparse only the mutable document tail while an agent
    response is streaming;
-4. expose Rendered and Source modes so malformed or unsupported input is always recoverable; and
+4. expose Reading and Source modes so malformed or unsupported input is always recoverable; and
 5. roll out behind one high-level `WarpossMarkdownRenderingV2` feature flag with dual-parse
    comparison before replacing the current parser path.
 
-This is not a proposal to embed a webview or import a third-party renderer wholesale. Glamour,
-Codex, Gemini CLI, mdcat, and Ratatui Markdown projects are design evidence; their render trees,
-interaction models, and runtimes do not match WarpUI directly.
+This is not a proposal to embed a webview or import a third-party renderer wholesale. Obsidian,
+Glamour, Codex, Gemini CLI, mdcat, and Ratatui Markdown projects are design evidence; their render
+trees, interaction models, and runtimes do not match WarpUI directly.
 
 ## Evidence classification
 
@@ -58,6 +63,7 @@ No runtime acceptance is claimed by this document.
 | Large code | [`tui_code_block_view.rs`](../../crates/warp_tui/src/tui_code_block_view.rs) bounds syntax highlighting at 256 KiB or 5,000 lines and falls back safely. | V2 must retain explicit resource ceilings rather than making rich rendering unbounded. |
 | Existing extensions | The parser recognizes `warp-embedded-object`, `warp-runnable-command`, and `warp-markdown-table` fenced languages. | Parser migration requires byte-for-byte source compatibility for these extensions. |
 | Existing feature work | Markdown tables, images, Mermaid, and editable Mermaid already have feature flags and focused specs, including [`mermaid-markdown-in-plans`](../mermaid-markdown-in-plans/PRODUCT.md). | V2 owns the common contract and composition; it does not reopen those product decisions. |
+| Shared desktop reader | [`MarkdownReaderDocument` and `MarkdownReaderView`](../../app/src/notebooks/markdown_reader.rs) now separate exact authoritative source from reading projection, declare source/copy/selection capabilities, and host one selectable rich-text view used by both file Markdown and the external CLI reader. | The two inputs retain different provenance but no longer maintain separate desktop reading renderers. This is the migration seam for the future source-preserving IR. |
 | Inline CLI block output | [`Block::output_to_string_force_full_grid_contents`](../../app/src/terminal/model/block.rs) reads the active block's complete retained output grid, including flat-storage scrollback, while respecting visual secret obfuscation and terminal soft-wrap metadata. | Warposs can build a complete visual snapshot for an inline Agent CLI tab without clipboard automation or OCR. It is rendered terminal text, not authoritative Markdown source. |
 | Alternate-screen visual buffer | [`TerminalModel`](../../app/src/terminal/model/terminal_model.rs) constructs `AltScreen` with a zero scroll limit, and [`GridHandler::scroll_region_up`](../../crates/warp_terminal/src/model/grid/ansi_handler.rs) deliberately does not move alternate-screen rows into flat-storage scrollback. | An alternate-screen frame is only the current viewport, so it cannot honestly power a whole-tab reader. The action remains unavailable in this mode. |
 | External CLI events | [`CLIAgentEventPayload`](../../app/src/terminal/cli_agent_sessions/event/mod.rs) accepts an optional `response` over structured OSC 777, and the session model retains it for a completed turn. Plain PTY cells and Codex's OSC 9 fallback do not provide authoritative Markdown source. | Structured transport remains the future lossless path, but it is not required for a best-effort whole-tab visual reader. |
@@ -156,6 +162,46 @@ P0 does not:
 7. **Theme roles, not hard-coded colors.** Meaning survives light/dark themes, reduced color,
    and no-color terminals.
 
+## Obsidian reference profile for the desktop reader
+
+Warposs uses Obsidian's documented reading model as a behavioral and visual reference, not as a
+runtime dependency. The relevant public contracts are:
+
+- **Reading view** presents a clean document without Markdown syntax; **Source mode** presents the
+  exact syntax. Warposs uses the same user-facing names for source-backed file Markdown.
+- **Readable line length** limits the maximum prose width. Warposs centers a bounded reading
+  column while allowing intrinsically wide content, especially tables and code, to remain
+  horizontally accessible.
+- Text and monospace fonts, font size, accent, surfaces, borders, muted text, headings, code,
+  tables, and blockquotes are semantic theme roles. Warposs maps those roles to existing Warp
+  theme and font settings instead of importing CSS values.
+- Reading text remains pointer-selectable and copyable. Switching view must not mutate the
+  document, selection source, terminal buffer, or active Agent process.
+
+The initial reproducible Warposs profile uses a 700 px maximum reading column, 1.6 body line
+height, 1.5 code line height, a six-level heading scale, subtle one-pixel rules, surfaced code,
+and bordered/striped tables. These are Warposs-owned tuning values derived from visual comparison;
+they are not asserted to be private Obsidian defaults.
+
+"1:1" in this project means the named interaction states, information hierarchy, spacing rhythm,
+and theme-role behavior are compared against fixed visual fixtures at the same viewport and font.
+It does not mean copying Obsidian's packaged CSS/assets or promising cross-platform pixel identity.
+Live Preview, WYSIWYG editing, heading folding, and proprietary plugin/theme behavior remain out of
+scope for P0.
+
+### Reader provenance and capability matrix
+
+| Input | Shared bottom layer | Reading input | Source mode / Copy Source |
+| --- | --- | --- | --- |
+| Markdown file | `MarkdownReaderDocument` + `MarkdownReaderView` + scoped rich-text style profile | A projection of the exact file source | Available; exact bytes, including line endings, remain authoritative |
+| External Agent CLI tab | Same document/view/style types | A bounded visual snapshot of the retained active-block terminal grid | Unavailable; right-click returns to the live terminal and selected rendered text can be copied |
+
+Until the V2 IR lands, blockquotes use a fenced-code-aware visual rail projection in the shared
+reader because the legacy `FormattedTextLine` model has no structural blockquote node. The exact
+file source remains separate and copyable; the CLI path remains explicitly labeled a visual
+snapshot. This compatibility projection must be removed when structural blockquotes migrate to
+the source-preserving IR.
+
 ## Scope and surfaces
 
 | Surface | P0 contract | P0 exit condition |
@@ -173,9 +219,9 @@ all P0 surfaces in this table.
 
 ## User-visible flow
 
-1. Eligible content opens in **Rendered** mode. Streaming content continues to update in the same
+1. Eligible content opens in **Reading** mode. Streaming content continues to update in the same
    logical document even when tool cards appear between text chunks.
-2. The focused message/document action menu exposes **View Source**, **View Rendered**, **Copy
+2. The focused message/document action menu exposes **View Source**, **View Reading**, **Copy
    Source**, and, where applicable, **Copy rendered text**. Code blocks retain their separate
    **Copy Code** action.
 3. The Command Palette exposes **Toggle Markdown Source for Focused Message**. The TUI exposes the
@@ -244,7 +290,9 @@ are not part of the formal GFM extension set.
 
 ### Reading and recovery
 
-- **MD-UX-01:** Each eligible document or agent message MUST offer Rendered and Source modes.
+- **MD-UX-01:** Each eligible source-backed document or agent message MUST offer Reading and Source
+  modes. A terminal-derived visual snapshot MUST instead offer Reading and return-to-terminal
+  actions because it has no authoritative Markdown source.
   The toggle MUST be keyboard accessible and MUST preserve scroll position as closely as the
   source-to-node map permits.
 - **MD-UX-02:** Copy Source MUST copy exact authoritative source. Copy rendered text and Copy Code
@@ -660,6 +708,7 @@ below pin the inspected commit where practical.
 
 | Project | Verified observation | What Warposs should reuse | Adoption decision | License |
 | --- | --- | --- | --- | --- |
+| [Obsidian](https://obsidian.md/help/edit-and-read) | Official Help separates Reading view from Editing view and Source mode, documents a readable-line-length setting, and exposes text/monospace fonts and note font size. Official developer guidance recommends semantic CSS variables for theme compatibility; the public [sample theme](https://github.com/obsidianmd/obsidian-sample-theme) is a minimal theme-development template. | Reading/Source vocabulary, bounded readable width, semantic visual roles, selectable reading content, and visual-regression fixtures. | Behavior and visual reference only. Do not embed Obsidian, scrape packaged application styles, or copy proprietary assets. The sample theme is 0BSD; no sample-theme code is required by this implementation. | Proprietary app; public sample theme 0BSD |
 | [OpenAI Codex](https://github.com/openai/codex/tree/694edc23b22b4696400dc47663ecacd437623870) | Rust TUI uses `pulldown-cmark` events/source offsets, H1-H6 roles, blockquotes, nested lists, syntax highlighting, width-aware tables with record fallback, typed terminal hyperlinks, and a streaming stable-prefix/tail controller. [Renderer](https://github.com/openai/codex/blob/694edc23b22b4696400dc47663ecacd437623870/codex-rs/tui/src/markdown_render.rs), [stream controller](https://github.com/openai/codex/blob/694edc23b22b4696400dc47663ecacd437623870/codex-rs/tui/src/streaming/controller.rs), [collector](https://github.com/openai/codex/blob/694edc23b22b4696400dc47663ecacd437623870/codex-rs/tui/src/markdown_stream.rs). | Source-backed IR, stable prefix/mutable tail, conservative table/reference invalidation, hyperlink metadata, semantic table fallback. | Reference architecture only; WarpUI and transcript models differ. | Apache-2.0 |
 | [Glamour](https://github.com/charmbracelet/glamour/tree/d0a719943b7b399fc17f0a98454c7b70443ce29b) | Go renderer exposes stylesheet roles and width configuration; v2 adds grapheme/cell-aware wrapping, OSC 8 links, and improved tables. | Semantic style roles, capability separation, Unicode wrapping test cases. | Do not adopt: Go/ANSI full-string output cannot supply WarpUI entities, source spans, or streaming child views. | MIT |
 | [Gemini CLI](https://github.com/google-gemini/gemini-cli/tree/3c311beac2e78336816dd4a123db39743f9fbf85) | Ink UI offers a syntax-highlighted raw Markdown mode and bounds pending code by terminal height, but [`MarkdownDisplay.tsx`](https://github.com/google-gemini/gemini-cli/blob/3c311beac2e78336816dd4a123db39743f9fbf85/packages/cli/src/ui/utils/MarkdownDisplay.tsx) recognizes core blocks with line/regex logic. | Source-mode escape hatch and explicit pending-state bounds. | UX reference only; do not reproduce the line/regex parser architecture. | Apache-2.0 |
@@ -721,6 +770,10 @@ The following are explicitly decided for this PRD and do not block P0:
 
 - [CommonMark 0.31.2](https://spec.commonmark.org/0.31.2/)
 - [GitHub Flavored Markdown specification](https://github.github.com/gfm/)
+- [Obsidian views and editing modes](https://obsidian.md/help/edit-and-read)
+- [Obsidian settings](https://obsidian.md/help/settings)
+- [Obsidian styling guidance](https://docs.obsidian.md/Reference/CSS%20variables/About%20styling)
+- [Obsidian sample theme](https://github.com/obsidianmd/obsidian-sample-theme)
 - [OpenAI Codex Markdown renderer](https://github.com/openai/codex/blob/694edc23b22b4696400dc47663ecacd437623870/codex-rs/tui/src/markdown_render.rs)
 - [OpenAI Codex streaming controller](https://github.com/openai/codex/blob/694edc23b22b4696400dc47663ecacd437623870/codex-rs/tui/src/streaming/controller.rs)
 - [Glamour](https://github.com/charmbracelet/glamour/tree/d0a719943b7b399fc17f0a98454c7b70443ce29b)

@@ -20,6 +20,7 @@ use crate::ui_components::icons::Icon;
 const TITLE_FONT_MULTIPLIER: f32 = 1.4;
 
 const EDITOR_MAX_WIDTH: f32 = 640.;
+const MARKDOWN_READER_MAX_WIDTH: f32 = 700.;
 
 const TITLE_MARGIN: f32 = 16.;
 const EDITOR_PADDING_LEFT: f32 = 4.;
@@ -93,4 +94,8 @@ pub(super) fn block_footer_action_button(
 // Maximum notebook editor width.
 pub fn notebook_editor_max_width() -> Pixels {
     EDITOR_MAX_WIDTH.into_pixels()
+}
+
+pub fn markdown_reader_max_width() -> Pixels {
+    MARKDOWN_READER_MAX_WIDTH.into_pixels()
 }

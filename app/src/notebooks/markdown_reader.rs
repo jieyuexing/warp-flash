@@ -104,7 +104,7 @@ pub struct MarkdownReaderConfig {
 impl MarkdownReaderConfig {
     pub fn reading_view(show_provenance_header: bool) -> Self {
         Self {
-            max_width: super::styles::notebook_editor_max_width(),
+            max_width: super::styles::markdown_reader_max_width(),
             show_provenance_header,
         }
     }
