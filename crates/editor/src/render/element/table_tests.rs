@@ -12,9 +12,9 @@ use warpui_core::units::{IntoPixels, Pixels};
 
 use crate::content::text::{FormattedTable, table_cell_offset_maps};
 use crate::render::element::table::{
-    model_table_layout_report, row_geometry_from_layout_report, table_cursor_relative_offset,
-    table_horizontal_scroll_delta, table_scroll_data, table_scrollbar,
-    table_selection_relative_range,
+    header_column_at_screen_position, model_table_layout_report, row_geometry_from_layout_report,
+    table_column_bounds, table_cursor_relative_offset, table_horizontal_scroll_delta,
+    table_scroll_data, table_scrollbar, table_selection_relative_range,
 };
 use crate::render::model::table_offset_map::TableOffsetMap;
 use crate::render::model::{
@@ -76,6 +76,7 @@ fn test_laid_out_table() -> LaidOutTable {
             outer_border: true,
             column_dividers: true,
             row_dividers: true,
+            column_selection: None,
         },
     };
     let cell_layouts = vec![vec![CellLayout::default(); 2]; 3];
@@ -101,6 +102,7 @@ fn test_laid_out_table() -> LaidOutTable {
         ],
         scroll_left: Cell::new(Pixels::zero()),
         scrollbar_interaction_state: Default::default(),
+        column_interaction_state: Default::default(),
         horizontal_scroll_allowed: true,
     }
 }
@@ -162,6 +164,60 @@ fn coordinate_to_offset_targets_second_row() {
         range.start,
         range.end,
     );
+}
+
+#[test]
+fn header_column_at_coordinate_targets_only_the_header() {
+    let table = test_laid_out_table();
+
+    assert_eq!(table.header_column_at_coordinate(20.0, 8.0), Some(0));
+    assert_eq!(table.header_column_at_coordinate(90.0, 8.0), Some(1));
+    assert_eq!(table.header_column_at_coordinate(90.0, 30.0), None);
+}
+
+#[test]
+fn selected_column_replaces_the_previous_column() {
+    let table = test_laid_out_table();
+
+    assert!(table.set_selected_column(Some(0)));
+    assert_eq!(table.selected_column(), Some(0));
+    assert!(table.set_selected_column(Some(1)));
+    assert_eq!(table.selected_column(), Some(1));
+    assert!(table.set_selected_column(None));
+    assert_eq!(table.selected_column(), None);
+}
+
+#[test]
+fn selected_column_rejects_columns_outside_the_table() {
+    let table = test_laid_out_table();
+
+    assert!(!table.set_selected_column(Some(2)));
+    assert_eq!(table.selected_column(), None);
+}
+
+#[test]
+fn header_hit_test_accounts_for_horizontal_table_scroll() {
+    let table = test_laid_out_table();
+    assert!(table.set_scroll_left(40.0.into_pixels(), 90.0.into_pixels()));
+    let viewport_bounds = RectF::new(vec2f(10.0, 20.0), vec2f(90.0, 96.0));
+
+    assert_eq!(
+        header_column_at_screen_position(&table, viewport_bounds, vec2f(60.0, 28.0)),
+        Some(1)
+    );
+    assert_eq!(
+        header_column_at_screen_position(&table, viewport_bounds, vec2f(60.0, 55.0)),
+        None
+    );
+}
+
+#[test]
+fn table_column_bounds_span_the_full_selected_column() {
+    let table = test_laid_out_table();
+    let bounds = table_column_bounds(&table, 1, vec2f(15.0, 25.0))
+        .expect("second column should have bounds");
+
+    assert_eq!(bounds, RectF::new(vec2f(95.0, 25.0), vec2f(120.0, 96.0)));
 }
 
 #[test]

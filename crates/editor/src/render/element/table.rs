@@ -146,8 +146,10 @@ impl RenderableBlock for RenderableTable {
             .start_layer(ClipBounds::BoundedByActiveLayerAnd(viewport_bounds));
         ctx.paint.scene.set_active_layer_click_through();
         paint_backgrounds(laid_out_table, style, screen_position, ctx);
+        paint_column_interaction_backgrounds(laid_out_table, style, screen_position, ctx);
         paint_cell_text(laid_out_table, style, screen_position, ctx);
         paint_borders(laid_out_table, style, screen_position, ctx);
+        paint_selected_column_border(laid_out_table, style, screen_position, ctx);
         paint_selection(model, ctx, table_start, laid_out_table, screen_position);
         paint_cursor(
             model,
@@ -212,6 +214,15 @@ impl RenderableBlock for RenderableTable {
                     }
                 }
 
+                if model.styles().table_style.column_selection.is_some() {
+                    let selected_column = self.viewport_bounds.and_then(|bounds| {
+                        header_column_at_screen_position(laid_out_table, bounds, *position)
+                    });
+                    if laid_out_table.set_selected_column(selected_column) {
+                        ctx.notify();
+                    }
+                }
+
                 false
             }
             Event::LeftMouseDragged { position, .. } => {
@@ -238,15 +249,34 @@ impl RenderableBlock for RenderableTable {
                 had_drag
             }
             Event::MouseMoved { position, .. } => {
-                let hovered = self
+                let scrollbar_hovered = self
                     .scrollbar
                     .is_some_and(|scrollbar| scrollbar.thumb_bounds.contains_point(*position));
-                if laid_out_table.set_scrollbar_hovered(hovered) {
+                let column_hovered = model
+                    .styles()
+                    .table_style
+                    .column_selection
+                    .is_some()
+                    .then(|| {
+                        self.viewport_bounds.and_then(|bounds| {
+                            header_column_at_screen_position(laid_out_table, bounds, *position)
+                        })
+                    })
+                    .flatten();
+                let changed = laid_out_table.set_scrollbar_hovered(scrollbar_hovered)
+                    | laid_out_table.set_hovered_header_column(column_hovered);
+                if changed {
                     ctx.notify();
                 }
                 // MouseMoved should never be consumed here so that downstream handlers
                 // (hover-link detection, cursor changes, etc.) still receive the event even
                 // when the pointer is over the scrollbar thumb.
+                false
+            }
+            Event::KeyDown { keystroke, .. } if keystroke.key == "escape" => {
+                if laid_out_table.set_selected_column(None) {
+                    ctx.notify();
+                }
                 false
             }
             Event::ScrollWheel {
@@ -292,6 +322,20 @@ fn table_scroll_data(laid_out_table: &LaidOutTable, viewport_width: Pixels) -> S
         visible_px: laid_out_table.viewport_width(viewport_width),
         total_size: laid_out_table.width(),
     }
+}
+
+fn header_column_at_screen_position(
+    laid_out_table: &LaidOutTable,
+    viewport_bounds: RectF,
+    position: Vector2F,
+) -> Option<usize> {
+    if !viewport_bounds.contains_point(position) {
+        return None;
+    }
+    let content_x =
+        position.x() - viewport_bounds.origin_x() + laid_out_table.scroll_left().as_f32();
+    let content_y = position.y() - viewport_bounds.origin_y();
+    laid_out_table.header_column_at_coordinate(content_x, content_y)
 }
 
 fn table_horizontal_scroll_delta(delta: Vector2F, precise: bool, shift: bool) -> Option<Pixels> {
@@ -373,6 +417,116 @@ fn paint_backgrounds(
             ))
             .with_background(bg);
     }
+}
+
+fn table_column_bounds(
+    laid_out_table: &LaidOutTable,
+    column: usize,
+    screen_position: Vector2F,
+) -> Option<RectF> {
+    let left = laid_out_table.col_x_offsets.get(column).copied()?;
+    let width = laid_out_table.column_widths.get(column)?.as_f32();
+    Some(RectF::new(
+        screen_position + vec2f(left, 0.0),
+        vec2f(width, laid_out_table.total_height.as_f32()),
+    ))
+}
+
+fn paint_column_interaction_backgrounds(
+    laid_out_table: &LaidOutTable,
+    style: &TableStyle,
+    screen_position: Vector2F,
+    ctx: &mut RenderContext,
+) {
+    let Some(column_style) = style.column_selection else {
+        return;
+    };
+    let selected_column = laid_out_table.selected_column();
+    if let Some(hovered_column) = laid_out_table.hovered_header_column()
+        && Some(hovered_column) != selected_column
+        && let Some(bounds) = table_column_bounds(laid_out_table, hovered_column, screen_position)
+    {
+        let header_height = row_height(laid_out_table, 0);
+        ctx.paint
+            .scene
+            .draw_rect_without_hit_recording(RectF::new(
+                bounds.origin(),
+                vec2f(bounds.width(), header_height),
+            ))
+            .with_background(column_style.hover_header_background);
+    }
+
+    let Some(selected_column) = selected_column else {
+        return;
+    };
+    let Some(bounds) = table_column_bounds(laid_out_table, selected_column, screen_position) else {
+        return;
+    };
+    ctx.paint
+        .scene
+        .draw_rect_without_hit_recording(bounds)
+        .with_background(column_style.selected_background);
+    ctx.paint
+        .scene
+        .draw_rect_without_hit_recording(RectF::new(
+            bounds.origin(),
+            vec2f(bounds.width(), row_height(laid_out_table, 0)),
+        ))
+        .with_background(column_style.selected_header_background);
+}
+
+fn paint_selected_column_border(
+    laid_out_table: &LaidOutTable,
+    style: &TableStyle,
+    screen_position: Vector2F,
+    ctx: &mut RenderContext,
+) {
+    let Some(column_style) = style.column_selection else {
+        return;
+    };
+    let Some(selected_column) = laid_out_table.selected_column() else {
+        return;
+    };
+    let Some(bounds) = table_column_bounds(laid_out_table, selected_column, screen_position) else {
+        return;
+    };
+    let border_width = column_style
+        .border_width
+        .max(0.0)
+        .min(bounds.width() / 2.0)
+        .min(bounds.height() / 2.0);
+    if border_width <= f32::EPSILON {
+        return;
+    }
+    let color = column_style.border_color;
+    let draw = |ctx: &mut RenderContext, rect: RectF| {
+        ctx.paint
+            .scene
+            .draw_rect_without_hit_recording(rect)
+            .with_background(color);
+    };
+    draw(
+        ctx,
+        RectF::new(bounds.origin(), vec2f(bounds.width(), border_width)),
+    );
+    draw(
+        ctx,
+        RectF::new(
+            bounds.origin() + vec2f(0.0, bounds.height() - border_width),
+            vec2f(bounds.width(), border_width),
+        ),
+    );
+    draw(
+        ctx,
+        RectF::new(bounds.origin(), vec2f(border_width, bounds.height())),
+    );
+    draw(
+        ctx,
+        RectF::new(
+            bounds.origin() + vec2f(bounds.width() - border_width, 0.0),
+            vec2f(border_width, bounds.height()),
+        ),
+    );
 }
 
 fn paint_cell_text(

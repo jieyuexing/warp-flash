@@ -1339,6 +1339,16 @@ pub struct TableStyle {
     pub outer_border: bool,
     pub column_dividers: bool,
     pub row_dividers: bool,
+    pub column_selection: Option<TableColumnSelectionStyle>,
+}
+
+#[derive(Debug, Clone, Copy, PartialEq)]
+pub struct TableColumnSelectionStyle {
+    pub hover_header_background: ColorU,
+    pub selected_background: ColorU,
+    pub selected_header_background: ColorU,
+    pub border_color: ColorU,
+    pub border_width: f32,
 }
 
 #[derive(Debug, Clone, Copy, PartialEq)]
@@ -2020,6 +2030,7 @@ pub struct LaidOutTable {
     pub cell_links: Vec<Vec<Vec<ParsedUrl>>>,
     pub scroll_left: Cell<Pixels>,
     pub(crate) scrollbar_interaction_state: TableScrollbarInteractionState,
+    pub(crate) column_interaction_state: TableColumnInteractionState,
     /// When `false`, the surrounding container already owns horizontal scrolling, so this table
     /// should render at full intrinsic width without introducing its own clip, scrollbar, or
     /// scroll event handling.
@@ -2037,6 +2048,12 @@ pub(crate) struct TableScrollbarDragState {
 pub(crate) struct TableScrollbarInteractionState {
     drag_state: Cell<Option<TableScrollbarDragState>>,
     hovered: Cell<bool>,
+}
+
+#[derive(Debug, Clone, Default)]
+pub(crate) struct TableColumnInteractionState {
+    selected_column: Cell<Option<usize>>,
+    hovered_header_column: Cell<Option<usize>>,
 }
 
 impl LaidOutTable {
@@ -2128,6 +2145,38 @@ impl LaidOutTable {
     pub(crate) fn clear_scrollbar_interaction_state(&self) {
         self.scrollbar_interaction_state.drag_state.set(None);
         self.scrollbar_interaction_state.hovered.set(false);
+    }
+
+    pub(crate) fn selected_column(&self) -> Option<usize> {
+        self.column_interaction_state.selected_column.get()
+    }
+
+    pub(crate) fn set_selected_column(&self, column: Option<usize>) -> bool {
+        let column = column.filter(|column| *column < self.column_widths.len());
+        self.column_interaction_state
+            .selected_column
+            .replace(column)
+            != column
+    }
+
+    pub(crate) fn hovered_header_column(&self) -> Option<usize> {
+        self.column_interaction_state.hovered_header_column.get()
+    }
+
+    pub(crate) fn set_hovered_header_column(&self, column: Option<usize>) -> bool {
+        let column = column.filter(|column| *column < self.column_widths.len());
+        self.column_interaction_state
+            .hovered_header_column
+            .replace(column)
+            != column
+    }
+
+    pub(crate) fn header_column_at_coordinate(&self, x: f32, y: f32) -> Option<usize> {
+        let header_height = self.row_heights.first()?.as_f32();
+        if x < 0.0 || x >= self.width().as_f32() || y < 0.0 || y >= header_height {
+            return None;
+        }
+        Some(self.col_at_x(x))
     }
 
     pub fn reveal_offset(&self, offset: CharOffset, viewport_width: Pixels) -> bool {

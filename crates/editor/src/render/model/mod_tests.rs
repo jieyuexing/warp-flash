@@ -1322,6 +1322,7 @@ fn make_test_laid_out_table() -> LaidOutTable {
                 outer_border: true,
                 column_dividers: true,
                 row_dividers: true,
+                column_selection: None,
             },
         },
         row_heights: vec![20.0.into_pixels(), 20.0.into_pixels()],
@@ -1343,6 +1344,7 @@ fn make_test_laid_out_table() -> LaidOutTable {
         cell_links: vec![vec![vec![], vec![]], vec![vec![], vec![]]],
         scroll_left: Cell::new(Pixels::zero()),
         scrollbar_interaction_state: Default::default(),
+        column_interaction_state: Default::default(),
         horizontal_scroll_allowed: true,
     }
 }

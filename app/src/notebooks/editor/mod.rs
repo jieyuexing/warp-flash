@@ -11,7 +11,7 @@ use warp_editor::content::text::{
 };
 use warp_editor::render::model::{
     BrokenLinkStyle, CheckBoxStyle, EmbeddedItem, HeadingStyle, HeadingStyles, HorizontalRuleStyle,
-    InlineCodeStyle, ParagraphStyles, RichTextStyles, TableStyle,
+    InlineCodeStyle, ParagraphStyles, RichTextStyles, TableColumnSelectionStyle, TableStyle,
 };
 use warp_util::user_input::UserInput;
 use warpui::elements::{Border, ListIndentLevel, Margin, Padding};
@@ -201,6 +201,7 @@ pub(crate) fn markdown_table_style(
         outer_border: table_appearance.outer_border,
         column_dividers: table_appearance.column_dividers,
         row_dividers: table_appearance.row_dividers,
+        column_selection: None,
     }
 }
 
@@ -331,6 +332,13 @@ pub fn markdown_reader_styles(
     styles.table_style.cell_padding = 10.;
     styles.table_style.outer_border = true;
     styles.table_style.column_dividers = true;
+    styles.table_style.column_selection = Some(TableColumnSelectionStyle {
+        hover_header_background: theme.accent().with_opacity(20).into_solid(),
+        selected_background: theme.accent().with_opacity(24).into_solid(),
+        selected_header_background: theme.accent().with_opacity(48).into_solid(),
+        border_color: theme.accent().into_solid(),
+        border_width: 2.,
+    });
     styles.heading_styles = HeadingStyles {
         h1: HeadingStyle {
             font_size_multiplier: 2.0,

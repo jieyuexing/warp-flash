@@ -215,6 +215,7 @@ pub const TEST_STYLES: RichTextStyles = RichTextStyles {
         outer_border: true,
         column_dividers: true,
         row_dividers: true,
+        column_selection: None,
     },
     heading_styles: HeadingStyles {
         h1: HeadingStyle {

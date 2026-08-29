@@ -547,6 +547,7 @@ impl CodeEditorModel {
                 outer_border: false,
                 column_dividers: false,
                 row_dividers: false,
+                column_selection: None,
             },
             heading_styles: Default::default(),
         }

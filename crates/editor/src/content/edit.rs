@@ -1446,6 +1446,7 @@ fn layout_table_block(
         cell_links,
         scroll_left: Cell::new(Pixels::zero()),
         scrollbar_interaction_state: Default::default(),
+        column_interaction_state: Default::default(),
         horizontal_scroll_allowed,
     })))
 }
