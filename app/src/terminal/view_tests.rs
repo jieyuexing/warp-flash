@@ -9757,9 +9757,9 @@ fn copy_uses_cli_agent_markdown_reader_selection() {
         let terminal = add_window_with_terminal(&mut app, None);
 
         terminal.update(&mut app, |view, ctx| {
-            let formatted_text = parse_cli_agent_markdown_snapshot("# Result\nselected text")
+            let document = parse_cli_agent_markdown_snapshot("# Result\nselected text")
                 .expect("reader content should parse");
-            let reader = CliAgentMarkdownReader::new(formatted_text);
+            let reader = CliAgentMarkdownReader::new(document, ctx);
             reader.set_selected_text_for_test(Some("selected text".to_owned()));
             view.cli_agent_markdown_reader = Some(reader);
 
@@ -9778,9 +9778,9 @@ fn markdown_reader_context_menu_offers_copy_for_a_selection() {
         let terminal = add_window_with_terminal(&mut app, None);
 
         terminal.update(&mut app, |view, ctx| {
-            let formatted_text = parse_cli_agent_markdown_snapshot("# Result\nselected text")
+            let document = parse_cli_agent_markdown_snapshot("# Result\nselected text")
                 .expect("reader content should parse");
-            let reader = CliAgentMarkdownReader::new(formatted_text);
+            let reader = CliAgentMarkdownReader::new(document, ctx);
             reader.set_selected_text_for_test(Some("selected text".to_owned()));
             view.cli_agent_markdown_reader = Some(reader);
 

@@ -33,8 +33,10 @@ use warpui::{
 };
 
 use super::context_menu::{ContextMenuAction, ContextMenuState, show_rich_editor_context_menu};
-use super::editor::view::{EditorViewEvent, RichTextEditorConfig, RichTextEditorView};
+use super::editor::view::{EditorViewEvent, RichTextEditorView};
 use super::link::{NotebookLinks, SessionSource};
+pub use super::markdown_reader::MarkdownDisplayMode;
+use super::markdown_reader::{MarkdownReaderConfig, MarkdownReaderDocument, MarkdownReaderView};
 use super::telemetry::NotebookTelemetryAction;
 use super::{NotebookLocation, styles};
 use crate::appearance::Appearance;
@@ -42,8 +44,6 @@ use crate::appearance::Appearance;
 use crate::code::editor_management::CodeSource;
 use crate::editor::InteractionState;
 use crate::menu::{MenuItem, MenuItemFields};
-use crate::notebooks::editor::model::NotebooksEditorModel;
-use crate::notebooks::editor::rich_text_styles;
 use crate::pane_group::focus_state::PaneFocusHandle;
 use crate::pane_group::pane::view;
 use crate::pane_group::pane::view::header::components::{
@@ -69,19 +69,13 @@ use crate::workflows::{WorkflowSource, WorkflowType};
 use crate::workspace::ActiveSession;
 use crate::{cmd_or_ctrl_shift, safe_warn, send_telemetry_from_ctx};
 
-/// Display mode for markdown files shown via the header segmented control.
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
-pub enum MarkdownDisplayMode {
-    Rendered,
-    Raw,
-}
-
 /// View for a read-only notebook backed by a file, rather than Warp Drive.
 pub struct FileNotebookView {
     /// Cached for displaying the title and breadcrumbs.
     location: Option<FileLocation>,
     /// Read-only view of the notebook contents.
     editor: ViewHandle<RichTextEditorView>,
+    reader: ViewHandle<MarkdownReaderView>,
     retry_button_mouse_state: MouseStateHandle,
     file_state: FileState,
     /// File watcher id for the currently opened file, if any.
@@ -135,6 +129,8 @@ pub enum FileNotebookAction {
     ReloadFile,
     #[cfg(feature = "local_fs")]
     CopyFilePath,
+    #[cfg(feature = "local_fs")]
+    CopyMarkdownSource,
     #[cfg(feature = "local_fs")]
     OpenInEditor,
     #[cfg(feature = "local_fs")]
@@ -242,26 +238,16 @@ impl FileNotebookView {
 
         let view_position_id = format!("file_notebook_view_{}", ctx.view_id());
 
-        let editor_model = ctx.add_model(|ctx| {
-            let styles = rich_text_styles(Appearance::as_ref(ctx), FontSettings::as_ref(ctx));
-            let mut model = NotebooksEditorModel::new(styles, window_id, ctx);
-            model.set_default_mermaid_display_mode(MarkdownDisplayMode::Rendered, ctx);
-            model
-        });
-        let editor = ctx.add_typed_action_view(|ctx| {
-            let mut view = RichTextEditorView::new(
+        let reader = ctx.add_view(|ctx| {
+            MarkdownReaderView::new(
+                MarkdownReaderDocument::authoritative(""),
                 view_position_id.clone(),
-                editor_model,
                 links.clone(),
-                RichTextEditorConfig {
-                    max_width: Some(styles::notebook_editor_max_width()),
-                    ..Default::default()
-                },
+                MarkdownReaderConfig::reading_view(false),
                 ctx,
-            );
-            view.set_interaction_state(InteractionState::Selectable, ctx);
-            view
+            )
         });
+        let editor = reader.as_ref(ctx).editor();
 
         ctx.subscribe_to_view(&editor, Self::handle_editor_event);
 
@@ -286,6 +272,7 @@ impl FileNotebookView {
         Self {
             location: None,
             editor,
+            reader,
             file_state: FileState::NoFile,
             retry_button_mouse_state: Default::default(),
             #[cfg(feature = "local_fs")]
@@ -360,27 +347,27 @@ impl FileNotebookView {
         let render_as_ipynb =
             FeatureFlag::JupyterNotebookRendering.is_enabled() && self.is_jupyter_notebook_file();
         let scroll_fraction = self.pending_scroll_fraction.take();
-        self.editor.update(ctx, |editor, ctx| {
+        self.reader.update(ctx, |reader, ctx| {
             if render_as_ipynb {
-                editor.reset_with_ipynb(content, ctx);
+                reader.reset_with_ipynb(content, ctx);
             } else {
-                editor.reset_with_markdown(content, ctx);
+                reader.reset_with_markdown(content, ctx);
             }
-            // Relative image paths in the content resolve against this.
-            editor.model().update(ctx, |model, ctx| {
-                model.set_document_path(doc_path, ctx);
-                // Restore scroll captured before a raw->rendered toggle. Deferred through the
-                // layout pipeline so it applies after the new content is laid out. The version is
-                // read here (after the reset above advanced it) rather than at dequeue: the reset's
-                // BufferEdit reaches the layout channel via a deferred subscription, so it can be
-                // enqueued after our ScrollToFraction.
-                if let Some(fraction) = scroll_fraction {
-                    let version = model.buffer_version(ctx);
-                    model.render_state().update(ctx, |render_state, _ctx| {
-                        render_state.scroll_to_fraction(fraction, version);
-                    });
-                }
-            });
+            reader.set_document_path(doc_path, ctx);
+        });
+        let editor_model = self.editor.as_ref(ctx).model().clone();
+        editor_model.update(ctx, |model, ctx| {
+            // Restore scroll captured before a raw->rendered toggle. Deferred through the
+            // layout pipeline so it applies after the new content is laid out. The version is
+            // read here (after the reset above advanced it) rather than at dequeue: the reset's
+            // BufferEdit reaches the layout channel via a deferred subscription, so it can be
+            // enqueued after our ScrollToFraction.
+            if let Some(fraction) = scroll_fraction {
+                let version = model.buffer_version(ctx);
+                model.render_state().update(ctx, |render_state, _ctx| {
+                    render_state.scroll_to_fraction(fraction, version);
+                });
+            }
         });
     }
 
@@ -997,7 +984,7 @@ impl FileNotebookView {
             FileState::NoFile => self.render_no_file(appearance),
             FileState::Loading(source) => self.render_loading(source, appearance),
             FileState::Error(source) => self.render_error(source, appearance),
-            FileState::Loaded(_) => ChildView::new(&self.editor).finish(),
+            FileState::Loaded(_) => ChildView::new(&self.reader).finish(),
         };
 
         #[cfg(not(target_family = "wasm"))]
@@ -1084,6 +1071,19 @@ impl TypedActionView for FileNotebookView {
                 if let Some(path) = self.file_state.path() {
                     ctx.clipboard()
                         .write(ClipboardContent::plain_text(path.display_path()));
+                }
+            }
+            #[cfg(feature = "local_fs")]
+            FileNotebookAction::CopyMarkdownSource => {
+                let source = {
+                    let document = self.reader.as_ref(ctx).document();
+                    document
+                        .capabilities()
+                        .copy_source
+                        .then(|| document.source().to_owned())
+                };
+                if let Some(source) = source {
+                    ctx.clipboard().write(ClipboardContent::plain_text(source));
                 }
             }
             #[cfg(feature = "local_fs")]
@@ -1205,6 +1205,13 @@ impl BackingView for FileNotebookView {
                         .with_on_select_action(FileNotebookAction::OpenInEditor)
                         .into_item(),
                 );
+                if self.shows_markdown_toggle() {
+                    actions.push(
+                        MenuItemFields::new("Copy Markdown source")
+                            .with_on_select_action(FileNotebookAction::CopyMarkdownSource)
+                            .into_item(),
+                    );
+                }
                 actions.extend([
                     MenuItem::Separator,
                     MenuItemFields::new("Copy file path")

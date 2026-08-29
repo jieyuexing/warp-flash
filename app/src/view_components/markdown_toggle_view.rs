@@ -34,10 +34,10 @@ impl MarkdownToggleView {
                         icon_color: theme.main_text_color(theme.background()).into(),
                         label: Some(LabelConfig {
                             label: match mode {
-                                MarkdownDisplayMode::Rendered => "Rendered".into(),
-                                MarkdownDisplayMode::Raw => "Raw".into(),
+                                MarkdownDisplayMode::Rendered => warp_i18n::localize_ui("Reading"),
+                                MarkdownDisplayMode::Raw => warp_i18n::localize_ui("Source"),
                             },
-                            width_override: Some(55.0),
+                            width_override: Some(58.0),
                             color: if is_selected {
                                 theme.accent().into()
                             } else {

@@ -13,7 +13,7 @@ use warp_editor::render::model::BlockItem;
 #[cfg(feature = "local_fs")]
 use warp_files::FileModel;
 use warpui::platform::WindowStyle;
-use warpui::{App, SingletonEntity, View};
+use warpui::{App, SingletonEntity, TypedActionView, View};
 
 use super::{FileNotebookAction, FileNotebookView, FileState, MarkdownDisplayMode, SourceFile};
 use crate::auth::AuthStateProvider;
@@ -315,6 +315,32 @@ fn test_load_static() {
     });
 }
 
+#[cfg(feature = "local_fs")]
+#[test]
+fn test_copy_markdown_source_preserves_exact_authoritative_text() {
+    App::test((), |mut app| async move {
+        init_app(&mut app);
+        let (_, handle) = app.add_window(WindowStyle::NotStealFocus, FileNotebookView::new);
+        let source = "# Heading\r\n\r\n> quoted **text**\r\n";
+
+        handle.update(&mut app, |file_notebook, ctx| {
+            file_notebook.open_static("Source", source, ctx);
+            file_notebook.handle_action(&FileNotebookAction::CopyMarkdownSource, ctx);
+
+            assert_eq!(ctx.clipboard().read().plain_text, source);
+            assert_eq!(file_notebook.reader.as_ref(ctx).document().source(), source);
+            assert!(
+                file_notebook
+                    .reader
+                    .as_ref(ctx)
+                    .document()
+                    .rendered_markdown()
+                    .contains("│ quoted **text**")
+            );
+        });
+    })
+}
+
 #[test]
 fn test_file_notebook_mermaid_blocks_default_to_rendered() {
     App::test((), |mut app| async move {
@@ -367,8 +393,6 @@ fn test_file_notebook_mermaid_blocks_default_to_rendered() {
 #[cfg(feature = "local_fs")]
 #[test]
 fn test_reload_and_discard_after_failed_open() {
-    use warpui::TypedActionView;
-
     /// Opens the notebook's current file and waits for the read to settle.
     async fn await_open(
         app: &mut warpui::App,

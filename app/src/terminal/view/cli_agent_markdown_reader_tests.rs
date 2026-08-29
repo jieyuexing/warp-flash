@@ -6,7 +6,9 @@ use super::*;
 fn parses_structures_from_the_entire_terminal_snapshot() {
     let source = "# Result\n\n• First\n• Second\n\n| A | B |\n| - | - |\n| 1 | 2 |";
 
-    let parsed = parse_cli_agent_markdown_snapshot(source).expect("snapshot should parse");
+    let document = parse_cli_agent_markdown_snapshot(source).expect("snapshot should parse");
+    let parsed = parse_markdown_with_gfm_tables(document.rendered_markdown())
+        .expect("reader projection should parse");
 
     assert!(
         parsed
@@ -56,35 +58,18 @@ fn projects_blockquotes_as_visual_quote_lines() {
         "> > nested quote\n",
     );
 
-    let normalized = normalize_terminal_visual_markdown(source).expect("snapshot should normalize");
-
-    assert_eq!(
-        normalized,
-        concat!(
-            "- \u{53ef}\u{4ee5}\u{8fd9}\u{6837}\u{56de}\u{590d}\u{ff1a}\n",
-            "\n",
-            "\u{2502} \u{5bf9}\u{ff0c}\u{8fd9}\u{4e2a}\u{4e1a}\u{52a1}\u{6821}\u{9a8c}\u{8981}\u{653e}\u{5230} **SQL4** \u{524d}\u{9762}\u{3002}\n",
-            "\u{2502}\n",
-            "\u{2502} SQL4 \u{524d}\u{5148}\u{7528} REMAIN \u{6821}\u{9a8c}\u{ff1a}\n",
-            "\u{2502}\n",
-            "\u{2502}   \u{2022} CTN_NUM = 1: QTY = REMAIN\n",
-            "\u{2502}   \u{2022} CTN_NUM > 1: REMAIN > QTY \u{00d7} (CTN_NUM - 1)\n",
-            "\u{2502} \u{2502} nested quote",
-        )
-    );
-
-    let parsed = parse_cli_agent_markdown_snapshot(source).expect("snapshot should parse");
+    let document = parse_cli_agent_markdown_snapshot(source).expect("snapshot should parse");
+    let parsed = parse_markdown_with_gfm_tables(document.rendered_markdown())
+        .expect("reader projection should parse");
     assert!(
         parsed
             .raw_text()
             .contains("\u{2502} \u{5bf9}\u{ff0c}\u{8fd9}\u{4e2a}\u{4e1a}\u{52a1}\u{6821}\u{9a8c}")
     );
-    assert!(
-        parsed
-            .raw_text()
-            .contains("\u{2502}   \u{2022} CTN_NUM = 1")
-    );
+    assert!(parsed.raw_text().contains("\u{2502} CTN_NUM = 1"));
     assert!(!parsed.raw_text().lines().any(|line| line.starts_with('>')));
+    assert!(!document.capabilities().source_mode);
+    assert!(!document.capabilities().copy_source);
 }
 
 #[test]

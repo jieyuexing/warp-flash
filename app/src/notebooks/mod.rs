@@ -4,6 +4,7 @@ pub mod editor;
 pub mod file;
 pub mod link;
 pub mod manager;
+pub mod markdown_reader;
 pub mod notebook;
 mod styles;
 pub mod telemetry;

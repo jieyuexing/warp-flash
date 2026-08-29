@@ -14763,7 +14763,7 @@ impl TerminalView {
         if let Some(selected_text) = self
             .cli_agent_markdown_reader
             .as_ref()
-            .and_then(CliAgentMarkdownReader::selected_text)
+            .and_then(|reader| reader.selected_text(ctx))
         {
             return Some(selected_text);
         }
@@ -16710,7 +16710,7 @@ impl TerminalView {
 
     fn current_cli_agent_markdown_reader(
         &self,
-        ctx: &AppContext,
+        ctx: &mut ViewContext<Self>,
     ) -> Option<CliAgentMarkdownReader> {
         let has_active_cli_agent_session = self.has_active_cli_agent_session(ctx);
         let source = {
@@ -16718,7 +16718,8 @@ impl TerminalView {
             cli_agent_markdown_snapshot_source(&model, has_active_cli_agent_session)?
         };
 
-        parse_cli_agent_markdown_snapshot(&source).map(CliAgentMarkdownReader::new)
+        let document = parse_cli_agent_markdown_snapshot(&source)?;
+        Some(CliAgentMarkdownReader::new(document, ctx))
     }
 
     fn toggle_cli_agent_markdown_reader(&mut self, ctx: &mut ViewContext<Self>) {
@@ -16735,7 +16736,7 @@ impl TerminalView {
 
     fn copy(&mut self, ctx: &mut ViewContext<Self>) {
         if let Some(reader) = &self.cli_agent_markdown_reader {
-            if let Some(selected_text) = reader.selected_text() {
+            if let Some(selected_text) = reader.selected_text(ctx) {
                 ctx.clipboard()
                     .write(ClipboardContent::plain_text(selected_text));
             }
@@ -18042,7 +18043,7 @@ impl TerminalView {
     ) -> Vec<MenuItem<TerminalAction>> {
         let mut menu_items = Vec::new();
         if let Some(reader) = &self.cli_agent_markdown_reader {
-            if reader.selected_text().is_some() {
+            if reader.selected_text(ctx).is_some() {
                 menu_items.push(
                     MenuItemFields::new("Copy")
                         .with_on_select_action(TerminalAction::ContextMenu(
@@ -21659,7 +21660,7 @@ impl TerminalView {
 
     fn context_menu_copy_selected_text(&mut self, ctx: &mut ViewContext<Self>) {
         if let Some(reader) = &self.cli_agent_markdown_reader {
-            if let Some(selected_text) = reader.selected_text() {
+            if let Some(selected_text) = reader.selected_text(ctx) {
                 ctx.clipboard()
                     .write(ClipboardContent::plain_text(selected_text));
             }
@@ -28377,7 +28378,7 @@ impl View for TerminalView {
                         did_wrap_terminal_size = true;
                         wrap_in_terminal_size_element(
                             &self.resize_tx,
-                            reader.render(&self.content_element_position_id, appearance),
+                            reader.render(&self.content_element_position_id),
                         )
                     } else if is_alt_screen_active {
                         did_wrap_terminal_size = true;
