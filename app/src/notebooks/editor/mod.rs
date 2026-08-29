@@ -304,7 +304,7 @@ pub fn markdown_reader_styles(
     let mut styles = rich_text_styles(appearance, font_settings);
     let theme = appearance.theme();
 
-    styles.base_text.line_height_ratio = 1.6;
+    styles.base_text.line_height_ratio = 1.52;
     styles.code_text.line_height_ratio = 1.5;
     styles.embedding_text.line_height_ratio = 1.5;
     styles.code_background = theme.surface_1().into();
@@ -313,14 +313,25 @@ pub fn markdown_reader_styles(
     styles.horizontal_rule_style.color = theme.outline().into();
     styles.horizontal_rule_style.rule_height = 1.;
     styles.block_spacings.text.margin = Margin::uniform(0.)
-        .with_top(4.)
-        .with_bottom(4.)
+        .with_top(2.)
+        .with_bottom(2.)
         .with_right(16.);
     styles.block_spacings.header.margin = Margin::uniform(0.)
-        .with_top(14.)
-        .with_bottom(6.)
+        .with_top(12.)
+        .with_bottom(5.)
         .with_right(16.);
     styles.block_spacings.header.padding = Padding::uniform(0.);
+    let list_margin = Margin::uniform(0.)
+        .with_top(1.)
+        .with_bottom(1.)
+        .with_right(16.);
+    styles.block_spacings.task_list = styles.block_spacings.task_list.with_margin(list_margin);
+    styles.block_spacings.ordered_list =
+        styles.block_spacings.ordered_list.with_margin(list_margin);
+    styles.block_spacings.unordered_list = styles
+        .block_spacings
+        .unordered_list
+        .with_margin(list_margin);
     styles.block_spacings.code_block.margin = Margin::uniform(0.)
         .with_top(10.)
         .with_bottom(10.)

@@ -1243,6 +1243,11 @@ pub struct IndentableBlockSpacing {
 }
 
 impl IndentableBlockSpacing {
+    pub fn with_margin(mut self, margin: Margin) -> Self {
+        self.margin = margin;
+        self
+    }
+
     pub fn to_spacing(&self, indent_level: ListIndentLevel) -> BlockSpacing {
         BlockSpacing {
             margin: self.margin,
