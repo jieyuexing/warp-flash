@@ -135,6 +135,19 @@ fn grouped_tab_member_padding(is_mini: bool) -> Padding {
     }
 }
 
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+struct GroupedTabsVisibility {
+    show_header: bool,
+    show_members: bool,
+}
+
+fn grouped_tabs_visibility(is_mini: bool, is_collapsed: bool) -> GroupedTabsVisibility {
+    GroupedTabsVisibility {
+        show_header: !is_mini,
+        show_members: is_mini || !is_collapsed,
+    }
+}
+
 // Circular icon constants
 const ICON_WITH_STATUS_GAP: f32 = 8.;
 pub(super) const VERTICAL_TABS_DETAIL_SIDECAR_POSITION_ID: &str = "vertical_tabs:detail_sidecar";
@@ -3108,7 +3121,6 @@ fn render_grouped_tabs_header(
     is_being_renamed: bool,
     rename_editor: Option<&ViewHandle<EditorView>>,
     collapsed_member_kinds: Option<&[SummaryPaneKind]>,
-    is_mini: bool,
     app: &AppContext,
 ) -> Box<dyn Element> {
     let appearance = Appearance::as_ref(app);
@@ -3121,7 +3133,7 @@ fn render_grouped_tabs_header(
     // Collapsed groups show the icon collage (same component as horizontal tab
     // groups) in place of the chevron, sized to VERTICAL_TABS_ICON_SIZE so
     // the 2-icon variant matches the tab Summary Pair layout exactly.
-    let tab_group_icon = if is_collapsed || is_mini {
+    let tab_group_icon = if is_collapsed {
         let kinds = collapsed_member_kinds.unwrap_or(&[]);
         render_group_member_icon_collage(kinds, VERTICAL_TABS_ICON_SIZE, appearance)
     } else {
@@ -3215,31 +3227,23 @@ fn render_grouped_tabs_header(
     let group_pinned = FeatureFlag::PinnedTabs.is_enabled() && group.pinned;
     let row = Flex::row()
         .with_main_axis_size(MainAxisSize::Max)
-        .with_main_axis_alignment(if is_mini {
-            MainAxisAlignment::Center
-        } else {
-            MainAxisAlignment::SpaceBetween
-        })
+        .with_main_axis_alignment(MainAxisAlignment::SpaceBetween)
         .with_cross_axis_alignment(CrossAxisAlignment::Center)
         .with_child(
             Shrinkable::new(
                 1.,
                 Flex::row()
                     .with_main_axis_size(MainAxisSize::Max)
-                    .with_main_axis_alignment(if is_mini {
-                        MainAxisAlignment::Center
-                    } else {
-                        MainAxisAlignment::Start
-                    })
+                    .with_main_axis_alignment(MainAxisAlignment::Start)
                     .with_cross_axis_alignment(CrossAxisAlignment::Center)
                     .with_spacing(ICON_WITH_STATUS_GAP)
                     .with_child(tab_group_icon)
-                    .with_children((!is_mini).then(|| Shrinkable::new(1., text_column).finish()))
+                    .with_child(Shrinkable::new(1., text_column).finish())
                     .finish(),
             )
             .finish(),
         )
-        .with_children((!is_mini).then_some(action_buttons))
+        .with_child(action_buttons)
         .finish();
 
     // Resolve the group's color so the header tints to match its member tabs.
@@ -3255,11 +3259,7 @@ fn render_grouped_tabs_header(
             WarpThemeFill::Solid(ColorU::transparent_black())
         };
         let mut container = Container::new(row)
-            .with_padding(Padding::uniform(if is_mini {
-                7.
-            } else {
-                GROUP_HORIZONTAL_PADDING
-            }))
+            .with_padding(Padding::uniform(GROUP_HORIZONTAL_PADDING))
             .with_corner_radius(CornerRadius::with_all(Radius::Pixels(ROW_CORNER_RADIUS)))
             .with_border(Border::all(1.).with_border_fill(border_fill));
         if let Some(color) = group_color_fill {
@@ -3278,7 +3278,7 @@ fn render_grouped_tabs_header(
         // Pin indicator anchored at the visible top-right corner, matching
         // the per-tab pin placement. Hidden whenever the action buttons
         // are visible so the two never overlap.
-        if group_pinned && !show_action_buttons && !is_mini {
+        if group_pinned && !show_action_buttons {
             let pin_icon = ConstrainedBox::new(
                 WarpIcon::PinFilledDiagonal
                     .to_warpui_icon(sub_text_color)
@@ -3356,6 +3356,7 @@ fn render_grouped_tab_container(
     let is_collapsed = group.collapsed;
     let first_member_index = members.first().map(|(index, _)| *index).unwrap_or(0);
     let is_mini = state.is_mini();
+    let visibility = grouped_tabs_visibility(is_mini, is_collapsed);
 
     let resolved_mode = resolve_vertical_tabs_mode(app);
     let needs_outer_horizontal_padding = uses_outer_group_container(match resolved_mode {
@@ -3386,55 +3387,41 @@ fn render_grouped_tab_container(
         let rename_editor = is_being_renamed.then(|| workspace.tab_group_rename_editor.clone());
         // Compute member kinds only when collapsed — the collage is only
         // rendered then, so this skips the per-tab pane walk when expanded.
-        let collapsed_member_kinds =
-            (is_collapsed || is_mini).then(|| workspace.compute_group_member_kinds(group.id, app));
-        let header = render_grouped_tabs_header(
-            &group,
-            member_count,
-            &mouse_states,
-            is_collapsed,
-            is_header_selected,
-            hover_state.is_hovered(),
-            is_being_renamed,
-            rename_editor.as_ref(),
-            collapsed_member_kinds.as_deref(),
-            is_mini,
-            app,
-        );
-        // While a pane is being dragged, the group header is a drop zone for the
-        // space above the first member. What a drop there does depends on whether
-        // the group is collapsed:
-        //
-        // - Collapsed: the members are hidden, so there's nothing to drop *into*.
-        //   The only sensible result is to land the pane just above the whole
-        //   group, so `AfterTabIndex(first)` always inserts at the group's first
-        //   slot (directly above it), no matter where in the header the cursor is.
-        //   Dropping just below a collapsed group is the next tab/group's job, so
-        //   we don't handle it here.
-        // - Expanded: the first member is visible, so the drop should follow the
-        //   cursor: above the group near the top of the header, or into the group
-        //   as its new first member lower down. `TabIndex(first)` enables that by
-        //   testing the cursor against the first member's row.
-        let header = if is_any_pane_dragging {
-            let header_location = if is_collapsed {
-                TabBarLocation::AfterTabIndex(first_member_index)
+        if visibility.show_header {
+            let collapsed_member_kinds =
+                is_collapsed.then(|| workspace.compute_group_member_kinds(group.id, app));
+            let header = render_grouped_tabs_header(
+                &group,
+                member_count,
+                &mouse_states,
+                is_collapsed,
+                is_header_selected,
+                hover_state.is_hovered(),
+                is_being_renamed,
+                rename_editor.as_ref(),
+                collapsed_member_kinds.as_deref(),
+                app,
+            );
+            let header = if is_any_pane_dragging {
+                let header_location = if is_collapsed {
+                    TabBarLocation::AfterTabIndex(first_member_index)
+                } else {
+                    TabBarLocation::TabIndex(first_member_index)
+                };
+                DropTarget::new(
+                    header,
+                    VerticalTabsPaneDropTargetData {
+                        tab_bar_location: header_location,
+                    },
+                )
+                .finish()
             } else {
-                TabBarLocation::TabIndex(first_member_index)
+                header
             };
-            DropTarget::new(
-                header,
-                VerticalTabsPaneDropTargetData {
-                    tab_bar_location: header_location,
-                },
-            )
-            .finish()
-        } else {
-            header
-        };
-        content.add_child(header);
+            content.add_child(header);
+        }
 
-        // Collapsed groups hide member rows in the panel chrome; the members remain in `workspace.tabs`.
-        if !is_collapsed {
+        if visibility.show_members {
             let last_member_idx = members.len().saturating_sub(1);
             for (i, (tab_index, filtered_pane_ids)) in members.iter().enumerate() {
                 let tab = &workspace.tabs[*tab_index];
@@ -3497,10 +3484,10 @@ fn render_grouped_tab_container(
         let mut padding = Padding::uniform(0.);
         if needs_outer_horizontal_padding {
             padding = Padding::uniform(GROUP_HORIZONTAL_PADDING);
-            if !is_collapsed {
+            if visibility.show_members {
                 padding = padding.with_bottom(GROUP_HORIZONTAL_PADDING + TAB_GROUP_CONTENT_INSET);
             }
-        } else if !is_collapsed {
+        } else if visibility.show_members {
             padding = padding.with_bottom(TAB_GROUP_CONTENT_INSET);
         }
 

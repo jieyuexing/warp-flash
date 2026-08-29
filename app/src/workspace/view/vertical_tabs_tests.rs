@@ -13,13 +13,14 @@ use super::{
     VerticalTabsSummaryData, VerticalTabsSummaryPrimaryLabel, branch_label_display,
     coalesce_summary_branch_entries, code_detail_kind_label, compact_branch_subtitle_display,
     detail_sidecar_width_and_bounds, detail_target_for_hovered_row, grouped_tab_member_padding,
-    is_mini_panel_width, non_terminal_search_text_fragments, pane_ids_for_display_granularity,
-    pane_search_text_fragments, preferred_agent_tab_titles, push_normalized_unique_summary_label,
-    search_fragments_contain_query, select_summary_pane_kind_icons,
-    should_keep_detail_sidecar_visible_for_mouse_position, should_show_tab_group_header,
-    shows_synced_inputs_indicator, sort_summary_primary_labels_status_first,
-    summary_overflow_count, summary_search_text_fragments, terminal_kind_badge_label,
-    terminal_primary_line_data, terminal_pull_request_badge_label, terminal_search_text_fragments,
+    grouped_tabs_visibility, is_mini_panel_width, non_terminal_search_text_fragments,
+    pane_ids_for_display_granularity, pane_search_text_fragments, preferred_agent_tab_titles,
+    push_normalized_unique_summary_label, search_fragments_contain_query,
+    select_summary_pane_kind_icons, should_keep_detail_sidecar_visible_for_mouse_position,
+    should_show_tab_group_header, shows_synced_inputs_indicator,
+    sort_summary_primary_labels_status_first, summary_overflow_count,
+    summary_search_text_fragments, terminal_kind_badge_label, terminal_primary_line_data,
+    terminal_pull_request_badge_label, terminal_search_text_fragments,
     terminal_title_fallback_font, uses_outer_group_container, visible_pane_ids_for_detail_target,
     vtab_diff_stats_text,
 };
@@ -63,6 +64,33 @@ fn mini_group_members_drop_the_expanded_sidebar_indent() {
             .with_left(12.)
             .with_right(4.)
     );
+}
+
+#[test]
+fn mini_group_hides_its_header_and_shows_expanded_members() {
+    let visibility = grouped_tabs_visibility(true, false);
+
+    assert!(!visibility.show_header);
+    assert!(visibility.show_members);
+}
+
+#[test]
+fn mini_group_shows_members_even_when_persisted_collapsed() {
+    let visibility = grouped_tabs_visibility(true, true);
+
+    assert!(!visibility.show_header);
+    assert!(visibility.show_members);
+}
+
+#[test]
+fn regular_group_respects_its_collapsed_state() {
+    let expanded = grouped_tabs_visibility(false, false);
+    let collapsed = grouped_tabs_visibility(false, true);
+
+    assert!(expanded.show_header);
+    assert!(expanded.show_members);
+    assert!(collapsed.show_header);
+    assert!(!collapsed.show_members);
 }
 
 #[test]
