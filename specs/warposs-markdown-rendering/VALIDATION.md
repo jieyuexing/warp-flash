@@ -40,14 +40,23 @@ Copy routing are covered by focused unit tests instead.
 
 ### Automated results
 
+- `WARP_LOCALE=en-US cargo test -p warp_editor --quiet`: 502 passed
 - `cargo check -p warp --lib`: pass
 - `cargo test -p warp --lib cli_agent_markdown_reader -- --nocapture`: 8 passed
 - `cargo test -p warp --lib notebooks::file::tests -- --nocapture`: 10 passed
 - `cargo test -p warp --lib notebooks::markdown_reader::tests -- --nocapture`: 5 passed
 - `cargo test -p warp_editor heading_typography_is_scoped_to_rich_text_styles -- --nocapture`:
   1 passed
+- `cargo clippy -p warp --all-targets --tests -- -D warnings`: pass
 - `./script/format`: pass
+- `./script/check_no_inline_test_modules`: pass
+- `python3 script/i18n/audit_zh_cn.py --check`: 1170/1170 production UI sources covered
 - `git diff --check`: pass
+
+The same full editor suite under this fork's default `zh-CN` locale produced 501 passes and one
+unrelated pre-existing failure: `replace_oversized_data_uri_images_swaps_in_placeholder` expects
+an English placeholder while the runtime correctly supplies its Chinese translation. Running the
+suite with the locale expected by that test confirms all 502 editor tests pass.
 
 ### Not claimed by this record
 
