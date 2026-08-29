@@ -17,7 +17,7 @@ use super::{
     pane_ids_for_display_granularity, pane_search_text_fragments, preferred_agent_tab_titles,
     push_normalized_unique_summary_label, search_fragments_contain_query,
     select_summary_pane_kind_icons, should_keep_detail_sidecar_visible_for_mouse_position,
-    should_show_tab_group_header, shows_synced_inputs_indicator,
+    should_show_group_action_buttons, should_show_tab_group_header, shows_synced_inputs_indicator,
     sort_summary_primary_labels_status_first, summary_overflow_count,
     summary_search_text_fragments, terminal_kind_badge_label, terminal_primary_line_data,
     terminal_pull_request_badge_label, terminal_search_text_fragments,
@@ -91,6 +91,35 @@ fn regular_group_respects_its_collapsed_state() {
     assert!(expanded.show_members);
     assert!(collapsed.show_header);
     assert!(!collapsed.show_members);
+}
+
+#[test]
+fn mini_tabs_never_show_the_hover_action_toolbar() {
+    assert!(!should_show_group_action_buttons(
+        true, false, true, false, false,
+    ));
+    assert!(!should_show_group_action_buttons(
+        true, false, false, true, false,
+    ));
+    assert!(!should_show_group_action_buttons(
+        true, false, false, false, true,
+    ));
+}
+
+#[test]
+fn regular_tabs_show_the_action_toolbar_for_hover_or_an_open_menu() {
+    assert!(should_show_group_action_buttons(
+        false, false, true, false, false,
+    ));
+    assert!(should_show_group_action_buttons(
+        false, false, false, true, false,
+    ));
+    assert!(should_show_group_action_buttons(
+        false, false, false, false, true,
+    ));
+    assert!(!should_show_group_action_buttons(
+        false, true, true, true, true,
+    ));
 }
 
 #[test]

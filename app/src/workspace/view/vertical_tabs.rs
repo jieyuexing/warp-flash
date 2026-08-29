@@ -148,6 +148,16 @@ fn grouped_tabs_visibility(is_mini: bool, is_collapsed: bool) -> GroupedTabsVisi
     }
 }
 
+fn should_show_group_action_buttons(
+    is_mini: bool,
+    is_dragging: bool,
+    is_group_hovered: bool,
+    are_action_buttons_hovered: bool,
+    is_menu_open: bool,
+) -> bool {
+    !is_mini && !is_dragging && (is_group_hovered || are_action_buttons_hovered || is_menu_open)
+}
+
 // Circular icon constants
 const ICON_WITH_STATUS_GAP: f32 = 8.;
 pub(super) const VERTICAL_TABS_DETAIL_SIDECAR_POSITION_ID: &str = "vertical_tabs:detail_sidecar";
@@ -2786,8 +2796,13 @@ fn render_tab_group_internal(
         // are hovered, following the pattern from AgentManagementView.
         // This prevents flickering when the mouse moves from the group
         // to the overlay buttons (which may sit outside the group bounds).
-        let should_show_action_buttons = !drag_state.is_any_pane_dragging
-            && (group_state.is_hovered() || action_buttons_mouse_over || is_menu_open_for_tab);
+        let should_show_action_buttons = should_show_group_action_buttons(
+            state.is_mini(),
+            drag_state.is_any_pane_dragging,
+            group_state.is_hovered(),
+            action_buttons_mouse_over,
+            is_menu_open_for_tab,
+        );
 
         let action_buttons = if should_show_action_buttons {
             render_group_action_buttons(
