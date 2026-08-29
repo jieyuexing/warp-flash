@@ -14,9 +14,9 @@ use warpui_core::text_layout::{CaretPosition, Glyph, Line, Run, TextFrame};
 use warpui_core::units::{IntoPixels, Pixels};
 
 use super::{
-    BlockItem, BrokenLinkStyle, CheckBoxStyle, DEFAULT_BLOCK_SPACINGS, HorizontalRuleStyle,
-    InlineCodeStyle, OffsetMap, PARAGRAPH_MIN_HEIGHT, Paragraph, ParagraphStyles, RichTextStyles,
-    TEXT_SPACING, TableStyle,
+    BlockItem, BrokenLinkStyle, CheckBoxStyle, DEFAULT_BLOCK_SPACINGS, HeadingStyle, HeadingStyles,
+    HorizontalRuleStyle, InlineCodeStyle, OffsetMap, PARAGRAPH_MIN_HEIGHT, Paragraph,
+    ParagraphStyles, RichTextStyles, TEXT_SPACING, TableStyle,
 };
 use crate::content::text::BufferBlockStyle;
 
@@ -215,6 +215,32 @@ pub const TEST_STYLES: RichTextStyles = RichTextStyles {
         outer_border: true,
         column_dividers: true,
         row_dividers: true,
+    },
+    heading_styles: HeadingStyles {
+        h1: HeadingStyle {
+            font_size_multiplier: 2.25,
+            font_weight: Weight::Semibold,
+        },
+        h2: HeadingStyle {
+            font_size_multiplier: 1.8,
+            font_weight: Weight::Semibold,
+        },
+        h3: HeadingStyle {
+            font_size_multiplier: 1.5,
+            font_weight: Weight::Semibold,
+        },
+        h4: HeadingStyle {
+            font_size_multiplier: 1.0,
+            font_weight: Weight::Semibold,
+        },
+        h5: HeadingStyle {
+            font_size_multiplier: 0.83,
+            font_weight: Weight::Normal,
+        },
+        h6: HeadingStyle {
+            font_size_multiplier: 0.67,
+            font_weight: Weight::Normal,
+        },
     },
 };
 

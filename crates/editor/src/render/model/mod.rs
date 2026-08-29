@@ -1185,6 +1185,55 @@ pub struct RichTextStyles {
     pub highlight_urls: bool,
     /// Styling for tables.
     pub table_style: TableStyle,
+    /// Typography for heading levels within this rich-text surface.
+    pub heading_styles: HeadingStyles,
+}
+
+#[derive(Clone, Copy, PartialEq, Debug)]
+pub struct HeadingStyle {
+    pub font_size_multiplier: f32,
+    pub font_weight: Weight,
+}
+
+#[derive(Clone, Copy, PartialEq, Debug)]
+pub struct HeadingStyles {
+    pub h1: HeadingStyle,
+    pub h2: HeadingStyle,
+    pub h3: HeadingStyle,
+    pub h4: HeadingStyle,
+    pub h5: HeadingStyle,
+    pub h6: HeadingStyle,
+}
+
+impl Default for HeadingStyles {
+    fn default() -> Self {
+        let style = |header_size: BlockHeaderSize| HeadingStyle {
+            font_size_multiplier: header_size.font_size_multiplication_ratio(),
+            font_weight: Weight::from_custom_weight(header_size.font_weight()),
+        };
+
+        Self {
+            h1: style(BlockHeaderSize::Header1),
+            h2: style(BlockHeaderSize::Header2),
+            h3: style(BlockHeaderSize::Header3),
+            h4: style(BlockHeaderSize::Header4),
+            h5: style(BlockHeaderSize::Header5),
+            h6: style(BlockHeaderSize::Header6),
+        }
+    }
+}
+
+impl HeadingStyles {
+    pub fn for_level(&self, header_size: BlockHeaderSize) -> HeadingStyle {
+        match header_size {
+            BlockHeaderSize::Header1 => self.h1,
+            BlockHeaderSize::Header2 => self.h2,
+            BlockHeaderSize::Header3 => self.h3,
+            BlockHeaderSize::Header4 => self.h4,
+            BlockHeaderSize::Header5 => self.h5,
+            BlockHeaderSize::Header6 => self.h6,
+        }
+    }
 }
 
 #[derive(Clone, PartialEq, Debug)]
@@ -4366,8 +4415,9 @@ impl RichTextStyles {
             BufferBlockStyle::CodeBlock { .. } => self.code_text,
             BufferBlockStyle::Header { header_size } => {
                 let mut base_text_style = self.base_text;
-                base_text_style.font_size *= header_size.font_size_multiplication_ratio();
-                base_text_style.font_weight = Weight::from_custom_weight(header_size.font_weight());
+                let heading_style = self.heading_styles.for_level(*header_size);
+                base_text_style.font_size *= heading_style.font_size_multiplier;
+                base_text_style.font_weight = heading_style.font_weight;
                 base_text_style
             }
         }
@@ -4388,6 +4438,8 @@ impl RichTextStyles {
                 .requires_relayout(&new_styles.inline_code_style)
             || self.table_style.requires_relayout(&new_styles.table_style)
             || self.minimum_paragraph_height != new_styles.minimum_paragraph_height
+            || self.heading_styles != new_styles.heading_styles
+            || self.block_spacings != new_styles.block_spacings
     }
 }
 

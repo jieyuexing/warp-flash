@@ -9,7 +9,7 @@ use vec1::{Vec1, vec1};
 use warpui_core::assets::asset_cache::AssetSource;
 use warpui_core::color::ColorU;
 use warpui_core::elements::ListIndentLevel;
-use warpui_core::fonts::FamilyId;
+use warpui_core::fonts::{FamilyId, Weight};
 use warpui_core::geometry::rect::RectF;
 use warpui_core::geometry::vector::vec2f;
 use warpui_core::text_layout::TextFrame;
@@ -28,8 +28,31 @@ use crate::content::text::{
 };
 use crate::render::model::test_utils::{TEST_STYLES, laid_out_paragraph, mock_paragraph};
 use crate::render::model::{
-    ColumnUnit, Height, LayoutSummary, LineCount, RenderedSelection, SoftWrapPoint, TEXT_SPACING,
+    ColumnUnit, HeadingStyle, Height, LayoutSummary, LineCount, RenderedSelection, SoftWrapPoint,
+    TEXT_SPACING,
 };
+
+#[test]
+fn heading_typography_is_scoped_to_rich_text_styles() {
+    let mut reading_styles = TEST_STYLES;
+    reading_styles.heading_styles.h1 = HeadingStyle {
+        font_size_multiplier: 2.,
+        font_weight: Weight::Bold,
+    };
+
+    let heading = reading_styles.paragraph_styles(&BufferBlockStyle::Header {
+        header_size: crate::content::text::BlockHeaderSize::Header1,
+    });
+    let default_heading = TEST_STYLES.paragraph_styles(&BufferBlockStyle::Header {
+        header_size: crate::content::text::BlockHeaderSize::Header1,
+    });
+
+    assert_eq!(heading.font_size, 20.);
+    assert_eq!(heading.font_weight, Weight::Bold);
+    assert_eq!(default_heading.font_size, 22.5);
+    assert_eq!(default_heading.font_weight, Weight::Semibold);
+    assert!(TEST_STYLES.requires_relayout(&reading_styles));
+}
 
 #[test]
 fn test_height() {

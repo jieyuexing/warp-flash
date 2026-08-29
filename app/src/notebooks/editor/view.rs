@@ -53,15 +53,15 @@ use super::keys::NotebookKeybindings;
 use super::link_editor::{LinkEditor, LinkEditorEvent};
 use super::model::{NotebooksEditorModel, RichTextEditorModelEvent};
 use super::omnibar::{Omnibar, OmnibarEvent};
-use super::{BlockType, NotebookWorkflow, rich_text_styles};
+use super::{BlockType, NotebookWorkflow, RichTextStyleProfile, rich_text_styles_for_profile};
 use crate::appearance::Appearance;
 use crate::cmd_or_ctrl_shift;
 use crate::editor::InteractionState;
 use crate::features::FeatureFlag;
 use crate::notebooks::editor::find_bar::FindBarAction;
 use crate::notebooks::editor::model::word_unit;
-use crate::notebooks::file::MarkdownDisplayMode;
 use crate::notebooks::link::{LinkTarget, NotebookLinks, ResolveError};
+use crate::notebooks::markdown_reader::MarkdownDisplayMode;
 use crate::notebooks::telemetry::{ActionEntrypoint, BlockInfo, EmbeddedObjectInfo, SelectionMode};
 use crate::server::ids::SyncId;
 use crate::settings::{AppEditorSettings, FontSettings, SelectionSettings};
@@ -1069,6 +1069,7 @@ pub struct RichTextEditorView {
 
     /// When true, the block insertion menu (slash menu) is disabled.
     disable_block_insertion_menu: bool,
+    style_profile: RichTextStyleProfile,
 }
 
 #[derive(Default)]
@@ -1092,6 +1093,8 @@ pub struct RichTextEditorConfig {
     /// Enable or disable the block insertion menu (slash menu).
     /// When disabled, typing "/" will not open the menu.
     pub disable_block_insertion_menu: bool,
+
+    pub style_profile: RichTextStyleProfile,
 }
 
 impl RichTextEditorView {
@@ -1176,6 +1179,7 @@ impl RichTextEditorView {
             can_execute_shell_commands: config.can_execute_shell_commands.unwrap_or(true),
             disable_scrolling: config.disable_scrolling,
             disable_block_insertion_menu: config.disable_block_insertion_menu,
+            style_profile: config.style_profile,
         }
     }
 
@@ -1296,7 +1300,8 @@ impl RichTextEditorView {
     fn handle_appearance_or_font_change(&mut self, ctx: &mut ViewContext<Self>) {
         let font_settings = FontSettings::as_ref(ctx);
         let appearance = Appearance::as_ref(ctx);
-        let new_styles = rich_text_styles(appearance, font_settings);
+        let new_styles =
+            rich_text_styles_for_profile(self.style_profile, appearance, font_settings);
         self.model.update(ctx, move |model, ctx| {
             model.update_rich_text_styles(new_styles, ctx);
         });

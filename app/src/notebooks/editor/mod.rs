@@ -10,12 +10,12 @@ use warp_editor::content::text::{
     BlockHeaderSize, BlockType as ContentBlockType, BufferBlockStyle, CodeBlockType,
 };
 use warp_editor::render::model::{
-    BrokenLinkStyle, CheckBoxStyle, EmbeddedItem, HorizontalRuleStyle, InlineCodeStyle,
-    ParagraphStyles, RichTextStyles, TableStyle,
+    BrokenLinkStyle, CheckBoxStyle, EmbeddedItem, HeadingStyle, HeadingStyles, HorizontalRuleStyle,
+    InlineCodeStyle, ParagraphStyles, RichTextStyles, TableStyle,
 };
 use warp_util::user_input::UserInput;
-use warpui::elements::{Border, ListIndentLevel};
-use warpui::fonts::FamilyId;
+use warpui::elements::{Border, ListIndentLevel, Margin, Padding};
+use warpui::fonts::{FamilyId, Weight};
 use warpui::ui_components::checkbox::HOVER_BACKGROUND_COLOR;
 
 use crate::appearance::Appearance;
@@ -41,6 +41,13 @@ pub mod view;
 pub use block_insertion_menu::BlockInsertionSource;
 const NOTEBOOK_LINE_HEIGHT_RATIO: f32 = 1.5;
 const NOTEBOOK_BASELINE_RATIO: f32 = 0.7;
+
+#[derive(Debug, Default, Clone, Copy, PartialEq, Eq)]
+pub enum RichTextStyleProfile {
+    #[default]
+    Notebook,
+    MarkdownReader,
+}
 
 #[derive(Clone, Copy)]
 pub(crate) struct MarkdownTableAppearance {
@@ -274,7 +281,84 @@ pub fn rich_text_styles(appearance: &Appearance, font_settings: &FontSettings) -
         cursor_width: 3.,
         highlight_urls: true,
         table_style: markdown_table_style(appearance, appearance.ui_font_family(), font_size),
+        heading_styles: Default::default(),
     }
+}
+
+pub fn rich_text_styles_for_profile(
+    profile: RichTextStyleProfile,
+    appearance: &Appearance,
+    font_settings: &FontSettings,
+) -> RichTextStyles {
+    match profile {
+        RichTextStyleProfile::Notebook => rich_text_styles(appearance, font_settings),
+        RichTextStyleProfile::MarkdownReader => markdown_reader_styles(appearance, font_settings),
+    }
+}
+
+pub fn markdown_reader_styles(
+    appearance: &Appearance,
+    font_settings: &FontSettings,
+) -> RichTextStyles {
+    let mut styles = rich_text_styles(appearance, font_settings);
+    let theme = appearance.theme();
+
+    styles.base_text.line_height_ratio = 1.6;
+    styles.code_text.line_height_ratio = 1.5;
+    styles.embedding_text.line_height_ratio = 1.5;
+    styles.code_background = theme.surface_1().into();
+    styles.code_border = Border::all(1.).with_border_fill(theme.outline());
+    styles.inline_code_style.background = theme.surface_2().into();
+    styles.horizontal_rule_style.color = theme.outline().into();
+    styles.horizontal_rule_style.rule_height = 1.;
+    styles.block_spacings.text.margin = Margin::uniform(0.)
+        .with_top(4.)
+        .with_bottom(4.)
+        .with_right(16.);
+    styles.block_spacings.header.margin = Margin::uniform(0.)
+        .with_top(14.)
+        .with_bottom(6.)
+        .with_right(16.);
+    styles.block_spacings.header.padding = Padding::uniform(0.);
+    styles.block_spacings.code_block.margin = Margin::uniform(0.)
+        .with_top(10.)
+        .with_bottom(10.)
+        .with_right(16.);
+    styles.table_style.header_background = theme.surface_1().into_solid();
+    styles.table_style.cell_background = theme.background().into_solid();
+    styles.table_style.alternate_row_background = Some(theme.surface_1().into_solid());
+    styles.table_style.border_color = theme.outline().into_solid();
+    styles.table_style.cell_padding = 10.;
+    styles.table_style.outer_border = true;
+    styles.table_style.column_dividers = true;
+    styles.heading_styles = HeadingStyles {
+        h1: HeadingStyle {
+            font_size_multiplier: 2.0,
+            font_weight: Weight::Bold,
+        },
+        h2: HeadingStyle {
+            font_size_multiplier: 1.6,
+            font_weight: Weight::Bold,
+        },
+        h3: HeadingStyle {
+            font_size_multiplier: 1.37,
+            font_weight: Weight::Semibold,
+        },
+        h4: HeadingStyle {
+            font_size_multiplier: 1.25,
+            font_weight: Weight::Semibold,
+        },
+        h5: HeadingStyle {
+            font_size_multiplier: 1.12,
+            font_weight: Weight::Semibold,
+        },
+        h6: HeadingStyle {
+            font_size_multiplier: 1.0,
+            font_weight: Weight::Semibold,
+        },
+    };
+
+    styles
 }
 
 impl From<BlockType> for BufferBlockStyle {

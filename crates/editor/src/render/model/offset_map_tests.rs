@@ -164,6 +164,7 @@ fn test_end_to_end() {
                 column_dividers: true,
                 row_dividers: true,
             },
+            heading_styles: Default::default(),
         };
 
         // Start by creating a buffer with a single line of text that includes a placeholder.
