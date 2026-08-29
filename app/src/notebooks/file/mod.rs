@@ -1207,9 +1207,11 @@ impl BackingView for FileNotebookView {
                 );
                 if self.shows_markdown_toggle() {
                     actions.push(
-                        MenuItemFields::new("Copy Markdown source")
-                            .with_on_select_action(FileNotebookAction::CopyMarkdownSource)
-                            .into_item(),
+                        MenuItemFields::new(
+                            warp_i18n::localize_ui("Copy Markdown source").into_owned(),
+                        )
+                        .with_on_select_action(FileNotebookAction::CopyMarkdownSource)
+                        .into_item(),
                     );
                 }
                 actions.extend([

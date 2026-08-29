@@ -932,6 +932,8 @@ Privacy Settings	隐私设置
 Purchasing these credits would take you over your monthly spend limit. 	购买这些点数会使你超出每月支出限额。
 Pure is not yet supported in Warp. You might consider one of the supported prompts as an alternative.  	Warp 尚不支持 Pure。你可以考虑改用受支持的提示符。  
 Raw	原始内容
+Reading	阅读
+Reading view	阅读视图
 Refresh notebook	刷新笔记本
 Reloading would exceed your monthly limit. 	重新加载会超出你的每月限额。
 Rendered	渲染结果
@@ -1662,6 +1664,10 @@ Unstage	取消暂存
 Unstage all	全部取消暂存
 Unstaged changes	已取消暂存更改
 Unversioned files are not deleted from the Version Control panel	版本控制面板不会删除未纳入版本控制的文件
+Copy Markdown source	复制 Markdown 源码
 Markdown reader · visual snapshot	Markdown 阅读器 · 可视化快照
 Show terminal output	显示终端输出
+Source	源码
+Source-backed document	源码支持的文档
 View tab in Markdown reader	在 Markdown 阅读器中查看标签页
+Visual snapshot	可视化快照
