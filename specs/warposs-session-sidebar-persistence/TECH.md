@@ -50,4 +50,4 @@ the mini threshold renders icon-only active and archived session affordances.
 - Pinning and stable tab-group UUIDs round-trip through SQLite.
 - New-window and existing-window transfers retain identity and pinned ordering.
 - Mini width and archive expansion survive app restart.
-- The independent manual fixture is `/Users/jieyuexing/dsh-universe/.local/warp-flash-tests`.
+- The independent manual fixture is `/Users/jieyuexing/jieyuexing-universe/projects/personal/warp-flash/qa-fixtures`.
